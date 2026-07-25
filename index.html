@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grow — daily discipline garden</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <h1>🌱 Grow</h1>
+    <p class="tagline">Tend your habits. Watch them bloom.</p>
+  </header>
+
+  <main class="layout">
+
+    <!-- LEFT: the garden / plant display -->
+    <section class="garden-panel">
+      <div class="garden-plot">
+        <div class="plant-stage" id="plantStage">🌱</div>
+        <div class="sun" id="sun">☀️</div>
+      </div>
+
+      <div class="growth-meter">
+        <div class="growth-fill" id="growthFill"></div>
+      </div>
+      <p class="growth-label" id="growthLabel">0% grown today</p>
+    </section>
+
+    <!-- RIGHT: the task list -->
+    <section class="task-panel">
+      <h2>Today's tasks</h2>
+
+      <form id="taskForm" class="task-form">
+        <input
+          type="text"
+          id="taskInput"
+          placeholder="e.g. Read for 20 minutes"
+          autocomplete="off"
+          required
+        />
+        <button type="submit">Add</button>
+      </form>
+
+      <ul id="taskList" class="task-list">
+        <!-- tasks get added here by script.js -->
+      </ul>
+
+      <p id="emptyState" class="empty-state">
+        No tasks yet — add your first one above to start growing.
+      </p>
+    </section>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

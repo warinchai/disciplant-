@@ -1,0 +1,215 @@
+/* ---------- Palette ----------
+  --soil:      #6B4F3B   deep warm brown, grounding color
+  --leaf:      #3A6B4A   forest green, primary accent
+  --sprout:    #8FBF7F   soft new-growth green
+  --sun:       #F2B84B   warm sunlight yellow
+  --cream:     #FBF7EE   card / page background
+  --ink:       #2E2A22   near-black text with a warm tint
+------------------------------- */
+
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;600&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #DCEBD8 0%, #F6F1E4 45%);
+  font-family: 'Nunito', sans-serif;
+  color: #2E2A22;
+  padding: 32px 20px 60px;
+}
+
+.site-header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.site-header h1 {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 2.4rem;
+  color: #3A6B4A;
+  margin: 0;
+}
+
+.tagline {
+  margin: 4px 0 0;
+  color: #6B4F3B;
+  font-size: 1rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+@media (max-width: 700px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.garden-panel,
+.task-panel {
+  background: #FBF7EE;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 4px 18px rgba(107, 79, 59, 0.12);
+}
+
+/* ---------- Garden panel ---------- */
+
+.garden-plot {
+  position: relative;
+  height: 220px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #BFE3D8 0%, #E7DBB8 65%, #6B4F3B 65%, #543D2C 100%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.plant-stage {
+  font-size: 4.5rem;
+  margin-bottom: 18px;
+  transition: transform 0.4s ease;
+}
+
+.sun {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-size: 1.6rem;
+  animation: glow 3s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.12); opacity: 1; }
+}
+
+.growth-meter {
+  margin-top: 16px;
+  height: 10px;
+  border-radius: 6px;
+  background: #E3DCC8;
+  overflow: hidden;
+}
+
+.growth-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #8FBF7F, #3A6B4A);
+  transition: width 0.5s ease;
+}
+
+.growth-label {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+  color: #6B4F3B;
+  text-align: center;
+}
+
+/* ---------- Task panel ---------- */
+
+.task-panel h2 {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.3rem;
+  color: #3A6B4A;
+  margin-top: 0;
+}
+
+.task-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.task-form input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #D9CFB8;
+  border-radius: 10px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.95rem;
+}
+
+.task-form input:focus {
+  outline: 2px solid #8FBF7F;
+  outline-offset: 1px;
+}
+
+.task-form button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  background: #3A6B4A;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.task-form button:hover {
+  background: #2E5539;
+}
+
+.task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #F3EEDE;
+}
+
+.task-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #3A6B4A;
+  cursor: pointer;
+}
+
+.task-item span {
+  flex: 1;
+  font-size: 0.95rem;
+}
+
+.task-item.completed span {
+  text-decoration: line-through;
+  color: #9A9384;
+}
+
+.task-item button.remove {
+  border: none;
+  background: none;
+  color: #B15C4A;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.empty-state {
+  color: #9A9384;
+  font-size: 0.9rem;
+  text-align: center;
+  margin-top: 20px;
+}
+
+.empty-state.hidden {
+  display: none;
+}
