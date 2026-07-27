@@ -3,65 +3,165 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Grow — daily discipline garden</title>
+  <title>DISCIPLANT — daily discipline garden</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <header class="site-header">
-    <h1>🌱 Grow</h1>
-    <p class="tagline">Tend your habits. Watch them bloom.</p>
-  </header>
+  <!-- Sky background — updated every 60 s to reflect local time of day -->
+  <div id="sky" class="sky-bg">
+    <div id="skyBody" class="sky-body"></div>
 
-  <p id="loadingState" class="loading-state">🌱 Loading your garden...</p>
+    <!-- Night stars -->
+    <div class="sky-stars"></div>
 
-  <main class="layout hidden" id="mainContent">
+    <!-- Daytime clouds -->
+    <div class="sky-clouds">
+      <div class="cloud cloud-1"></div>
+      <div class="cloud cloud-2"></div>
+      <div class="cloud cloud-3"></div>
+    </div>
 
-    <!-- LEFT: the garden / plant display -->
-    <section class="garden-panel">
-      <div class="garden-plot">
-        <div class="plant-stage" id="plantStage">🌱</div>
-        <div class="sun" id="sun">☀️</div>
+    <!-- Daytime birds -->
+    <div class="sky-birds">
+      <div class="bird bird-1"></div>
+      <div class="bird bird-2"></div>
+    </div>
+
+    <!-- Distant hill silhouettes for depth -->
+    <div class="sky-hills"></div>
+
+    <!-- Atmospheric haze at horizon -->
+    <div class="sky-horizon-haze"></div>
+
+    <!-- Night fireflies near ground -->
+    <div class="sky-fireflies">
+      <div class="firefly firefly-1"></div>
+      <div class="firefly firefly-2"></div>
+      <div class="firefly firefly-3"></div>
+      <div class="firefly firefly-4"></div>
+    </div>
+
+    <div class="sky-ground">
+      <div class="sky-ground-inner"></div>
+      <!-- Ground grass tufts and pebbles -->
+      <div class="ground-tuft gt-1"></div>
+      <div class="ground-tuft gt-2"></div>
+      <div class="ground-tuft gt-3"></div>
+      <div class="ground-tuft gt-4"></div>
+      <div class="ground-tuft gt-5"></div>
+      <div class="ground-tuft gt-6"></div>
+      <div class="ground-tuft gt-7"></div>
+      <div class="ground-tuft gt-8"></div>
+      <div class="ground-tuft gt-9"></div>
+      <div class="ground-tuft gt-10"></div>
+      <div class="ground-pebble gp-1"></div>
+      <div class="ground-pebble gp-2"></div>
+      <div class="ground-pebble gp-3"></div>
+      <div class="ground-pebble gp-4"></div>
+    </div>
+  </div>
+
+  <!-- Garden scene — SVG plants, fixed overlay, visible only on Garden page -->
+  <div id="gardenScene" class="garden-scene hidden"></div>
+
+  <!-- ================================================
+       PAGE: HOME
+       ================================================ -->
+  <div id="page-home" class="page page-home">
+    <div class="home-inner">
+      <p class="home-eyebrow">A living habit garden</p>
+      <h1 class="hero-title">DISCIPLANT</h1>
+      <p class="hero-tagline">Tend your habits. Watch them bloom.</p>
+
+      <button class="cta-btn cta-primary" id="btn-to-garden">TO GARDEN</button>
+
+      <div class="home-copy">
+        <p>Every habit is a seed. DISCIPLANT turns your daily practice into a living garden — six areas of life, six plant species, each one growing alongside the discipline you bring to it.</p>
+        <p>Add tasks in the categories that matter: study, move your body, find stillness, sleep well, keep your space and finances in order. Complete them each day and watch your plants grow. Miss a day and the chain breaks — so don't break it.</p>
+        <p>The garden reflects exactly what you tend. An oak that's weathered thirty days of consistent learning looks different from one that was just planted. That difference is visible, and it compounds.</p>
+        <p>Small actions, done daily, become something real. Start now — add your first task, check it off, and plant your first day.</p>
       </div>
 
-      <div class="growth-meter">
-        <div class="growth-fill" id="growthFill"></div>
+      <button class="cta-btn cta-secondary" id="btn-to-tasks">TO TASKS</button>
+    </div>
+  </div>
+
+  <!-- ================================================
+       PAGE: GARDEN
+       ================================================ -->
+  <div id="page-garden" class="page page-garden hidden">
+    <nav class="site-nav">
+      <button class="nav-btn" id="garden-nav-home">Home</button>
+      <span class="nav-sep">·</span>
+      <span class="nav-current">Garden</span>
+      <span class="nav-sep">·</span>
+      <button class="nav-btn" id="garden-nav-tasks">Tasks</button>
+    </nav>
+    <p id="loadingState" class="loading-state">🌱 Loading your garden...</p>
+
+    <!-- Garden view sub-nav — Daily vs Long-Term -->
+    <div class="cat-subnav garden-subnav" id="gardenSubnav">
+      <button class="cat-tab active" id="garden-tab-daily"    data-garden-tab="daily">Daily Garden</button>
+      <button class="cat-tab"        id="garden-tab-longterm" data-garden-tab="longterm">Long-Term Garden</button>
+    </div>
+  </div>
+
+  <!-- ================================================
+       PAGE: TASKS
+       ================================================ -->
+  <div id="page-tasks" class="page page-tasks hidden">
+    <nav class="site-nav tasks-nav">
+      <button class="nav-btn" id="tasks-nav-home">Home</button>
+      <span class="nav-sep">·</span>
+      <button class="nav-btn" id="tasks-nav-garden">Garden</button>
+      <span class="nav-sep">·</span>
+      <span class="nav-current">Tasks</span>
+    </nav>
+
+    <p id="tasksLoadingState" class="loading-state">🌱 Loading your garden...</p>
+
+    <!-- Main tasks content — hidden until auth resolves -->
+    <div id="mainContent" class="tasks-content hidden">
+
+      <!-- Shared add-task form (always visible, category pre-set by active tab) -->
+      <div class="task-add-section">
+        <form id="taskForm" class="task-form">
+          <input
+            type="text"
+            id="taskInput"
+            placeholder="e.g. Read for 20 min"
+            autocomplete="off"
+            required
+          />
+          <select id="categorySelect" class="cat-select">
+            <!-- options populated from CATEGORIES in script.js -->
+          </select>
+          <button type="submit">Add</button>
+        </form>
       </div>
-      <p class="growth-label" id="growthLabel">0% grown today</p>
-    </section>
 
-    <!-- RIGHT: the task list -->
-    <section class="task-panel">
-      <h2>Today's tasks</h2>
+      <!-- Category sub-nav (populated by JS) -->
+      <div class="cat-subnav" id="catSubnav"></div>
 
-      <form id="taskForm" class="task-form">
-        <input
-          type="text"
-          id="taskInput"
-          placeholder="e.g. Read for 20 minutes"
-          autocomplete="off"
-          required
-        />
-        <button type="submit">Add</button>
-      </form>
+      <!-- "All" tab panel -->
+      <div id="tab-all" class="task-tab-panel">
+        <ul id="taskList" class="task-list"></ul>
+        <p id="emptyState" class="empty-state">No tasks yet — add your first one above.</p>
+      </div>
 
-      <ul id="taskList" class="task-list">
-        <!-- tasks get added here by script.js -->
-      </ul>
+      <!-- Category tab panels (populated by JS) -->
+      <div id="taskTabsContainer"></div>
 
-      <p id="emptyState" class="empty-state">
-        No tasks yet — add your first one above to start growing.
-      </p>
-    </section>
+    </div>
+  </div>
 
-  </main>
-
-  <!-- Firebase SDKs (compat version — simpler syntax for beginners) -->
+  <!-- Firebase SDKs (compat version) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
-  <!-- Your Firebase project's keys live here -->
+  <!-- Firebase project keys -->
   <script src="firebase-config.js"></script>
 
   <script src="script.js"></script>
