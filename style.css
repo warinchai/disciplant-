@@ -30,6 +30,145 @@ body {
 
 
 /* ========================================
+   Garden page backdrop — replaces the universal
+   sky/hills scene while on the Garden page
+   ======================================== */
+
+.garden-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.gb-sky {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 50vh; /* horizon line — matches the top edge of the plot (garden-scene: 0 + 50vh) below */
+  background: linear-gradient(180deg, #8ec6e8 0%, #bfe0ef 55%, #cfe8d0 100%);
+}
+
+.gb-sun {
+  position: absolute;
+  top: 9%;
+  right: 11%;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #F7CE6A;
+  box-shadow: 0 0 46px rgba(247, 206, 106, 0.55);
+}
+
+.gb-cloud {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 100px;
+}
+.gb-cloud::before,
+.gb-cloud::after {
+  content: '';
+  position: absolute;
+  background: inherit;
+  border-radius: 50%;
+}
+.gb-cloud-1 {
+  width: 90px; height: 26px;
+  top: 14%; left: 12%;
+  animation: gbCloudDrift 70s linear infinite;
+}
+.gb-cloud-1::before { width: 42px; height: 36px; top: -20px; left: 14px; }
+.gb-cloud-1::after  { width: 30px; height: 26px; top: -14px; right: 16px; }
+
+.gb-cloud-2 {
+  width: 70px; height: 20px;
+  top: 24%; left: 55%;
+  opacity: 0.85;
+  animation: gbCloudDrift 95s linear infinite 12s;
+}
+.gb-cloud-2::before { width: 32px; height: 26px; top: -14px; left: 10px; }
+.gb-cloud-2::after  { width: 24px; height: 20px; top: -10px; right: 12px; }
+
+@keyframes gbCloudDrift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(140px); }
+}
+
+.gb-butterfly {
+  position: absolute;
+  width: 16px;
+  height: 12px;
+  animation: gbButterflyDrift 15s ease-in-out infinite;
+}
+.gb-butterfly span {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 12px;
+  background: #E8709C;
+  border-radius: 65% 40% 65% 40%;
+}
+.gb-butterfly span:first-child { left: 0;  transform-origin: right center; animation: gbFlutter 0.7s ease-in-out infinite alternate; }
+.gb-butterfly span:last-child  { right: 0; transform-origin: left center;  background: #F0A0BC; animation: gbFlutter 0.7s ease-in-out infinite alternate-reverse; }
+
+@keyframes gbFlutter {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0.35); }
+}
+
+.gb-butterfly-1 { top: 26%; left: 22%; }
+.gb-butterfly-2 { top: 20%; left: 68%; animation-duration: 19s; animation-direction: reverse; }
+
+@keyframes gbButterflyDrift {
+  0%, 100% { transform: translate(0, 0); }
+  25%      { transform: translate(26px, -16px); }
+  50%      { transform: translate(46px, 4px); }
+  75%      { transform: translate(14px, 18px); }
+}
+
+.gb-fence {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 50vh;
+  height: 42px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    #d9c49a 0px, #d9c49a 9px,
+    transparent 9px, transparent 26px
+  );
+  border-top: 4px solid #c2a874;
+  opacity: 0.92;
+}
+
+.gb-lawn {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 50vh;
+  background: linear-gradient(to bottom, #6fae46 0%, #58973a 45%, #3f7a2a 100%);
+}
+.gb-lawn::before {
+  content: '';
+  position: absolute;
+  top: -18px;
+  left: -3%;
+  width: 106%;
+  height: 40px;
+  background: #6fae46;
+  border-radius: 52% 48% 58% 42% / 55% 62% 40% 50%;
+}
+
+@media (max-width: 600px) {
+  .gb-fence  { bottom: 50vh; height: 32px; }
+  .gb-sun    { width: 48px; height: 48px; }
+}
+
+
+/* ========================================
    Sky background + garden ground scene
    ======================================== */
 
@@ -128,39 +267,108 @@ body {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 27vh;
-  height: 56vh;
+  bottom: 0;
+  height: 50vh;
   pointer-events: none;
   z-index: 5;
   overflow: visible;
 }
 
+/* Perspective planting bed — a literal patch of soil narrowing
+   toward the top (far/horizon) and widening toward the bottom
+   (near/foreground), matching the far/mid/near depth rows plants
+   are assigned to in script.js. Sits behind every .garden-plant
+   (which carry z-index 2–4) since this pseudo-element has no
+   z-index of its own and is first in paint order. Purely decorative
+   — pointer-events are already off on the whole .garden-scene. */
+/* Ground-anchored wrapper. bottom is pulled below the scene's own
+   bottom edge, deliberately sinking the plant a bit INTO the grass
+   rather than sitting exactly on the seam — the base doesn't need to
+   touch the literal top pixel of the ground to read as "grounded";
+   sitting a little lower in the green still reads as closer/rooted.
+   The sink grows along with the plant's own --plant-scale so bigger
+   plants (whose few-pixel art/origin mismatch gets multiplied by
+   scale) get pulled down further too, instead of drifting upward. */
 .garden-plant {
   position: absolute;
-  bottom: 0;
-  transform: scale(var(--plant-scale, 1));
-  transform-origin: bottom center;
+  bottom: calc(var(--plant-depth-bottom, 0%) - 14px - (var(--plant-scale, 1) - 1) * 3px);
   pointer-events: auto;
   cursor: default;
-  transition: filter 0.25s ease;
+}
+
+/* Depth rows are drawn with a fixed stacking order (far behind mid
+   behind near), which normally means a "far" plant can end up
+   partly covered by a closer one. On hover, force the hovered plant
+   — and everything inside it, including its label — to the very
+   front of the stack, overriding the inline z-index set in JS, so
+   it (and its description) is always fully visible while inspected. */
+.garden-plant:hover {
+  z-index: 999 !important;
+}
+
+/* The part that actually scales as the plant grows. transform-origin
+   is pinned near the base of the drawn art (not the raw SVG canvas
+   edge, which has empty padding below the shadow), so the plant's
+   visual base stays rooted to the ground instead of drifting upward
+   as it gets bigger. */
+.plant-visual {
+  position: relative;
+  transform: scale(var(--plant-scale, 1));
+  transform-origin: center 97%;
+  transition: transform 1.1s cubic-bezier(0.34, 1.2, 0.4, 1), filter 0.25s ease;
   filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.30));
 }
 
-.garden-plant:hover {
+.garden-plant:hover .plant-visual {
   filter: brightness(1.12) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.30)) drop-shadow(0 0 12px rgba(242, 184, 75, 0.45));
 }
 
+/* Discrete growth — stacked SVG stages that crossfade into each
+   other when a task crosses a milestone day (2 / 15 / 60), rather
+   than the same shape just stretching bigger. */
+.plant-stage-crossfade {
+  position: relative;
+  width: 120px;
+  height: 195px;
+}
+
+.plant-stage-layer {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.8s ease;
+}
+
 .plant-label-tag {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
   text-align: center;
   margin-top: 7px;
   pointer-events: none;
-  white-space: nowrap;
+  white-space: normal;
+  width: 130px;
+}
+
+.garden-empty-msg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 82%;
+  max-width: 340px;
+  text-align: center;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.95rem;
+  color: #e8dfc8;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
 }
 
 .plant-label-name {
   display: block;
   font-family: 'Fredoka', sans-serif;
-  font-size: 1.05rem;
+  font-size: 0.80rem;
   font-weight: 600;
   color: #ffffff;
   text-shadow:
@@ -173,7 +381,7 @@ body {
 .plant-label-streak {
   display: block;
   font-family: 'Nunito', sans-serif;
-  font-size: 0.86rem;
+  font-size: 0.66rem;
   font-weight: 700;
   color: #F2B84B;
   text-shadow:
@@ -184,18 +392,17 @@ body {
 }
 
 @media (max-width: 600px) {
-  .garden-scene {
-    bottom: 27vh;
-    height: 52vh;
-  }
   .garden-plant {
+    bottom: calc(var(--plant-depth-bottom, 0%) - 8px - (var(--plant-scale, 1) - 1) * 1.8px);
+  }
+  .plant-visual {
     transform: scale(calc(var(--plant-scale, 1) * 0.60));
   }
   .plant-label-name {
-    font-size: 0.80rem;
+    font-size: 0.64rem;
   }
   .plant-label-streak {
-    font-size: 0.66rem;
+    font-size: 0.54rem;
   }
 }
 
@@ -1215,5 +1422,275 @@ body {
   .task-add-section {
     border-radius: 0 0 14px 14px;
     padding: 12px 12px 14px;
+  }
+}
+
+
+/* ========================================
+   Developer mode — editable growth inspector
+   ======================================== */
+
+.dev-toggle-btn {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 9998;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(251, 247, 238, 0.25);
+  background: rgba(20, 16, 10, 0.80);
+  color: #e8dfc8;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+  transition: transform 0.16s, border-color 0.16s, background 0.16s;
+}
+
+.dev-toggle-btn:hover {
+  transform: translateY(-2px);
+  border-color: rgba(242, 184, 75, 0.55);
+}
+
+.dev-toggle-btn.active {
+  background: #F2B84B;
+  color: #2E2A22;
+  border-color: #F2B84B;
+}
+
+.dev-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 380px;
+  max-width: 92vw;
+  z-index: 9999;
+  background: rgba(14, 12, 8, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-left: 1px solid rgba(251, 247, 238, 0.14);
+  color: #e8dfc8;
+  font-family: 'Nunito', sans-serif;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -8px 0 34px rgba(0, 0, 0, 0.5);
+}
+
+.dev-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(251, 247, 238, 0.14);
+  flex-shrink: 0;
+}
+
+.dev-panel-title {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #F2B84B;
+  letter-spacing: 0.03em;
+}
+
+.dev-panel-close {
+  background: none;
+  border: none;
+  color: #e8dfc8;
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 0.65;
+  padding: 2px 6px;
+}
+
+.dev-panel-close:hover {
+  opacity: 1;
+}
+
+.dev-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(251, 247, 238, 0.10);
+  flex-shrink: 0;
+}
+
+.dev-btn {
+  padding: 6px 10px;
+  border-radius: 7px;
+  border: 1px solid rgba(251, 247, 238, 0.22);
+  background: rgba(251, 247, 238, 0.06);
+  color: #e8dfc8;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.dev-btn:hover {
+  background: rgba(242, 184, 75, 0.16);
+  border-color: rgba(242, 184, 75, 0.45);
+}
+
+.dev-panel-body {
+  padding: 14px 16px 28px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.dev-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.76rem;
+  color: #b0a898;
+  margin-bottom: 8px;
+}
+
+.dev-note {
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: #9a836a;
+  font-style: italic;
+  margin: 0 0 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(251, 247, 238, 0.10);
+}
+
+.dev-task-row {
+  background: rgba(251, 247, 238, 0.05);
+  border: 1px solid rgba(251, 247, 238, 0.12);
+  border-radius: 10px;
+  padding: 10px 11px 11px;
+  margin-bottom: 10px;
+}
+
+.dev-task-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+.dev-task-title {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.dev-task-done {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  color: #b0a898;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dev-task-done input {
+  accent-color: #F2B84B;
+  cursor: pointer;
+}
+
+.dev-field-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.dev-field-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #9a836a;
+  min-width: 76px;
+}
+
+.dev-number-input {
+  width: 52px;
+  padding: 4px 5px;
+  border-radius: 6px;
+  border: 1px solid rgba(251, 247, 238, 0.25);
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.dev-number-input:focus {
+  outline: none;
+  border-color: #F2B84B;
+}
+
+.dev-quick-btn {
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(251, 247, 238, 0.18);
+  background: rgba(251, 247, 238, 0.06);
+  color: #e8dfc8;
+  font-size: 0.70rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s;
+}
+
+.dev-quick-btn:hover {
+  background: rgba(242, 184, 75, 0.20);
+  border-color: rgba(242, 184, 75, 0.5);
+}
+
+.dev-milestones .dev-quick-btn {
+  background: rgba(58, 107, 74, 0.18);
+  border-color: rgba(143, 191, 127, 0.30);
+}
+
+.dev-milestones .dev-quick-btn:hover {
+  background: rgba(143, 191, 127, 0.28);
+  border-color: rgba(143, 191, 127, 0.55);
+}
+
+.dev-task-readout {
+  font-size: 0.70rem;
+  color: #F2B84B;
+  margin-top: 6px;
+  padding-top: 7px;
+  border-top: 1px dashed rgba(251, 247, 238, 0.12);
+}
+
+.dev-empty {
+  text-align: center;
+  font-style: italic;
+  color: #9a836a;
+  font-size: 0.82rem;
+  margin-top: 20px;
+}
+
+@media (max-width: 600px) {
+  .dev-panel {
+    width: 100%;
+    max-width: 100%;
+    top: auto;
+    height: 75vh;
+    border-left: none;
+    border-top: 1px solid rgba(251, 247, 238, 0.14);
+  }
+  .dev-toggle-btn {
+    right: 14px;
+    bottom: 14px;
+    width: 42px;
+    height: 42px;
+    font-size: 1.1rem;
   }
 }

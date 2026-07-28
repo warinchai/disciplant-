@@ -62,6 +62,20 @@
     </div>
   </div>
 
+  <!-- Garden page backdrop — a simple daytime yard, only shown on the
+       Garden page. Replaces the universal time-of-day sky/hills scene
+       (#sky) for this page, which is hidden instead via JS. -->
+  <div id="gardenBackdrop" class="garden-backdrop hidden">
+    <div class="gb-sky"></div>
+    <div class="gb-sun"></div>
+    <div class="gb-cloud gb-cloud-1"></div>
+    <div class="gb-cloud gb-cloud-2"></div>
+    <div class="gb-butterfly gb-butterfly-1"><span></span><span></span></div>
+    <div class="gb-butterfly gb-butterfly-2"><span></span><span></span></div>
+    <div class="gb-fence"></div>
+    <div class="gb-lawn"></div>
+  </div>
+
   <!-- Garden scene — SVG plants, fixed overlay, visible only on Garden page -->
   <div id="gardenScene" class="garden-scene hidden"></div>
 
@@ -155,6 +169,24 @@
 
     </div>
   </div>
+
+  <!-- ================================================
+       DEVELOPER MODE — live state inspector
+       Toggle with the 🛠 button or Ctrl/Cmd+Shift+D
+       ================================================ -->
+  <div id="devPanel" class="dev-panel hidden">
+    <div class="dev-panel-header">
+      <span class="dev-panel-title">🛠 Developer Mode</span>
+      <button id="devPanelClose" class="dev-panel-close" aria-label="Close developer panel">✕</button>
+    </div>
+    <div class="dev-panel-actions">
+      <button id="devActionRollover" class="dev-btn">Simulate day rollover</button>
+      <button id="devActionLog" class="dev-btn">Log to console</button>
+      <button id="devActionCopy" class="dev-btn">Copy state JSON</button>
+    </div>
+    <div id="devPanelBody" class="dev-panel-body"></div>
+  </div>
+  <button id="devModeToggle" class="dev-toggle-btn" title="Developer mode (Ctrl/Cmd+Shift+D)">🛠</button>
 
   <!-- Firebase SDKs (compat version) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
