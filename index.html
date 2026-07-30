@@ -66,8 +66,10 @@
        Garden page. Replaces the universal time-of-day sky/hills scene
        (#sky) for this page, which is hidden instead via JS. -->
   <div id="gardenBackdrop" class="garden-backdrop hidden">
-    <div class="gb-sky"></div>
-    <div class="gb-sun"></div>
+    <div id="gbSky" class="gb-sky"></div>
+    <div class="gb-stars"></div>
+    <div id="gbSun" class="gb-sun"></div>
+    <div id="gbMoon" class="gb-moon hidden"></div>
     <div class="gb-cloud gb-cloud-1"></div>
     <div class="gb-cloud gb-cloud-2"></div>
     <div class="gb-butterfly gb-butterfly-1"><span></span><span></span></div>
@@ -76,8 +78,16 @@
     <div class="gb-lawn"></div>
   </div>
 
-  <!-- Garden scene — SVG plants, fixed overlay, visible only on Garden page -->
-  <div id="gardenScene" class="garden-scene hidden"></div>
+  <!-- Garden scene — SVG plants, horizontally scrollable overlay,
+       visible only on Garden page. #gardenSceneTrack is 3x the
+       viewport width so more plants can spread out; #gardenScene
+       itself is the scrolling viewport and its own scroll position
+       is never disturbed by re-renders (only the track's children
+       are replaced on each render). -->
+  <div id="gardenScene" class="garden-scene hidden">
+    <p id="gardenEmptyMsg" class="garden-empty-msg hidden">🌱 Your garden is empty — add a task to plant your first seed.</p>
+    <div id="gardenSceneTrack" class="garden-scene-track"></div>
+  </div>
 
   <!-- ================================================
        PAGE: HOME

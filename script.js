@@ -200,6 +200,11 @@ let currentTaskTab   = 'all';
 let currentGardenTab = 'daily';
 let authReady        = false;
 
+// Set true whenever we navigate TO the garden page, so the next
+// renderGarden() call knows to center the (horizontally scrollable)
+// garden scene instead of leaving it wherever it last scrolled to.
+let pendingGardenScrollCenter = false;
+
 
 // ============================================
 // DOM references
@@ -213,9 +218,13 @@ const categorySelect    = document.getElementById('categorySelect');
 const taskList          = document.getElementById('taskList');
 const emptyState        = document.getElementById('emptyState');
 const gardenSceneEl     = document.getElementById('gardenScene');
+const gardenTrackEl     = document.getElementById('gardenSceneTrack');
 const gardenBackdropEl  = document.getElementById('gardenBackdrop');
 const skyEl             = document.getElementById('sky');
 const skyBodyEl         = document.getElementById('skyBody');
+const gbSkyEl           = document.getElementById('gbSky');
+const gbSunEl           = document.getElementById('gbSun');
+const gbMoonEl          = document.getElementById('gbMoon');
 
 // Page containers
 const pageHomeEl   = document.getElementById('page-home');
@@ -231,6 +240,7 @@ const pageTasksEl  = document.getElementById('page-tasks');
     tasksLoadingState: tasksLoadingState,
     mainContent:       mainContent,
     gardenSceneEl:     gardenSceneEl,
+    gardenTrackEl:     gardenTrackEl,
     gardenBackdropEl:  gardenBackdropEl,
     taskForm:          taskForm,
     taskInput:         taskInput,
@@ -392,6 +402,10 @@ function navigateTo(page) {
 
   if (page === 'garden') {
     if (loadingState) loadingState.classList.toggle('hidden', authReady);
+    // Center the garden scene's horizontal scroll on this visit —
+    // consumed by renderGarden() below (or later, once auth/data is
+    // ready, whenever it next runs).
+    pendingGardenScrollCenter = true;
     if (authReady) renderGarden();
   }
 
@@ -1277,9 +1291,10 @@ function hasCustomPosition(task) {
 // page on a wide screen, while narrower screens pull the edges in
 // just enough to keep every title readable.
 function clampCenterPct(pct) {
-  var viewportW   = (typeof window !== 'undefined' && window.innerWidth) || 800;
+  var trackW      = (gardenTrackEl && gardenTrackEl.getBoundingClientRect().width) ||
+                     ((typeof window !== 'undefined' && window.innerWidth * 3) || 2400);
   var labelHalfPx = 68; // half of .plant-label-tag's 130px width, plus a small buffer
-  var marginPct   = Math.min(30, (labelHalfPx / viewportW) * 100);
+  var marginPct   = Math.min(30, (labelHalfPx / trackW) * 100);
   return Math.max(marginPct, Math.min(100 - marginPct, pct));
 }
 
@@ -1500,17 +1515,34 @@ function buildPlantVisual(task, cat, stageIdx) {
   return container;
 }
 
+// Centers the garden scene's horizontal scroll position on its full
+// (3x-viewport-wide) track. Deferred a frame so it runs after the
+// browser has laid out this render's plants and recalculated
+// scrollWidth — reading it synchronously right after an innerHTML
+// swap can still reflect the previous render's width.
+function centerGardenScroll() {
+  requestAnimationFrame(function () {
+    if (!gardenSceneEl) return;
+    gardenSceneEl.scrollLeft = (gardenSceneEl.scrollWidth - gardenSceneEl.clientWidth) / 2;
+  });
+}
+
 function renderGarden() {
-  if (!gardenSceneEl) return;
-  gardenSceneEl.innerHTML = '';
+  if (!gardenSceneEl || !gardenTrackEl) return;
+  gardenTrackEl.innerHTML = '';
+
+  var shouldCenterScroll = pendingGardenScrollCenter;
+  pendingGardenScrollCenter = false;
+
+  var emptyMsgEl = document.getElementById('gardenEmptyMsg');
 
   if (tasks.length === 0) {
-    var emptyMsg       = document.createElement('p');
-    emptyMsg.className = 'garden-empty-msg';
-    emptyMsg.textContent = '🌱 Your garden is empty — add a task to plant your first seed.';
-    gardenSceneEl.appendChild(emptyMsg);
+    if (emptyMsgEl) emptyMsgEl.classList.remove('hidden');
+    // Nothing to scroll to yet — keep the message centered in view.
+    gardenSceneEl.scrollLeft = 0;
     return;
   }
+  if (emptyMsgEl) emptyMsgEl.classList.add('hidden');
 
   // Highest available art stage index — same length across every
   // category's PLANT_SVG_DATA array (4 stages: 0–3).
@@ -1616,8 +1648,10 @@ function renderGarden() {
 
     setupPlantDrag(wrap, task.id);
 
-    gardenSceneEl.appendChild(wrap);
+    gardenTrackEl.appendChild(wrap);
   });
+
+  if (shouldCenterScroll) centerGardenScroll();
 }
 
 // Escapes a task's free-text text before it's inserted via innerHTML
@@ -1671,6 +1705,16 @@ function setupPlantDrag(wrap, taskId) {
     window.addEventListener('pointerup', onUp);
   });
 
+  // Double-click/double-tap picks the plant up immediately — no
+  // holding required. It follows the pointer freely and the next
+  // click anywhere drops it in place.
+  wrap.addEventListener('dblclick', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (activePlantDrag) return; // something's already being carried
+    beginPlantDrag(taskId, wrap, null, true);
+  });
+
   // A plant is meant to be pressed-and-held, not dragged natively —
   // this stops touch scrolling/selection/callout menus from
   // hijacking the long-press gesture.
@@ -1679,7 +1723,7 @@ function setupPlantDrag(wrap, taskId) {
   wrap.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 }
 
-function beginPlantDrag(taskId, wrap, pointerId) {
+function beginPlantDrag(taskId, wrap, pointerId, floating) {
   var task = tasks.find(function (t) { return t.id === taskId; });
   if (!task || !gardenSceneEl) return;
 
@@ -1687,26 +1731,35 @@ function beginPlantDrag(taskId, wrap, pointerId) {
     taskId:   taskId,
     wrap:     wrap,
     moved:    false,
+    floating: !!floating,
     pendingX: (typeof task.posX === 'number') ? task.posX : (parseFloat(wrap.style.left) || 50),
     pendingY: (typeof task.posY === 'number') ? task.posY : DEFAULT_BOTTOM_PCT,
   };
 
   wrap.classList.add('dragging');
   wrap.style.zIndex = 9990;
-  try { wrap.setPointerCapture(pointerId); } catch (e) {}
 
   document.addEventListener('pointermove', onPlantDragMove);
-  document.addEventListener('pointerup', onPlantDragEnd);
-  document.addEventListener('pointercancel', onPlantDragEnd);
+
+  if (floating) {
+    // Picked up via double-click — the mouse button isn't held down,
+    // so there's no pointerup to end on. Instead, follow the pointer
+    // on plain movement and finalize on the next click anywhere.
+    document.addEventListener('click', onPlantDragEnd, { capture: true, once: true });
+  } else {
+    try { wrap.setPointerCapture(pointerId); } catch (e) {}
+    document.addEventListener('pointerup', onPlantDragEnd);
+    document.addEventListener('pointercancel', onPlantDragEnd);
+  }
 }
 
 function onPlantDragMove(e) {
-  if (!activePlantDrag || !gardenSceneEl) return;
+  if (!activePlantDrag || !gardenTrackEl) return;
   activePlantDrag.moved = true;
 
-  var rect = gardenSceneEl.getBoundingClientRect();
-  // Free placement: track the pointer directly, anywhere in the
-  // scene — no row/band to snap to.
+  var rect = gardenTrackEl.getBoundingClientRect();
+  // Free placement: track the pointer directly, anywhere across the
+  // (scrollable, 3x-wide) track — no row/band to snap to.
   var xPct = clampCenterPct(((e.clientX - rect.left) / rect.width) * 100);
   var yPct = ((e.clientY - rect.top) / rect.height) * 100;
   var bottomPct = clampBottomPct(100 - yPct);
@@ -1723,10 +1776,19 @@ function onPlantDragMove(e) {
   wrap.style.setProperty('--plant-scale', totalScale.toFixed(3));
 }
 
-function onPlantDragEnd() {
+function onPlantDragEnd(e) {
+  if (e && e.type === 'click') {
+    // This click is the "drop" for a floating carry, not a real
+    // click on whatever happens to be underneath — don't let it
+    // also trigger that element's own click behavior.
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
   document.removeEventListener('pointermove', onPlantDragMove);
   document.removeEventListener('pointerup', onPlantDragEnd);
   document.removeEventListener('pointercancel', onPlantDragEnd);
+  document.removeEventListener('click', onPlantDragEnd, { capture: true });
 
   if (!activePlantDrag) return;
 
@@ -1742,12 +1804,10 @@ function onPlantDragEnd() {
     // Dropped somewhere new — lock in the free (x, y) position.
     task.posX = drag.pendingX;
     task.posY = drag.pendingY;
-  } else {
-    // Pressed and held, then let go without moving — reset this
-    // plant back to its automatic spot.
-    task.posX = null;
-    task.posY = null;
   }
+  // else: released without moving (a tap, or a press-and-hold let go
+  // in place) — leave the plant's position exactly as it was. No
+  // reset to the automatic spot.
 
   saveData();
   render();
@@ -1813,6 +1873,17 @@ function updateSky() {
   // Toggle ambient-detail visibility based on time of day
   skyEl.classList.toggle('sky-day',   isDay);
   skyEl.classList.toggle('sky-night', !isDay);
+
+  // Garden page backdrop — mirror the same live gradient/day-night
+  // state here so the garden's sky isn't stuck looking like a fixed
+  // midday scene while the home page sky moves with real time.
+  if (gbSkyEl) {
+    gbSkyEl.style.background =
+      'linear-gradient(180deg, ' + topColor + ' 0%, ' + botColor + ' 55%, #cfe8d0 100%)';
+  }
+  if (gardenBackdropEl) gardenBackdropEl.classList.toggle('gb-night', !isDay);
+  if (gbSunEl)  gbSunEl.classList.toggle('hidden',  !isDay);
+  if (gbMoonEl) gbMoonEl.classList.toggle('hidden', isDay);
 
   var arcProgress;
   if (isDay) {

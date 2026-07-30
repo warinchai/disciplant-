@@ -60,6 +60,91 @@ body {
   border-radius: 50%;
   background: #F7CE6A;
   box-shadow: 0 0 46px rgba(247, 206, 106, 0.55);
+  transition: opacity 1.5s ease;
+}
+
+/* --- Garden backdrop moon (shown instead of the sun at night) --- */
+.gb-moon {
+  position: absolute;
+  top: 9%;
+  right: 11%;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #e9e6da;
+  box-shadow: 0 0 34px rgba(233, 230, 218, 0.45);
+  transition: opacity 1.5s ease;
+}
+.gb-moon::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: -6px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #bfe0ef; /* matches the daytime sky base so it reads as a crescent cut */
+  opacity: 0;
+}
+
+/* --- Garden backdrop stars (night only) --- */
+.gb-stars {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 50vh;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 2.5s ease;
+  overflow: hidden;
+}
+.gb-stars::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.9);
+  box-shadow:
+    8vw 18vh rgba(255,255,255,0.85),
+    18vw 35vh rgba(255,255,255,0.6),
+    27vw 12vh rgba(255,255,255,0.75),
+    38vw 28vh rgba(255,255,255,0.9),
+    47vw 42vh rgba(255,255,255,0.55),
+    58vw 15vh rgba(255,255,255,0.8),
+    67vw 33vh rgba(255,255,255,0.65),
+    76vw 20vh rgba(255,255,255,0.85),
+    85vw 40vh rgba(255,255,255,0.55),
+    93vw 22vh rgba(255,255,255,0.75),
+    13vw 55vh rgba(255,255,255,0.6),
+    32vw 60vh rgba(255,255,255,0.7),
+    52vw 58vh rgba(255,255,255,0.55),
+    71vw 62vh rgba(255,255,255,0.7),
+    88vw 57vh rgba(255,255,255,0.6);
+}
+
+/* Night state — toggled on #gardenBackdrop by JS to match real time */
+.garden-backdrop.gb-night .gb-stars {
+  opacity: 1;
+}
+.garden-backdrop.gb-night .gb-cloud,
+.garden-backdrop.gb-night .gb-butterfly {
+  opacity: 0 !important;
+  transition: opacity 1.5s ease;
+}
+.garden-backdrop.gb-night .gb-lawn {
+  filter: brightness(0.45) saturate(0.85);
+  transition: filter 1.5s ease;
+}
+.garden-backdrop.gb-night .gb-fence {
+  filter: brightness(0.55);
+  transition: filter 1.5s ease;
+}
+.gb-lawn,
+.gb-fence {
+  transition: filter 1.5s ease;
 }
 
 .gb-cloud {
@@ -268,10 +353,41 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 50vh;
-  pointer-events: none;
+  height: 100vh;
   z-index: 5;
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: flex;
+  align-items: flex-end;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(242, 184, 75, 0.55) transparent;
+}
+
+.garden-scene::-webkit-scrollbar {
+  height: 8px;
+}
+.garden-scene::-webkit-scrollbar-track {
+  background: transparent;
+}
+.garden-scene::-webkit-scrollbar-thumb {
+  background: rgba(242, 184, 75, 0.5);
+  border-radius: 8px;
+}
+.garden-scene::-webkit-scrollbar-thumb:hover {
+  background: rgba(242, 184, 75, 0.75);
+}
+
+/* The actual wide canvas plants are placed in — 3x the visible
+   width, so there's real room to spread more plants out. Percentage
+   left/bottom values on .garden-plant are relative to THIS box, not
+   the viewport, so a plant's x-position is stable no matter how the
+   surrounding viewport is scrolled. */
+.garden-scene-track {
+  position: relative;
+  width: 300%;
+  height: 50vh;
+  flex-shrink: 0;
 }
 
 /* Perspective planting bed — a literal patch of soil narrowing
@@ -367,9 +483,9 @@ body {
 
 .garden-empty-msg {
   position: absolute;
-  top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  bottom: 25vh;
+  transform: translate(-50%, 50%);
   width: 82%;
   max-width: 340px;
   text-align: center;
