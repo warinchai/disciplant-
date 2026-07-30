@@ -1636,7 +1636,7 @@ function escapeHtml(str) {
 // moved resets that plant back to its automatic position.
 // ============================================
 
-var LONG_PRESS_MS      = 380; // hold this long before a drag begins
+var LONG_PRESS_MS      = 50; // hold this long before a drag begins
 var DRAG_CANCEL_DIST_PX = 8;   // finger/mouse wobble tolerance before the hold is armed
 
 var activePlantDrag = null; // { taskId, wrap, moved, pendingX, pendingY }
