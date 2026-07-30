@@ -516,24 +516,31 @@ function applyDayBoundaries() {
   var changed = false;
 
   if (lastResetDate !== today) {
+    var gap = lastResetDate ? dayGap(lastResetDate, today) : null;
+
     tasks.forEach(function (task) {
+      // gap === 1: task.completed still reflects "yesterday" — if it
+      // wasn't done, that day was missed, so the streak breaks now.
+      // gap > 1 (or no prior reset date at all): at least one full
+      // day passed with no rollover recorded, which can only mean it
+      // was missed — the streak always breaks in that case too.
+      var survivedYesterday = (gap === 1) && task.completed;
+
+      if (!survivedYesterday && task.streak > 0) {
+        task.streak = 0;
+        changed = true;
+      }
       if (task.completed) {
         task.completed = false;
         changed = true;
       }
     });
+
     lastResetDate = today;
     changed = true;
   }
 
   tasks.forEach(function (task) {
-    if (task.lastCleanDate && task.lastCleanDate !== today) {
-      var gap = dayGap(task.lastCleanDate, today);
-      if (gap > 1 && task.streak > 0) {
-        task.streak = 0;
-        changed     = true;
-      }
-    }
     if (task.streak < 0) { task.streak = 0; changed = true; }
   });
 
@@ -580,6 +587,11 @@ auth.onAuthStateChanged(function (user) {
               lastCleanDate:     t.lastCleanDate        || null,
               prevLastCleanDate: t.prevLastCleanDate    || null,
               totalGrowthDays:    t.totalGrowthDays       || 0,
+              // Manual placement override — set when the user drags
+              // this plant to a spot themselves. null/undefined means
+              // "use the automatic layout" (see computePlantLayout).
+              posX:              (typeof t.posX === 'number') ? t.posX : null,
+              posY:              (typeof t.posY === 'number') ? t.posY : null,
             };
           });
           lastResetDate = data.lastResetDate || null;
@@ -591,6 +603,7 @@ auth.onAuthStateChanged(function (user) {
         nextId = getNextId(tasks);
 
         var anyChanged = applyDayBoundaries();
+        if (assignPermanentPositions()) anyChanged = true;
         if (anyChanged) saveData();
 
         render();
@@ -636,6 +649,8 @@ function saveData() {
       lastCleanDate:     t.lastCleanDate || null,
       prevLastCleanDate: t.prevLastCleanDate || null,
       totalGrowthDays:    t.totalGrowthDays || 0,
+      posX:              (typeof t.posX === 'number') ? t.posX : null,
+      posY:              (typeof t.posY === 'number') ? t.posY : null,
     };
   });
   db.collection('gardens').doc(currentUserId).set({
@@ -670,9 +685,12 @@ taskForm.addEventListener('submit', function (event) {
     lastCleanDate:     null,
     prevLastCleanDate: null,
     totalGrowthDays:    0,
+    posX:              null,
+    posY:              null,
   });
   nextId++;
   taskInput.value = '';
+  assignPermanentPositions();
   saveData();
   render();
 });
@@ -685,31 +703,24 @@ function toggleTask(taskId, newChecked) {
   var task = tasks.find(function (t) { return t.id === taskId; });
   if (!task) return;
 
-  var today = getTodayString();
-  task.completed = newChecked;
+  // Compare against the PREVIOUS completed state, not a date string.
+  // completed and "credit given" are always toggled in lockstep by
+  // this function, so "was it already completed" is a perfectly
+  // reliable signal for "was today's credit already given" — and
+  // unlike comparing lastCleanDate to today's date string, it can't
+  // be thrown off by the dev rollover simulation, timezone edge
+  // cases, or any other date-comparison mismatch.
+  var wasCompleted = task.completed;
+  task.completed   = newChecked;
 
-  if (newChecked) {
-    // Completing the task today grows both streak and size —
-    // but only once per calendar day (no double-counting).
-    if (task.lastCleanDate !== today) {
-      task.prevLastCleanDate = task.lastCleanDate || null;
-      task.lastCleanDate     = today;
-      task.streak            = (task.streak || 0) + 1;
-      task.totalGrowthDays   = (task.totalGrowthDays || 0) + 1;
-    }
-  } else {
-    // Unchecking today's completion undoes TODAY's credit for both
-    // streak and size. This only fires if today is the day that was
-    // just credited (lastCleanDate === today) — once the calendar
-    // day rolls over, applyDayBoundaries() locks that day in and
-    // this branch can no longer touch it, so past days are never
-    // retroactively undone, only the box you just checked.
-    if (task.lastCleanDate === today) {
-      task.streak            = Math.max(0, (task.streak || 0) - 1);
-      task.totalGrowthDays   = Math.max(0, (task.totalGrowthDays || 0) - 1);
-      task.lastCleanDate     = task.prevLastCleanDate || null;
-      task.prevLastCleanDate = null;
-    }
+  if (newChecked && !wasCompleted) {
+    // Fresh completion — grow both streak and size, once.
+    task.streak          = (task.streak || 0) + 1;
+    task.totalGrowthDays = (task.totalGrowthDays || 0) + 1;
+  } else if (!newChecked && wasCompleted) {
+    // Undoing a completion — reverse today's credit for both.
+    task.streak          = Math.max(0, (task.streak || 0) - 1);
+    task.totalGrowthDays = Math.max(0, (task.totalGrowthDays || 0) - 1);
   }
 
   saveData();
@@ -956,65 +967,102 @@ var PLANT_SVG_DATA = {
 
   // ---- LAVENDER (Sleep) ----
   sleep: [
-    // Stage 0: Tiny seed mound
+    // Stage 0: Teardrop bud breaking soil, with a soft inner sheen
     '<ellipse cx="40" cy="121" rx="10" ry="3" fill="rgba(0,0,0,0.12)"/>' +
-    '<ellipse cx="40" cy="116" rx="5" ry="5.5" fill="#A0A0D8"/>' +
-    '<ellipse cx="40" cy="112" rx="3.5" ry="4" fill="#8080C0"/>',
+    '<path d="M40,120 C35.5,112 36.5,104 40,97 C43.5,104 44.5,112 40,120 Z" fill="#8C6ED0"/>' +
+    '<path d="M40,119 C37,113 37.5,106 40,100 C42,106 42.5,113 40,119 Z" fill="#C6B4F0" opacity="0.55"/>' +
+    '<ellipse cx="40" cy="99" rx="3" ry="3.8" fill="#B49CE8"/>' +
+    '<ellipse cx="39" cy="97.5" rx="1.2" ry="1.6" fill="rgba(255,255,255,0.5)"/>',
 
-    // Stage 1: Single stem + leaves + small spike
+    // Stage 1: One stem, two pointed basal leaves, a short two-level spike
     '<ellipse cx="40" cy="122" rx="13" ry="3.5" fill="rgba(0,0,0,0.12)"/>' +
-    '<rect x="39.5" y="93" width="1.5" height="29" rx="0.75" fill="#6A8A50"/>' +
-    '<ellipse cx="32" cy="107" rx="8" ry="3.5" fill="#7A9A60" transform="rotate(-15,32,107)"/>' +
-    '<ellipse cx="48" cy="103" rx="8" ry="3.5" fill="#8FAF70" transform="rotate(15,48,103)"/>' +
-    '<rect x="39" y="85" width="2" height="12" rx="1" fill="#7878C8"/>' +
-    '<ellipse cx="40" cy="84" rx="4.5" ry="6" fill="#9090D8"/>' +
-    '<ellipse cx="40" cy="80" rx="3" ry="4.5" fill="#A8A8E8"/>',
+    '<path d="M40,120 C33,116.5 28,109 27,99.5 C33.5,102.5 39,109.5 40,120 Z" fill="#6FAF52"/>' +
+    '<path d="M39.3,118 C35.3,112.5 31.3,105.5 28.3,100.3" stroke="#4F8A3E" stroke-width="0.9" fill="none" opacity="0.55"/>' +
+    '<path d="M40,120 C47,115.5 51,108 52,98.5 C46.5,101.5 41,108.5 40,120 Z" fill="#8FCB6A"/>' +
+    '<path d="M40.7,118 C44.6,112.7 48.4,105.9 51.2,100.6" stroke="#4F8A3E" stroke-width="0.9" fill="none" opacity="0.45"/>' +
+    '<rect x="39.3" y="82" width="1.4" height="38" rx="0.7" fill="#4B3B78"/>' +
+    '<ellipse cx="36" cy="95" rx="5" ry="7" fill="#8C6ED0" transform="rotate(-25,36,95)"/>' +
+    '<ellipse cx="44" cy="95" rx="5" ry="7" fill="#A88CE0" transform="rotate(25,44,95)"/>' +
+    '<ellipse cx="37" cy="87" rx="4" ry="6" fill="#A88CE0" transform="rotate(-20,37,87)"/>' +
+    '<ellipse cx="43" cy="87" rx="4" ry="6" fill="#8C6ED0" transform="rotate(20,43,87)"/>' +
+    '<ellipse cx="40" cy="80" rx="3" ry="4.5" fill="#B49CE8"/>' +
+    '<ellipse cx="39" cy="78.5" rx="1.2" ry="1.8" fill="rgba(255,255,255,0.5)"/>',
 
-    // Stage 2: Multi-stem small bush
+    // Stage 2: Three stems (center + two shorter fanning sides), fuller basal fan
     '<ellipse cx="40" cy="122" rx="19" ry="4.5" fill="rgba(0,0,0,0.14)"/>' +
-    '<rect x="35" y="84" width="1.5" height="38" rx="0.75" fill="#6A8A50"/>' +
-    '<rect x="40" y="79" width="1.5" height="43" rx="0.75" fill="#6A8A50"/>' +
-    '<rect x="45" y="85" width="1.5" height="37" rx="0.75" fill="#6A8A50"/>' +
-    '<ellipse cx="27" cy="100" rx="10" ry="4" fill="#7A9A60" transform="rotate(-15,27,100)"/>' +
-    '<ellipse cx="53" cy="97" rx="10" ry="4" fill="#8FAF70" transform="rotate(15,53,97)"/>' +
-    '<rect x="34" y="70" width="2" height="16" rx="1" fill="#7878C8"/>' +
-    '<ellipse cx="35" cy="69" rx="5" ry="8" fill="#9090D8"/>' +
-    '<rect x="39.5" y="63" width="2" height="20" rx="1" fill="#8080C8"/>' +
-    '<ellipse cx="40.5" cy="62" rx="5.5" ry="9" fill="#9898E0"/>' +
-    '<rect x="44.5" y="71" width="2" height="16" rx="1" fill="#7878C8"/>' +
-    '<ellipse cx="45.5" cy="70" rx="5" ry="8" fill="#8888D0"/>' +
-    '<ellipse cx="35" cy="62" rx="3.5" ry="5.5" fill="#B0B0F0"/>' +
-    '<ellipse cx="40.5" cy="54" rx="4" ry="6" fill="#B8B8F8"/>' +
-    '<ellipse cx="45.5" cy="63" rx="3.5" ry="5.5" fill="#B0B0F0"/>',
+    '<path d="M40,119 C31,114 24,105 22,93 C31,97 38,106 40,119 Z" fill="#6FAF52"/>' +
+    '<path d="M40,119 C34.5,114 29.5,107.5 27.5,99 C33.5,102 39,109.5 40,119 Z" fill="#4F8A3E"/>' +
+    '<path d="M40,119 C45.5,114 50.5,107.5 52.5,99 C46.5,102 41,109.5 40,119 Z" fill="#6FAF52"/>' +
+    '<path d="M40,119 C49,114 56,105 58,93 C49,97 42,106 40,119 Z" fill="#8FCB6A"/>' +
+    '<rect x="39.3" y="70" width="1.4" height="49" rx="0.7" fill="#4B3B78"/>' +
+    '<ellipse cx="35" cy="95" rx="6" ry="9" fill="#8C6ED0" transform="rotate(-26,35,95)"/>' +
+    '<ellipse cx="45" cy="95" rx="6" ry="9" fill="#A88CE0" transform="rotate(26,45,95)"/>' +
+    '<ellipse cx="36" cy="85" rx="5" ry="7.5" fill="#A88CE0" transform="rotate(-22,36,85)"/>' +
+    '<ellipse cx="44" cy="85" rx="5" ry="7.5" fill="#8C6ED0" transform="rotate(22,44,85)"/>' +
+    '<ellipse cx="37.5" cy="76" rx="3.8" ry="6" fill="#8C6ED0" transform="rotate(-18,37.5,76)"/>' +
+    '<ellipse cx="42.5" cy="76" rx="3.8" ry="6" fill="#A88CE0" transform="rotate(18,42.5,76)"/>' +
+    '<ellipse cx="40" cy="68" rx="3" ry="4.5" fill="#B49CE8"/>' +
+    '<path d="M40,119 Q34,105 32,90" stroke="#4B3B78" stroke-width="2.4" fill="none" stroke-linecap="round"/>' +
+    '<ellipse cx="26" cy="99" rx="4.5" ry="6.5" fill="#A88CE0" transform="rotate(-28,26,99)"/>' +
+    '<ellipse cx="33" cy="99" rx="4.5" ry="6.5" fill="#8C6ED0" transform="rotate(20,33,99)"/>' +
+    '<ellipse cx="28.5" cy="90" rx="3.5" ry="5" fill="#8C6ED0" transform="rotate(-20,28.5,90)"/>' +
+    '<ellipse cx="31.5" cy="86" rx="2.5" ry="3.8" fill="#B49CE8"/>' +
+    '<path d="M40,119 Q46,105 48,88" stroke="#4B3B78" stroke-width="2.4" fill="none" stroke-linecap="round"/>' +
+    '<ellipse cx="53" cy="97" rx="4.5" ry="6.5" fill="#8C6ED0" transform="rotate(28,53,97)"/>' +
+    '<ellipse cx="46" cy="97" rx="4.5" ry="6.5" fill="#A88CE0" transform="rotate(-20,46,97)"/>' +
+    '<ellipse cx="50.5" cy="88" rx="3.5" ry="5" fill="#A88CE0" transform="rotate(20,50.5,88)"/>' +
+    '<ellipse cx="48" cy="84" rx="2.5" ry="3.8" fill="#B49CE8"/>',
 
-    // Stage 3: Full lavender bush
-    '<ellipse cx="40" cy="122" rx="28" ry="5.5" fill="rgba(0,0,0,0.18)"/>' +
-    '<rect x="24" y="87" width="1.5" height="35" rx="0.75" fill="#5A7A40"/>' +
-    '<rect x="30" y="80" width="1.5" height="42" rx="0.75" fill="#5A7A40"/>' +
-    '<rect x="36" y="75" width="1.5" height="47" rx="0.75" fill="#6A8A50"/>' +
-    '<rect x="43" y="73" width="1.5" height="49" rx="0.75" fill="#6A8A50"/>' +
-    '<rect x="49" y="78" width="1.5" height="44" rx="0.75" fill="#5A7A40"/>' +
-    '<rect x="55" y="85" width="1.5" height="37" rx="0.75" fill="#5A7A40"/>' +
-    '<ellipse cx="17" cy="100" rx="12" ry="4.5" fill="#6A9050" transform="rotate(-15,17,100)"/>' +
-    '<ellipse cx="63" cy="98" rx="12" ry="4.5" fill="#7AA060" transform="rotate(15,63,98)"/>' +
-    '<ellipse cx="33" cy="96" rx="10" ry="4" fill="#7A9A60" transform="rotate(-10,33,96)"/>' +
-    '<ellipse cx="50" cy="94" rx="10" ry="4" fill="#8AAF70" transform="rotate(10,50,94)"/>' +
-    '<rect x="23.5" y="66" width="2" height="23" rx="1" fill="#6868B8"/>' +
-    '<ellipse cx="24.5" cy="65" rx="5" ry="9" fill="#8888C8"/>' +
-    '<rect x="29.5" y="57" width="2" height="27" rx="1" fill="#7070C0"/>' +
-    '<ellipse cx="30.5" cy="56" rx="5.5" ry="10" fill="#9090D8"/>' +
-    '<rect x="36" y="51" width="2" height="29" rx="1" fill="#7878C8"/>' +
-    '<ellipse cx="37" cy="50" rx="6" ry="11" fill="#9898E0"/>' +
-    '<rect x="43" y="49" width="2" height="29" rx="1" fill="#7878C8"/>' +
-    '<ellipse cx="44" cy="48" rx="6" ry="11" fill="#9898E0"/>' +
-    '<rect x="50" y="55" width="2" height="27" rx="1" fill="#7070C0"/>' +
-    '<ellipse cx="51" cy="54" rx="5.5" ry="10" fill="#9090D8"/>' +
-    '<rect x="56" y="64" width="2" height="23" rx="1" fill="#6868B8"/>' +
-    '<ellipse cx="57" cy="63" rx="5" ry="9" fill="#8888C8"/>' +
-    '<ellipse cx="37" cy="40" rx="4" ry="7" fill="#B8B8F8"/>' +
-    '<ellipse cx="44" cy="38" rx="4.5" ry="7.5" fill="#C0C0FF"/>' +
-    '<ellipse cx="30.5" cy="47" rx="3.5" ry="6" fill="#B0B0F0"/>' +
-    '<ellipse cx="51" cy="45" rx="3.5" ry="6" fill="#B0B0F0"/>'
+    // Stage 3: Full bush — six-blade basal fan, tall center spike, two
+    // curved side spikes, alternating two-tone petals with sheen highlights
+    // and small bud tufts at each tip (matches the reference illustration).
+    '<ellipse cx="40" cy="122" rx="27" ry="5.5" fill="rgba(0,0,0,0.17)"/>' +
+    '<path d="M40,120 C27,113 17,101 14,85 C26,90 36,102 40,120 Z" fill="#6FAF52"/>' +
+    '<path d="M40,120 C31,114 23,105 20,92 C29,96 37,106 40,120 Z" fill="#4F8A3E"/>' +
+    '<path d="M40,120 C35.5,115 31,108.5 29,100 C34,103 38.5,110 40,120 Z" fill="#6FAF52"/>' +
+    '<path d="M40,120 C44.5,115 49,108.5 51,100 C46,103 41.5,110 40,120 Z" fill="#8FCB6A"/>' +
+    '<path d="M40,120 C49,114 57,105 60,92 C51,96 43,106 40,120 Z" fill="#4F8A3E"/>' +
+    '<path d="M40,120 C53,113 63,101 66,85 C54,90 44,102 40,120 Z" fill="#8FCB6A"/>' +
+    '<path d="M38,116 C29,109 21,99 17,87" stroke="#3E7530" stroke-width="1" fill="none" opacity="0.5"/>' +
+    '<path d="M42,116 C51,109 59,99 63,87" stroke="#3E7530" stroke-width="1" fill="none" opacity="0.5"/>' +
+    '<path d="M40,120 Q26,90 20,60" stroke="#4B3B78" stroke-width="3" fill="none" stroke-linecap="round"/>' +
+    '<ellipse cx="22" cy="95" rx="5.5" ry="8.5" fill="#8C6ED0" transform="rotate(-30,22,95)"/>' +
+    '<ellipse cx="32" cy="95" rx="5.5" ry="8.5" fill="#A88CE0" transform="rotate(30,32,95)"/>' +
+    '<ellipse cx="19.5" cy="83" rx="4.8" ry="7.5" fill="#A88CE0" transform="rotate(-27,19.5,83)"/>' +
+    '<ellipse cx="28.5" cy="83" rx="4.8" ry="7.5" fill="#8C6ED0" transform="rotate(27,28.5,83)"/>' +
+    '<ellipse cx="17.5" cy="71" rx="4" ry="6.5" fill="#8C6ED0" transform="rotate(-24,17.5,71)"/>' +
+    '<ellipse cx="24.5" cy="71" rx="4" ry="6.5" fill="#A88CE0" transform="rotate(24,24.5,71)"/>' +
+    '<ellipse cx="19" cy="61" rx="2.5" ry="4" fill="#B49CE8"/>' +
+    '<path d="M41,120 Q54,92 60,64" stroke="#4B3B78" stroke-width="3" fill="none" stroke-linecap="round"/>' +
+    '<ellipse cx="58" cy="97" rx="5.5" ry="8.5" fill="#A88CE0" transform="rotate(30,58,97)"/>' +
+    '<ellipse cx="48" cy="97" rx="5.5" ry="8.5" fill="#8C6ED0" transform="rotate(-30,48,97)"/>' +
+    '<ellipse cx="60.5" cy="85" rx="4.8" ry="7.5" fill="#8C6ED0" transform="rotate(27,60.5,85)"/>' +
+    '<ellipse cx="51.5" cy="85" rx="4.8" ry="7.5" fill="#A88CE0" transform="rotate(-27,51.5,85)"/>' +
+    '<ellipse cx="62.5" cy="73" rx="4" ry="6.5" fill="#A88CE0" transform="rotate(24,62.5,73)"/>' +
+    '<ellipse cx="55.5" cy="73" rx="4" ry="6.5" fill="#8C6ED0" transform="rotate(-24,55.5,73)"/>' +
+    '<ellipse cx="61" cy="63" rx="2.5" ry="4" fill="#B49CE8"/>' +
+    '<rect x="39.2" y="38" width="1.6" height="82" rx="0.8" fill="#4B3B78"/>' +
+    '<rect x="39.2" y="38" width="0.6" height="82" fill="rgba(255,255,255,0.15)"/>' +
+    '<ellipse cx="33" cy="100" rx="8" ry="12" fill="#8C6ED0" transform="rotate(-30,33,100)"/>' +
+    '<ellipse cx="47" cy="100" rx="8" ry="12" fill="#A88CE0" transform="rotate(30,47,100)"/>' +
+    '<ellipse cx="33.5" cy="91" rx="7.5" ry="11.5" fill="#A88CE0" transform="rotate(-28,33.5,91)"/>' +
+    '<ellipse cx="46.5" cy="91" rx="7.5" ry="11.5" fill="#8C6ED0" transform="rotate(28,46.5,91)"/>' +
+    '<ellipse cx="34" cy="82" rx="7" ry="11" fill="#8C6ED0" transform="rotate(-26,34,82)"/>' +
+    '<ellipse cx="46" cy="82" rx="7" ry="11" fill="#A88CE0" transform="rotate(26,46,82)"/>' +
+    '<ellipse cx="34.7" cy="73" rx="6" ry="9.5" fill="#A88CE0" transform="rotate(-24,34.7,73)"/>' +
+    '<ellipse cx="45.3" cy="73" rx="6" ry="9.5" fill="#8C6ED0" transform="rotate(24,45.3,73)"/>' +
+    '<ellipse cx="35.4" cy="64" rx="5" ry="8.5" fill="#8C6ED0" transform="rotate(-22,35.4,64)"/>' +
+    '<ellipse cx="44.6" cy="64" rx="5" ry="8.5" fill="#A88CE0" transform="rotate(22,44.6,64)"/>' +
+    '<ellipse cx="36.2" cy="55" rx="4" ry="7" fill="#A88CE0" transform="rotate(-19,36.2,55)"/>' +
+    '<ellipse cx="43.8" cy="55" rx="4" ry="7" fill="#8C6ED0" transform="rotate(19,43.8,55)"/>' +
+    '<ellipse cx="37" cy="47" rx="3" ry="5.5" fill="#8C6ED0" transform="rotate(-16,37,47)"/>' +
+    '<ellipse cx="43" cy="47" rx="3" ry="5.5" fill="#A88CE0" transform="rotate(16,43,47)"/>' +
+    '<ellipse cx="44.6" cy="62" rx="1.5" ry="3" fill="rgba(255,255,255,0.3)" transform="rotate(22,44.6,62)"/>' +
+    '<ellipse cx="43.5" cy="53" rx="1.3" ry="2.5" fill="rgba(255,255,255,0.35)" transform="rotate(19,43.5,53)"/>' +
+    '<ellipse cx="40" cy="40" rx="3" ry="5" fill="#B49CE8"/>' +
+    '<ellipse cx="36.5" cy="43" rx="2" ry="3.5" fill="#C6B4F0" transform="rotate(-18,36.5,43)"/>' +
+    '<ellipse cx="43.5" cy="43" rx="2" ry="3.5" fill="#A88CE0" transform="rotate(18,43.5,43)"/>' +
+    '<ellipse cx="39" cy="38" rx="1.1" ry="1.8" fill="rgba(255,255,255,0.5)"/>'
   ],
 
   // ---- BAMBOO (Chores) ----
@@ -1144,59 +1192,181 @@ var PLANT_SVG_DATA = {
 // ============================================
 // Plant positions in the garden scene — perspective depth
 // ============================================
-// Every task gets a stable "depth row" (far / mid / near), assigned
-// once via a deterministic hash of the task's id — so a task always
-// lands in the same row for as long as it exists, but which row it
-// lands in looks arbitrary rather than tied to creation order. Far
-// plants sit higher up and smaller, near plants sit lower and larger,
-// each row also using less/more of the available width so the far
-// row reads as narrower/further away. This scale multiplier stacks
-// with (not replaces) the growth-based scale from computeScaleForDays.
+// Every task can be placed at any free (x, y) point in the garden —
+// there's no fixed depth row to snap to. Two internal "slots" groups
+// still exist purely so freshly-added, never-dragged plants spread
+// out across the width instead of stacking in the middle (see
+// assignPermanentPositions below) — they don't affect depth.
+//
+// Depth perception: a plant's y position (bottomPct — how far up
+// the scene it sits) continuously drives two things: how big it
+// renders (further up/back = smaller, further down/front = bigger)
+// and its stacking order (further-down/front plants paint on top of
+// further-up/back ones), via computeDepthScale/computeDepthZ below.
 // ============================================
 
 // Deterministic pseudo-random value in [0, 1) for a given integer
 // seed. Same input always produces the same output — this is what
-// makes the depth-row assignment stable across renders/reloads
+// makes the automatic-slot assignment stable across renders/reloads
 // instead of re-shuffling every time the garden re-renders.
 function hashSeed(n) {
   var x = Math.sin(n * 12.9898) * 43758.5453123;
   return x - Math.floor(x);
 }
 
-var DEPTH_BANDS = {
-  far:  { scale: 0.55, bottomPct: 77, leftMin: 38, leftMax: 62, z: 2 },
-  mid:  { scale: 0.78, bottomPct: 50, leftMin: 28, leftMax: 72, z: 3 },
-  near: { scale: 1.00, bottomPct: 25, leftMin: 18, leftMax: 82, z: 4 },
+// Used only to spread never-dragged plants into one of two
+// interleaved slot groups (see phaseOffset in computePlantLayout)
+// so they don't all land in a perfectly even single-file line.
+var SLOT_GROUPS = {
+  a: { centerMin: 16, centerMax: 84, phaseOffset: 0   },
+  b: { centerMin: 16, centerMax: 84, phaseOffset: 0.5 },
 };
+var DEFAULT_BOTTOM_PCT = 40;
+var PLANT_Z_INDEX      = 3;
 
-function getTaskDepthBand(taskId) {
-  var seed = hashSeed(taskId);
-  if (seed < 1 / 3) return 'far';
-  if (seed < 2 / 3) return 'mid';
-  return 'near';
+// Depth-perception tuning. bottomPct's visible range is clamped to
+// [DEPTH_BOTTOM_MIN, DEPTH_BOTTOM_MAX] by clampBottomPct() below.
+// DEFAULT_BOTTOM_PCT is treated as the "neutral" depth (scale 1x,
+// matching how auto-placed plants have always looked) — dragging a
+// plant further down toward DEPTH_BOTTOM_MIN (foreground) scales it
+// up toward DEPTH_MAX_SCALE, and further up toward DEPTH_BOTTOM_MAX
+// (background) scales it down toward DEPTH_MIN_SCALE.
+var DEPTH_BOTTOM_MIN = 4;
+var DEPTH_BOTTOM_MAX = 92;
+var DEPTH_MIN_SCALE  = 0.6;  // furthest back
+var DEPTH_MAX_SCALE  = 1.4;  // furthest front
+
+// Bigger/closer plants should always paint over smaller/further ones
+// — a simple painter's-algorithm z-index derived straight from
+// bottomPct, so stacking order always matches the size cue instead
+// of depending on task order or manual z-index bookkeeping.
+function computeDepthScale(bottomPct) {
+  var clamped = Math.max(DEPTH_BOTTOM_MIN, Math.min(DEPTH_BOTTOM_MAX, bottomPct));
+  if (clamped <= DEFAULT_BOTTOM_PCT) {
+    var tNear = (DEFAULT_BOTTOM_PCT - clamped) / (DEFAULT_BOTTOM_PCT - DEPTH_BOTTOM_MIN);
+    return 1 + (DEPTH_MAX_SCALE - 1) * tNear;
+  }
+  var tFar = (clamped - DEFAULT_BOTTOM_PCT) / (DEPTH_BOTTOM_MAX - DEFAULT_BOTTOM_PCT);
+  return 1 - (1 - DEPTH_MIN_SCALE) * tFar;
 }
 
-function computePlantLayout(task, indexInBand, bandTotal) {
-  var band = getTaskDepthBand(task.id);
-  var cfg  = DEPTH_BANDS[band];
+function computeDepthZ(bottomPct) {
+  var clamped = Math.max(DEPTH_BOTTOM_MIN, Math.min(DEPTH_BOTTOM_MAX, bottomPct));
+  // Lower bottomPct (further down/toward the viewer) → higher z-index.
+  return PLANT_Z_INDEX + Math.round((DEPTH_BOTTOM_MAX - clamped) * 5);
+}
 
-  var basePct = bandTotal <= 1
-    ? (cfg.leftMin + cfg.leftMax) / 2
-    : cfg.leftMin + (cfg.leftMax - cfg.leftMin) * (indexInBand / (bandTotal - 1));
+function getTaskSlotGroup(taskId) {
+  var seed = hashSeed(taskId);
+  return seed < 0.5 ? 'a' : 'b';
+}
+
+// A task with a manually-dragged position stores posX and posY
+// (each 0–100, as a left%/bottom% pair) directly on the task,
+// bypassing the automatic slot layout below entirely — this is a
+// free (x, y) point, not a snap to any row or band.
+function hasCustomPosition(task) {
+  return typeof task.posX === 'number' && typeof task.posY === 'number';
+}
+
+// Keeps a plant's title — a fixed 130px-wide tag centered right below
+// it — fully on-screen. A flat percentage clamp either wastes width
+// on a wide desktop or still lets labels clip off a narrow phone, so
+// instead the safe margin is computed in real pixels against the
+// current viewport width: plants can spread across almost the entire
+// page on a wide screen, while narrower screens pull the edges in
+// just enough to keep every title readable.
+function clampCenterPct(pct) {
+  var viewportW   = (typeof window !== 'undefined' && window.innerWidth) || 800;
+  var labelHalfPx = 68; // half of .plant-label-tag's 130px width, plus a small buffer
+  var marginPct   = Math.min(30, (labelHalfPx / viewportW) * 100);
+  return Math.max(marginPct, Math.min(100 - marginPct, pct));
+}
+
+// Keeps a dragged plant's base from landing above the top of the
+// scene or below the visible grass — a free y placement, just kept
+// within a sane visible range.
+function clampBottomPct(pct) {
+  return Math.max(4, Math.min(92, pct));
+}
+
+function computePlantLayout(task, indexInGroup, groupTotal) {
+  var group = getTaskSlotGroup(task.id);
+  var cfg   = SLOT_GROUPS[group];
+  var range = cfg.centerMax - cfg.centerMin;
+
+  var basePct;
+  if (groupTotal <= 1) {
+    basePct = cfg.centerMin + range / 2;
+  } else {
+    // Evenly spaced slots across the width, then group "b"'s slots
+    // are nudged by half a slot (phaseOffset: 0.5) so its plants fall
+    // into the gaps of group "a"'s plants instead of lining up
+    // directly on top of them.
+    var slot = range / groupTotal;
+    basePct = cfg.centerMin + slot * (indexInGroup + 0.5) + slot * (cfg.phaseOffset || 0);
+  }
 
   // Small stable jitter (from a second, independent hash) so plants
-  // within the same row don't line up in a perfectly even row.
+  // don't line up in a perfectly even row.
   var jitterSeed  = hashSeed(task.id * 7 + 3);
-  var jitterRange = (cfg.leftMax - cfg.leftMin) / Math.max(bandTotal, 1) * 0.35;
-  var leftPct     = basePct + (jitterSeed - 0.5) * jitterRange;
-  leftPct         = Math.max(12, Math.min(88, leftPct));
+  var jitterRange = range / Math.max(groupTotal, 1) * 0.35;
+  var centerPct   = clampCenterPct(basePct + (jitterSeed - 0.5) * jitterRange);
 
   return {
-    left:        leftPct + '%',
-    bottomPct:   cfg.bottomPct,
-    depthScale:  cfg.scale,
-    z:           cfg.z,
-    band:        band,
+    center:      centerPct + '%',
+    bottomPct:   DEFAULT_BOTTOM_PCT,
+    depthScale:  computeDepthScale(DEFAULT_BOTTOM_PCT),
+    z:           computeDepthZ(DEFAULT_BOTTOM_PCT),
+  };
+}
+
+// Permanently assigns an auto-computed posX/posY to every task that
+// doesn't already have one (i.e. hasn't been manually dragged). This
+// is what makes plant positions stable: instead of recomputing an
+// undragged plant's slot every render based on how many OTHER
+// undragged plants currently exist (which shifts every remaining
+// plant's slot the moment one of them gets dragged out of that
+// pool), each plant's automatic position is computed exactly once,
+// written onto the task like a manual placement, and never touched
+// again — dragging one plant can no longer move any other plant.
+// Returns true if any task was newly assigned (so callers know to
+// persist the change).
+function assignPermanentPositions() {
+  var assignedAny = false;
+  var slotGroups = { a: [], b: [] };
+
+  tasks.forEach(function (task) {
+    if (!hasCustomPosition(task)) {
+      slotGroups[getTaskSlotGroup(task.id)].push(task);
+    }
+  });
+
+  Object.keys(slotGroups).forEach(function (group) {
+    var list = slotGroups[group];
+    list.forEach(function (task, idx) {
+      var layout   = computePlantLayout(task, idx, list.length);
+      task.posX    = parseFloat(layout.center);
+      task.posY    = layout.bottomPct;
+      assignedAny  = true;
+    });
+  });
+
+  return assignedAny;
+}
+
+// Layout for a manually-placed plant — its left%/bottom% come
+// straight from the saved (x, y) override, and its size + stacking
+// order are derived from that same y so plants dropped further down
+// (toward the viewer) look and paint bigger/closer than ones dropped
+// further up (toward the horizon).
+function computeCustomLayout(task) {
+  var bottomPct = clampBottomPct(task.posY);
+  return {
+    center:      clampCenterPct(task.posX) + '%',
+    bottomPct:   bottomPct,
+    depthScale:  computeDepthScale(bottomPct),
+    z:           computeDepthZ(bottomPct),
   };
 }
 
@@ -1346,22 +1516,29 @@ function renderGarden() {
   // category's PLANT_SVG_DATA array (4 stages: 0–3).
   var maxStageIdx = PLANT_SVG_DATA.misc.length - 1;
 
-  // Bucket tasks into depth rows once per render. Each task's band is
-  // a stable hash of its id, so this grouping (and therefore each
-  // task's position within its row) stays consistent render to
-  // render — it just needs to be computed here so indexInBand/
-  // bandTotal reflect the *current* set of tasks in that row.
-  var depthGroups = { far: [], mid: [], near: [] };
+  // Bucket auto-positioned (never-dragged) tasks into their slot
+  // group once per render. Each task's group is a stable hash of its
+  // id, so this grouping (and therefore each task's position) stays
+  // consistent render to render. Manually-placed (dragged) tasks are
+  // excluded here — they don't participate in the auto grid at all,
+  // so they don't shift where other plants' slots fall.
+  var slotGroups = { a: [], b: [] };
   tasks.forEach(function (task) {
-    depthGroups[getTaskDepthBand(task.id)].push(task);
+    if (hasCustomPosition(task)) return;
+    slotGroups[getTaskSlotGroup(task.id)].push(task);
   });
 
   tasks.forEach(function (task, i) {
-    var cat        = getCategoryById(task.categoryId);
-    var band        = getTaskDepthBand(task.id);
-    var bandTasks   = depthGroups[band];
-    var indexInBand = bandTasks.indexOf(task);
-    var layout      = computePlantLayout(task, indexInBand, bandTasks.length);
+    var cat = getCategoryById(task.categoryId);
+    var layout;
+    if (hasCustomPosition(task)) {
+      layout = computeCustomLayout(task);
+    } else {
+      var group        = getTaskSlotGroup(task.id);
+      var groupTasks   = slotGroups[group];
+      var indexInGroup = groupTasks.indexOf(task);
+      layout           = computePlantLayout(task, indexInGroup, groupTasks.length);
+    }
 
     var totalGrowthDays = Math.max(0, task.totalGrowthDays || 0);
     var streak          = Math.max(0, task.streak || 0);
@@ -1397,22 +1574,29 @@ function renderGarden() {
     // grown far-row plant is still smaller than a fully grown
     // near-row plant, and vice versa a young near-row plant can still
     // be bigger on screen than an old far-row one.
+    var growthOnlyScale = scale;
     scale = scale * layout.depthScale;
 
     // Ground-anchored wrapper — position only, never scales.
     var wrap = document.createElement('div');
     wrap.className = 'garden-plant';
-    wrap.style.left = layout.left;
+    wrap.style.left = layout.center;
     wrap.style.zIndex = layout.z;
     // Set on the wrap (not the inner .plant-visual) so both the
     // wrap's ground-sink offset and .plant-visual's own scale — which
     // inherits this custom property — can read the same value.
     wrap.style.setProperty('--plant-scale', scale.toFixed(3));
     wrap.style.setProperty('--plant-depth-bottom', layout.bottomPct + '%');
+    // Stashed so the drag handler can recompute total scale live as
+    // the plant is dragged between the far/near bands, without
+    // having to redo the daily/long-term growth math mid-drag.
+    wrap.dataset.growthScale = growthOnlyScale.toFixed(4);
+    wrap.dataset.taskId      = task.id;
     wrap.setAttribute(
       'title',
       task.text + ' · ' + cat.name + ' (' + cat.species + ') · ' +
-      totalGrowthDays + ' days grown' + (streak > 0 ? ' · 🔥 ' + streak + ' day streak' : '')
+      totalGrowthDays + ' days grown' + (streak > 0 ? ' · 🔥 ' + streak + ' day streak' : '') +
+      ' · press and hold to move'
     );
 
     // Scaling visual — grows from a fixed point near the ground.
@@ -1430,6 +1614,8 @@ function renderGarden() {
       '<span class="plant-label-streak">' + subLabel + '</span>';
     wrap.appendChild(labelEl);
 
+    setupPlantDrag(wrap, task.id);
+
     gardenSceneEl.appendChild(wrap);
   });
 }
@@ -1439,6 +1625,132 @@ function escapeHtml(str) {
   var div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+
+// ============================================
+// Drag-to-place: press and hold a plant to pick it up, drag it
+// anywhere in the garden, and drop it. While held, the far/near
+// depth-band strips light up so you can see where you're placing it
+// (and switch rows by dragging up/down). Letting go without having
+// moved resets that plant back to its automatic position.
+// ============================================
+
+var LONG_PRESS_MS      = 380; // hold this long before a drag begins
+var DRAG_CANCEL_DIST_PX = 8;   // finger/mouse wobble tolerance before the hold is armed
+
+var activePlantDrag = null; // { taskId, wrap, moved, pendingX, pendingY }
+
+function setupPlantDrag(wrap, taskId) {
+  wrap.addEventListener('pointerdown', function (e) {
+    if (e.button !== undefined && e.button !== 0) return; // left-click / primary touch only
+
+    var startX = e.clientX;
+    var startY = e.clientY;
+    var pointerId = e.pointerId;
+    var armed = false;
+
+    var timer = setTimeout(function () {
+      armed = true;
+      beginPlantDrag(taskId, wrap, pointerId);
+    }, LONG_PRESS_MS);
+
+    function onMove(ev) {
+      if (armed) return; // once dragging has begun, onPlantDragMove takes over
+      var dist = Math.hypot(ev.clientX - startX, ev.clientY - startY);
+      if (dist > DRAG_CANCEL_DIST_PX) cleanup();
+    }
+    function onUp() { cleanup(); }
+    function cleanup() {
+      clearTimeout(timer);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    }
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  });
+
+  // A plant is meant to be pressed-and-held, not dragged natively —
+  // this stops touch scrolling/selection/callout menus from
+  // hijacking the long-press gesture.
+  wrap.style.touchAction = 'none';
+  wrap.style.userSelect  = 'none';
+  wrap.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+}
+
+function beginPlantDrag(taskId, wrap, pointerId) {
+  var task = tasks.find(function (t) { return t.id === taskId; });
+  if (!task || !gardenSceneEl) return;
+
+  activePlantDrag = {
+    taskId:   taskId,
+    wrap:     wrap,
+    moved:    false,
+    pendingX: (typeof task.posX === 'number') ? task.posX : (parseFloat(wrap.style.left) || 50),
+    pendingY: (typeof task.posY === 'number') ? task.posY : DEFAULT_BOTTOM_PCT,
+  };
+
+  wrap.classList.add('dragging');
+  wrap.style.zIndex = 9990;
+  try { wrap.setPointerCapture(pointerId); } catch (e) {}
+
+  document.addEventListener('pointermove', onPlantDragMove);
+  document.addEventListener('pointerup', onPlantDragEnd);
+  document.addEventListener('pointercancel', onPlantDragEnd);
+}
+
+function onPlantDragMove(e) {
+  if (!activePlantDrag || !gardenSceneEl) return;
+  activePlantDrag.moved = true;
+
+  var rect = gardenSceneEl.getBoundingClientRect();
+  // Free placement: track the pointer directly, anywhere in the
+  // scene — no row/band to snap to.
+  var xPct = clampCenterPct(((e.clientX - rect.left) / rect.width) * 100);
+  var yPct = ((e.clientY - rect.top) / rect.height) * 100;
+  var bottomPct = clampBottomPct(100 - yPct);
+
+  activePlantDrag.pendingX = xPct;
+  activePlantDrag.pendingY = bottomPct;
+
+  var wrap = activePlantDrag.wrap;
+  var growthScale = parseFloat(wrap.dataset.growthScale || '1');
+  var totalScale  = growthScale * computeDepthScale(bottomPct);
+
+  wrap.style.left = xPct + '%';
+  wrap.style.setProperty('--plant-depth-bottom', bottomPct + '%');
+  wrap.style.setProperty('--plant-scale', totalScale.toFixed(3));
+}
+
+function onPlantDragEnd() {
+  document.removeEventListener('pointermove', onPlantDragMove);
+  document.removeEventListener('pointerup', onPlantDragEnd);
+  document.removeEventListener('pointercancel', onPlantDragEnd);
+
+  if (!activePlantDrag) return;
+
+  var drag = activePlantDrag;
+  activePlantDrag = null;
+
+  drag.wrap.classList.remove('dragging');
+
+  var task = tasks.find(function (t) { return t.id === drag.taskId; });
+  if (!task) { renderGarden(); return; }
+
+  if (drag.moved) {
+    // Dropped somewhere new — lock in the free (x, y) position.
+    task.posX = drag.pendingX;
+    task.posY = drag.pendingY;
+  } else {
+    // Pressed and held, then let go without moving — reset this
+    // plant back to its automatic spot.
+    task.posX = null;
+    task.posY = null;
+  }
+
+  saveData();
+  render();
 }
 
 
@@ -1540,6 +1852,21 @@ function checkDayRollover() {
   }
 }
 setInterval(checkDayRollover, 60000);
+
+
+// ============================================
+// Keep plant positions correct across resizes
+// ============================================
+// computePlantLayout() sizes its label-clipping safety margin off
+// window.innerWidth, so a real viewport resize (rotating a phone,
+// resizing a browser window) can change what a safe position is.
+// Debounced so a drag-resize doesn't re-render on every pixel.
+var gardenResizeTimer = null;
+window.addEventListener('resize', function () {
+  if (currentPage !== 'garden' || !authReady) return;
+  clearTimeout(gardenResizeTimer);
+  gardenResizeTimer = setTimeout(function () { renderGarden(); }, 150);
+});
 
 
 // ============================================
@@ -1744,10 +2071,10 @@ if (devPanelBody) {
 
 if (devActionRollover) {
   devActionRollover.addEventListener('click', function () {
-    // Backdates lastResetDate only (real per-task dates are left
-    // alone), so this exercises the "uncheck everything for a new
-    // day" half of applyDayBoundaries() without also force-breaking
-    // streaks, which is a separate scenario.
+    // Backdates lastResetDate by one day and runs the same boundary
+    // logic a real midnight rollover uses — any task not currently
+    // checked off will have its streak reset to 0 and get unchecked,
+    // exactly like missing a real day would.
     lastResetDate = addDaysToDateString(getTodayString(), -1);
     checkDayRollover();
     devFlashButton(devActionRollover, 'Rolled ✓', 'Simulate day rollover', 1200);
