@@ -138,12 +138,7 @@ body {
   filter: brightness(0.45) saturate(0.85);
   transition: filter 1.5s ease;
 }
-.garden-backdrop.gb-night .gb-fence {
-  filter: brightness(0.55);
-  transition: filter 1.5s ease;
-}
-.gb-lawn,
-.gb-fence {
+.gb-lawn {
   transition: filter 1.5s ease;
 }
 
@@ -213,21 +208,6 @@ body {
   75%      { transform: translate(14px, 18px); }
 }
 
-.gb-fence {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 50vh;
-  height: 42px;
-  background-image: repeating-linear-gradient(
-    90deg,
-    #d9c49a 0px, #d9c49a 9px,
-    transparent 9px, transparent 26px
-  );
-  border-top: 4px solid #c2a874;
-  opacity: 0.92;
-}
-
 .gb-lawn {
   position: absolute;
   left: 0;
@@ -248,7 +228,6 @@ body {
 }
 
 @media (max-width: 600px) {
-  .gb-fence  { bottom: 50vh; height: 32px; }
   .gb-sun    { width: 48px; height: 48px; }
 }
 
@@ -389,6 +368,109 @@ body {
   height: 50vh;
   flex-shrink: 0;
 }
+
+/* Ground texture layer — grass blade clumps scattered across the
+   scrollable garden track (see renderGrassField in script.js). Lives
+   inside .garden-scene-track so it scrolls WITH the content, giving
+   swipe/scroll a visible sense of motion that a flat green plane
+   couldn't. Sits behind every .garden-plant, whose z-index (3+) is
+   always higher than this layer's. */
+.grass-tuft-field {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.grass-clump {
+  position: absolute;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.grass-blade {
+  position: absolute;
+  bottom: 0;
+  border-radius: 40% 60% 0 0;
+  transform-origin: bottom center;
+}
+
+
+/* ========================================
+   Garden fence — lives INSIDE #gardenSceneTrack
+   (the scrollable element), not the fixed
+   backdrop, so it moves together with the plants
+   and grass field as the garden is panned. It sits
+   near the top of the track, with a soft shadow
+   bridging its base down into the grass field
+   below it, so the posts read as rooted in the
+   ground rather than floating above it. Rebuilt
+   fresh on every renderGarden() call, same as the
+   grass field (see renderFence() in script.js).
+   ======================================== */
+.garden-fence-strip {
+  position: absolute;
+  top: -7%;
+  left: 0;
+  width: 100%;
+  height: 42px;
+  z-index: 2;
+  pointer-events: none;
+  border-top: 4px solid #b89a68;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.20);
+  opacity: 0.95;
+  /* Four picket shades of the same tan/brown family, cycling every
+     104px. A single flat colour would look static while scrolling —
+     alternating shades make the panning motion obvious at a glance. */
+  background-image: repeating-linear-gradient(
+    90deg,
+    #e0cd9c 0px,  #e0cd9c 9px,
+    transparent 9px, transparent 26px,
+    #d3ba85 26px, #d3ba85 35px,
+    transparent 35px, transparent 52px,
+    #c7ad76 52px, #c7ad76 61px,
+    transparent 61px, transparent 78px,
+    #b89a68 78px, #b89a68 87px,
+    transparent 87px, transparent 104px
+  );
+}
+
+/* Soft shadow bridging the fence's base into the grass field just
+   below it, so the posts look planted in the lawn instead of hanging
+   in empty space above it. */
+.garden-fence-shadow {
+  position: absolute;
+  top: calc(0% + 42px);
+  left: 0;
+  width: 100%;
+  height: 16px;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(30, 50, 15, 0.30), transparent);
+  filter: blur(2px);
+}
+
+/* Night dimming — toggled via .scene-night on #gardenScene (see
+   updateSky() in script.js), kept in sync with the same real-time
+   day/night state as the rest of the garden. */
+.garden-scene.scene-night .garden-fence-strip {
+  filter: brightness(0.55);
+  transition: filter 1.5s ease;
+}
+.garden-scene.scene-night .garden-fence-shadow {
+  opacity: 0.7;
+  transition: opacity 1.5s ease;
+}
+
+@media (max-width: 600px) {
+  .garden-fence-strip {
+    height: 32px;
+  }
+  .garden-fence-shadow {
+    top: calc(0% + 32px);
+  }
+}
+
 
 /* Perspective planting bed — a literal patch of soil narrowing
    toward the top (far/horizon) and widening toward the bottom

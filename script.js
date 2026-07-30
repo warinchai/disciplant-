@@ -222,9 +222,6 @@ const gardenTrackEl     = document.getElementById('gardenSceneTrack');
 const gardenBackdropEl  = document.getElementById('gardenBackdrop');
 const skyEl             = document.getElementById('sky');
 const skyBodyEl         = document.getElementById('skyBody');
-const gbSkyEl           = document.getElementById('gbSky');
-const gbSunEl           = document.getElementById('gbSun');
-const gbMoonEl          = document.getElementById('gbMoon');
 
 // Page containers
 const pageHomeEl   = document.getElementById('page-home');
@@ -394,10 +391,11 @@ function navigateTo(page) {
   // Garden scene: only visible on garden page once auth is ready
   if (gardenSceneEl) gardenSceneEl.classList.toggle('hidden', page !== 'garden' || !authReady);
 
-  // The universal time-of-day sky/hills scene is swapped out for a
-  // dedicated, static garden-yard backdrop while on the Garden page,
-  // and swapped back for Home/Tasks.
-  if (skyEl)            skyEl.classList.toggle('hidden', page === 'garden');
+  // The universal time-of-day sky (gradient, stars, hills, fireflies,
+  // clouds/birds, sun/moon) stays visible on every page, including
+  // Garden, so night/day looks identical everywhere. The garden
+  // backdrop now only adds the garden-specific ground (fence + lawn)
+  // on top of it while on the Garden page.
   if (gardenBackdropEl) gardenBackdropEl.classList.toggle('hidden', page !== 'garden');
 
   if (page === 'garden') {
@@ -1387,6 +1385,109 @@ function computeCustomLayout(task) {
 
 
 // ============================================
+// Ground texture — grass blade clumps
+//
+// The scrollable garden track was otherwise a flat green plane, so
+// swiping left/right gave no visual feedback that the view was
+// actually moving. These clumps live INSIDE #gardenSceneTrack (the
+// element that actually scrolls), scattered across its full 300%
+// width, so they visibly slide past as you swipe — unlike the fixed
+// sky/lawn backdrop behind everything, which never moves.
+//
+// Deterministic (hashSeed-based) so the field looks the same on
+// every render/reload instead of re-shuffling. Blade height and tint
+// are derived from the same depth math as the plants (computeDepthScale/
+// lerpColor, both already defined above) so clumps nearer the "front"
+// of the garden render bigger and more saturated than ones further
+// toward the horizon — reinforcing the same depth cue the plants use.
+// ============================================
+
+var GRASS_PALETTE = ['#3a6020', '#4a7a30', '#537d33', '#5a9035', '#487526', '#6aab45', '#436b2c'];
+var GRASS_TIP_LIGHT = '#cfe8a0';
+// The track is 3x the viewport width, so this total is split evenly
+// across those 3 "screens" — 45 total works out to ~15 clumps visible
+// in any single field of view at a time, matching GRASS_PER_SCREEN.
+var GRASS_PER_SCREEN  = 15;
+var GRASS_CLUMP_COUNT = GRASS_PER_SCREEN * 3;
+
+function buildGrassClump(xPct, yPct, seedBase) {
+  var wrap = document.createElement('div');
+  wrap.className = 'grass-clump';
+  wrap.style.left = xPct + '%';
+  wrap.style.bottom = yPct + '%';
+
+  // Reuse the plants' own depth scale so clumps shrink/lighten
+  // toward the back of the garden the same way plants do.
+  var depthScale = computeDepthScale(yPct);
+  var bladeCount = 3;
+
+  for (var b = 0; b < bladeCount; b++) {
+    var s = seedBase + b * 2.3;
+    var heightPx  = (9 + hashSeed(s) * 11) * depthScale;
+    var widthPx   = 3 + hashSeed(s + 0.7) * 2.5;
+    var rotDeg    = (hashSeed(s + 1.3) - 0.5) * 46;
+    var offsetX   = (hashSeed(s + 2.1) - 0.5) * 14;
+    var colorIdx  = Math.floor(hashSeed(s + 3.4) * GRASS_PALETTE.length);
+    var baseColor = GRASS_PALETTE[colorIdx];
+    var tipColor  = lerpColor(baseColor, GRASS_TIP_LIGHT, 0.35);
+
+    var blade = document.createElement('div');
+    blade.className = 'grass-blade';
+    blade.style.left      = offsetX + 'px';
+    blade.style.width     = widthPx + 'px';
+    blade.style.height    = Math.max(5, heightPx) + 'px';
+    blade.style.background = 'linear-gradient(to top, ' + baseColor + ', ' + tipColor + ')';
+    blade.style.transform  = 'translateX(-50%) rotate(' + rotDeg + 'deg)';
+    blade.style.opacity    = (0.65 + hashSeed(s + 4.2) * 0.3).toFixed(2);
+    wrap.appendChild(blade);
+  }
+
+  return wrap;
+}
+
+// ============================================
+// Garden fence — DOM elements inside the scrollable track
+// ============================================
+// Previously the fence lived in the fixed #gardenBackdrop, so it
+// never moved when the garden was panned. Rendering it here instead,
+// as a direct child of #gardenSceneTrack (same as the grass field
+// above), means it scrolls together with the plants and grass. See
+// .garden-fence-strip / .garden-fence-shadow in style.css for the
+// picket shading and ground-connecting shadow.
+function renderFence(track) {
+  var fence = document.createElement('div');
+  fence.className = 'garden-fence-strip';
+  track.appendChild(fence);
+
+  var shadow = document.createElement('div');
+  shadow.className = 'garden-fence-shadow';
+  track.appendChild(shadow);
+}
+
+function renderGrassField(track) {
+  var field = document.createElement('div');
+  field.className = 'grass-tuft-field';
+
+  // Stratified placement: the track is divided into GRASS_CLUMP_COUNT
+  // equal-width cells (one clump per cell), and each clump is jittered
+  // to a random spot WITHIN its own cell. This keeps clumps spread
+  // out evenly across the whole track — unlike pure random x/y, which
+  // can easily leave empty gaps in one area and a dense bunch in
+  // another purely by chance.
+  var cellWidth = 100 / GRASS_CLUMP_COUNT;
+
+  for (var i = 0; i < GRASS_CLUMP_COUNT; i++) {
+    var seed = i * 9.173;
+    var xPct = i * cellWidth + hashSeed(seed) * cellWidth;
+    var yPct = 6 + hashSeed(seed + 0.5) * 76; // keep off the very top/bottom edges of the plot
+    field.appendChild(buildGrassClump(xPct, yPct, seed * 3.7));
+  }
+
+  track.appendChild(field);
+}
+
+
+// ============================================
 // Daily-progress ring at the plant's base
 // ============================================
 function buildProgressRing(comp) {
@@ -1533,6 +1634,12 @@ function renderGarden() {
 
   var shouldCenterScroll = pendingGardenScrollCenter;
   pendingGardenScrollCenter = false;
+
+  // Ground texture and fence first, so they sit behind every plant
+  // appended below (both live inside the scrollable track now, so
+  // they pan together with the plants — see renderFence() above).
+  renderGrassField(gardenTrackEl);
+  renderFence(gardenTrackEl);
 
   var emptyMsgEl = document.getElementById('gardenEmptyMsg');
 
@@ -1874,16 +1981,11 @@ function updateSky() {
   skyEl.classList.toggle('sky-day',   isDay);
   skyEl.classList.toggle('sky-night', !isDay);
 
-  // Garden page backdrop — mirror the same live gradient/day-night
-  // state here so the garden's sky isn't stuck looking like a fixed
-  // midday scene while the home page sky moves with real time.
-  if (gbSkyEl) {
-    gbSkyEl.style.background =
-      'linear-gradient(180deg, ' + topColor + ' 0%, ' + botColor + ' 55%, #cfe8d0 100%)';
-  }
+  // Garden page ground (fence + lawn) — the sky itself is now the
+  // shared #sky element above, so this just keeps the ground's
+  // night-dimming in sync with real time.
   if (gardenBackdropEl) gardenBackdropEl.classList.toggle('gb-night', !isDay);
-  if (gbSunEl)  gbSunEl.classList.toggle('hidden',  !isDay);
-  if (gbMoonEl) gbMoonEl.classList.toggle('hidden', isDay);
+  if (gardenSceneEl)    gardenSceneEl.classList.toggle('scene-night', !isDay);
 
   var arcProgress;
   if (isDay) {
