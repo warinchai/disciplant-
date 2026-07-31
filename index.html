@@ -119,6 +119,8 @@
       <span class="nav-current">Garden</span>
       <span class="nav-sep">·</span>
       <button class="nav-btn" id="garden-nav-tasks">Tasks</button>
+      <span class="nav-sep">·</span>
+      <button class="nav-btn" id="garden-nav-stats">Stats</button>
     </nav>
     <p id="loadingState" class="loading-state">🌱 Loading your garden...</p>
 
@@ -139,6 +141,8 @@
       <button class="nav-btn" id="tasks-nav-garden">Garden</button>
       <span class="nav-sep">·</span>
       <span class="nav-current">Tasks</span>
+      <span class="nav-sep">·</span>
+      <button class="nav-btn" id="tasks-nav-stats">Stats</button>
     </nav>
 
     <p id="tasksLoadingState" class="loading-state">🌱 Loading your garden...</p>
@@ -175,6 +179,89 @@
       <!-- Category tab panels (populated by JS) -->
       <div id="taskTabsContainer"></div>
 
+    </div>
+  </div>
+
+  <!-- ================================================
+       PAGE: STATS
+       ================================================ -->
+  <div id="page-stats" class="page page-stats hidden">
+    <nav class="site-nav stats-nav">
+      <button class="nav-btn" id="stats-nav-home">Home</button>
+      <span class="nav-sep">·</span>
+      <button class="nav-btn" id="stats-nav-garden">Garden</button>
+      <span class="nav-sep">·</span>
+      <button class="nav-btn" id="stats-nav-tasks">Tasks</button>
+      <span class="nav-sep">·</span>
+      <span class="nav-current">Stats</span>
+    </nav>
+
+    <p id="statsLoadingState" class="loading-state">🌱 Loading your garden...</p>
+
+    <div id="statsContent" class="stats-content hidden">
+
+      <!-- Profile Identity Header — avatar, name/email, garden level
+           badge, quick stats bar, and the sign in/out action. -->
+      <div id="profileHeader" class="profile-header"></div>
+
+      <div class="stats-view-select-wrap">
+        <select id="statsViewSelect" class="stats-view-select"></select>
+      </div>
+
+      <!-- View mode 1: Overall garden overview -->
+      <div id="statsOverallView" class="stats-view">
+        <div class="stats-heatmap-card">
+          <h3 class="stats-card-title">Yearly Activity</h3>
+          <div id="statsOverallHeatmap" class="heatmap-wrap"></div>
+          <div class="heatmap-legend">
+            <span>Less</span>
+            <span class="heatmap-legend-swatch heat-stage-0"></span>
+            <span class="heatmap-legend-swatch heat-stage-1"></span>
+            <span class="heatmap-legend-swatch heat-stage-2"></span>
+            <span class="heatmap-legend-swatch heat-stage-3"></span>
+            <span>More</span>
+          </div>
+        </div>
+        <div id="statsOverallCards" class="stats-cards-grid"></div>
+      </div>
+
+      <!-- View mode 2: Individual plant/task view -->
+      <div id="statsIndividualView" class="stats-view hidden">
+        <div class="stats-heatmap-card">
+          <h3 class="stats-card-title" id="statsIndividualHeatmapTitle">Yearly Activity</h3>
+          <div id="statsIndividualHeatmap" class="heatmap-wrap"></div>
+          <div class="heatmap-legend">
+            <span>Not completed</span>
+            <span class="heatmap-legend-swatch heat-stage-0"></span>
+            <span class="heatmap-legend-swatch heat-stage-3"></span>
+            <span>Completed</span>
+          </div>
+        </div>
+        <div id="statsIndividualCards" class="stats-cards-grid"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Shared tooltip for heatmap cells, positioned via JS on hover -->
+  <div id="heatmapTooltip" class="heatmap-tooltip hidden"></div>
+
+  <!-- ================================================
+       AUTH WIDGET — persistent sign-in status pill,
+       visible on every page. Opens the auth modal.
+       ================================================ -->
+  <button id="authWidgetBtn" class="auth-widget-btn" title="Account">
+    <img id="authAvatarImg" class="auth-avatar-img hidden" src="" alt="" />
+    <span id="authAvatarFallback" class="auth-avatar-fallback">🌱</span>
+    <span id="authWidgetLabel" class="auth-widget-label">Guest</span>
+  </button>
+
+  <!-- Auth modal — sign in / sign out -->
+  <div id="authModal" class="auth-modal hidden">
+    <div class="auth-modal-backdrop" id="authModalBackdrop"></div>
+    <div class="auth-modal-card">
+      <button id="authModalClose" class="auth-modal-close" aria-label="Close">✕</button>
+      <div class="auth-modal-body" id="authModalBody"></div>
     </div>
   </div>
 

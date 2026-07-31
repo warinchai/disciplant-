@@ -1649,6 +1649,257 @@ body {
 
 
 /* ========================================
+   Stats page
+   ======================================== */
+
+.page-stats {
+  background: rgba(8, 5, 2, 0.42);
+}
+
+.stats-nav {
+  background: rgba(8, 5, 2, 0.18);
+  border-bottom: 1px solid rgba(251, 247, 238, 0.07);
+}
+
+.stats-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 12px 18px 72px;
+}
+
+.stats-view-select-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.stats-view-select {
+  flex: 1 1 200px;
+  padding: 10px 12px;
+  border: 1.5px solid #D9CFB8;
+  border-radius: 12px;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 0.86rem;
+  font-weight: 600;
+  background: rgba(251, 247, 238, 0.95);
+  color: #3A2E22;
+  cursor: pointer;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.stats-view-select:focus {
+  outline: none;
+  border-color: #8FBF7F;
+  box-shadow: 0 0 0 3px rgba(143, 191, 127, 0.22);
+}
+
+.stats-view.hidden {
+  display: none !important;
+}
+
+.stats-heatmap-card {
+  background: rgba(251, 247, 238, 0.97);
+  border-radius: 18px;
+  padding: 16px 16px 18px;
+  margin-bottom: 14px;
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.28),
+    0 2px 8px rgba(0, 0, 0, 0.12),
+    0 1px 0 rgba(255, 255, 255, 0.55) inset;
+}
+
+.stats-card-title {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 1.14rem;
+  font-weight: 400;
+  color: #2E2A22;
+  margin: 0 0 12px;
+}
+
+/* GitHub-style contribution grid — scrolls horizontally on narrow
+   screens rather than squeezing cells illegibly small. */
+.heatmap-wrap {
+  overflow: visible;
+  padding-bottom: 4px;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 1fr);
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 3px;
+  width: 100%;
+  height: 130px;
+}
+
+.heatmap-week {
+  display: contents;
+}
+
+.heatmap-cell {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  border-radius: 3px;
+  background: rgba(107, 79, 59, 0.10);
+  cursor: pointer;
+  transition: transform 0.12s ease, outline-color 0.12s ease;
+}
+
+.heatmap-cell:hover {
+  transform: scale(1.25);
+  outline: 1.5px solid rgba(58, 107, 74, 0.55);
+  outline-offset: 0.5px;
+}
+
+.heatmap-cell-empty {
+  background: transparent;
+  cursor: default;
+}
+.heatmap-cell-empty:hover {
+  transform: none;
+  outline: none;
+}
+
+.heat-stage-0 { background: rgba(107, 79, 59, 0.10); }
+.heat-stage-1 { background: #C3E4B0; }
+.heat-stage-2 { background: #7CB37F; }
+.heat-stage-3 { background: #3A6B4A; }
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #9a836a;
+}
+
+.heatmap-legend-swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+/* Shared tooltip, positioned via JS to follow the pointer over
+   whichever heatmap cell is currently hovered. */
+.heatmap-tooltip {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  background: rgba(20, 16, 10, 0.92);
+  color: #F2B84B;
+  border: 1px solid rgba(242, 184, 75, 0.40);
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.stats-cards-grid {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  flex: 1 1 0;
+  min-width: 0;
+  background: rgba(251, 247, 238, 0.97);
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow:
+    0 6px 26px rgba(0, 0, 0, 0.24),
+    0 1px 0 rgba(255, 255, 255, 0.5) inset;
+}
+
+.stat-card-emoji {
+  font-size: 1.3rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.stat-card-body {
+  min-width: 0;
+  width: 100%;
+}
+
+.stat-card-label {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9a836a;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-card-value {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #2E2A22;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-card-sub {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  color: #9a836a;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 600px) {
+  .stats-content {
+    padding: 0 12px 52px;
+  }
+  .heatmap-grid {
+    height: 98px;
+    gap: 2px;
+  }
+  .stats-cards-grid {
+    gap: 5px;
+  }
+  .stat-card {
+    padding: 8px 8px;
+  }
+  .stat-card-emoji {
+    font-size: 1.05rem;
+  }
+  .stat-card-label {
+    font-size: 0.56rem;
+  }
+  .stat-card-value {
+    font-size: 0.72rem;
+  }
+  .stat-card-sub {
+    font-size: 0.56rem;
+  }
+}
+
+
+/* ========================================
    Responsive
    ======================================== */
 
@@ -1674,6 +1925,348 @@ body {
     border-radius: 0 0 14px 14px;
     padding: 12px 12px 14px;
   }
+}
+
+
+/* ========================================
+   Auth widget — persistent account pill,
+   top-right corner on every page
+   ======================================== */
+
+.auth-widget-btn {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 9997;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 24px;
+  border: 1.5px solid rgba(251, 247, 238, 0.25);
+  background: rgba(20, 16, 10, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #e8dfc8;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.80rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.16s, background 0.16s, transform 0.16s;
+  max-width: 190px;
+}
+
+.auth-widget-btn:hover {
+  border-color: rgba(242, 184, 75, 0.55);
+  background: rgba(20, 16, 10, 0.88);
+  transform: translateY(-1px);
+}
+
+.auth-avatar-img,
+.auth-avatar-fallback {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.auth-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #3A6B4A, #2E5539);
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.auth-widget-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 600px) {
+  .auth-widget-btn {
+    top: 10px;
+    right: 10px;
+    max-width: 40px;
+    padding: 5px;
+    justify-content: center;
+  }
+  .auth-widget-label { display: none; }
+}
+
+
+/* ========================================
+   Auth modal
+   ======================================== */
+
+.auth-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.auth-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 5, 2, 0.62);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.auth-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  background: rgba(251, 247, 238, 0.98);
+  border-radius: 20px;
+  padding: 28px 24px 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+.auth-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: #9a836a;
+  cursor: pointer;
+  padding: 4px;
+  opacity: 0.7;
+}
+.auth-modal-close:hover { opacity: 1; }
+
+.auth-modal-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  margin: 0 auto 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  background: linear-gradient(145deg, #8FBF7F, #3A6B4A);
+  color: #fff;
+  object-fit: cover;
+}
+
+.auth-modal-title {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 1.3rem;
+  color: #2E2A22;
+  margin: 0 0 4px;
+}
+
+.auth-modal-subtitle {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  color: #9a836a;
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+.auth-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 16px;
+  border-radius: 12px;
+  border: 1.5px solid #D9CFB8;
+  background: #fff;
+  color: #2E2A22;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.90rem;
+  cursor: pointer;
+  transition: background 0.16s, box-shadow 0.16s;
+}
+.auth-google-btn:hover {
+  background: #f7f4ec;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
+}
+.auth-google-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+.auth-signout-btn {
+  width: 100%;
+  padding: 11px 16px;
+  border-radius: 12px;
+  border: none;
+  background: #C97070;
+  color: #fff;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.90rem;
+  cursor: pointer;
+  transition: background 0.16s;
+}
+.auth-signout-btn:hover { background: #A03838; }
+
+.auth-modal-note {
+  margin-top: 14px;
+  font-size: 0.72rem;
+  color: #b0a898;
+  line-height: 1.5;
+}
+
+.auth-modal-error {
+  margin-top: 12px;
+  font-size: 0.76rem;
+  color: #a03838;
+  line-height: 1.5;
+}
+
+
+/* ========================================
+   Profile identity header (Stats page)
+   ======================================== */
+
+.profile-header {
+  background: rgba(251, 247, 238, 0.97);
+  border-radius: 18px;
+  padding: 18px 18px 16px;
+  margin-bottom: 14px;
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.28),
+    0 2px 8px rgba(0, 0, 0, 0.12),
+    0 1px 0 rgba(255, 255, 255, 0.55) inset;
+}
+
+.profile-header-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.profile-avatar-img,
+.profile-avatar-fallback {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.profile-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  background: linear-gradient(145deg, #8FBF7F, #3A6B4A);
+  color: #fff;
+}
+
+.profile-id-block {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.profile-name {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: #2E2A22;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-email {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.78rem;
+  color: #9a836a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-badge {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: rgba(143, 191, 127, 0.20);
+  color: #3A5C30;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.profile-action-btn {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1.5px solid #D9CFB8;
+  background: #fff;
+  color: #2E2A22;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.80rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s, box-shadow 0.16s;
+}
+.profile-action-btn:hover {
+  background: #f7f4ec;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.10);
+}
+.profile-action-btn.is-signout {
+  border-color: rgba(201, 112, 112, 0.4);
+  color: #A03838;
+}
+
+.profile-quick-stats {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.profile-quick-stat {
+  flex: 1 1 0;
+  min-width: 90px;
+  background: rgba(107, 79, 59, 0.06);
+  border-radius: 12px;
+  padding: 9px 10px;
+  text-align: center;
+}
+
+.profile-quick-stat-value {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #3A6B4A;
+  line-height: 1.2;
+}
+
+.profile-quick-stat-label {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #9a836a;
+  margin-top: 2px;
+}
+
+@media (max-width: 600px) {
+  .profile-header { padding: 14px 14px 12px; }
+  .profile-avatar-img, .profile-avatar-fallback { width: 46px; height: 46px; font-size: 1.3rem; }
+  .profile-name { font-size: 0.90rem; }
+  .profile-quick-stat-value { font-size: 0.88rem; }
 }
 
 

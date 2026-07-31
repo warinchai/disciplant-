@@ -194,6 +194,21 @@ let nextId              = 1;
 let currentUserId       = null;
 let unsubscribeSnapshot = null;
 
+// Auth / profile identity state — kept separate from `tasks` (garden
+// data) since it describes the SIGNED-IN USER, not their garden.
+// isAnonymous === true means "Guest Gardener" (no Google account
+// linked yet); displayName/email/photoURL are populated once a
+// Google account is linked/signed in.
+let currentUserProfile = {
+  uid:         null,
+  isAnonymous: true,
+  displayName: null,
+  email:       null,
+  photoURL:    null,
+};
+let authActionPending = false; // true while a popup sign-in/link is in flight
+let authActionError   = null;  // last-error message shown in the modal, if any
+
 // Navigation state
 let currentPage      = 'home';
 let currentTaskTab   = 'all';
@@ -227,6 +242,23 @@ const skyBodyEl         = document.getElementById('skyBody');
 const pageHomeEl   = document.getElementById('page-home');
 const pageGardenEl = document.getElementById('page-garden');
 const pageTasksEl  = document.getElementById('page-tasks');
+const pageStatsEl  = document.getElementById('page-stats');
+
+// Stats page elements
+const statsLoadingState = document.getElementById('statsLoadingState');
+const statsContent      = document.getElementById('statsContent');
+const heatmapTooltipEl   = document.getElementById('heatmapTooltip');
+const profileHeaderEl    = document.getElementById('profileHeader');
+
+// Auth widget / modal elements
+const authWidgetBtn      = document.getElementById('authWidgetBtn');
+const authAvatarImg      = document.getElementById('authAvatarImg');
+const authAvatarFallback = document.getElementById('authAvatarFallback');
+const authWidgetLabel    = document.getElementById('authWidgetLabel');
+const authModalEl        = document.getElementById('authModal');
+const authModalBackdrop  = document.getElementById('authModalBackdrop');
+const authModalClose     = document.getElementById('authModalClose');
+const authModalBody      = document.getElementById('authModalBody');
 
 // Sanity check: warn loudly in the console if any required element is
 // missing from the page, instead of silently crashing later when we
@@ -249,6 +281,9 @@ const pageTasksEl  = document.getElementById('page-tasks');
     pageHomeEl:        pageHomeEl,
     pageGardenEl:      pageGardenEl,
     pageTasksEl:       pageTasksEl,
+    pageStatsEl:       pageStatsEl,
+    statsLoadingState: statsLoadingState,
+    statsContent:      statsContent,
   };
   Object.keys(required).forEach(function (key) {
     if (!required[key]) {
@@ -387,6 +422,7 @@ function navigateTo(page) {
   if (pageHomeEl)   pageHomeEl.classList.toggle('hidden',   page !== 'home');
   if (pageGardenEl) pageGardenEl.classList.toggle('hidden', page !== 'garden');
   if (pageTasksEl)  pageTasksEl.classList.toggle('hidden',  page !== 'tasks');
+  if (pageStatsEl)  pageStatsEl.classList.toggle('hidden',  page !== 'stats');
 
   // Garden scene: only visible on garden page once auth is ready
   if (gardenSceneEl) gardenSceneEl.classList.toggle('hidden', page !== 'garden' || !authReady);
@@ -413,10 +449,17 @@ function navigateTo(page) {
     if (authReady) renderTaskList();
   }
 
+  if (page === 'stats') {
+    if (statsLoadingState) statsLoadingState.classList.toggle('hidden', authReady);
+    if (statsContent) statsContent.classList.toggle('hidden', !authReady);
+    if (authReady) renderStatsPage();
+  }
+
   // Scroll the destination page back to top
   if (page === 'tasks'  && pageTasksEl)  pageTasksEl.scrollTop  = 0;
   if (page === 'garden' && pageGardenEl) pageGardenEl.scrollTop = 0;
   if (page === 'home'   && pageHomeEl)   pageHomeEl.scrollTop   = 0;
+  if (page === 'stats'  && pageStatsEl)  pageStatsEl.scrollTop  = 0;
 }
 
 function switchTaskTab(tabId) {
@@ -448,8 +491,13 @@ document.getElementById('btn-to-garden').addEventListener('click',  function () 
 document.getElementById('btn-to-tasks').addEventListener('click',   function () { navigateTo('tasks');  });
 document.getElementById('garden-nav-home').addEventListener('click',  function () { navigateTo('home');   });
 document.getElementById('garden-nav-tasks').addEventListener('click', function () { navigateTo('tasks');  });
+document.getElementById('garden-nav-stats').addEventListener('click', function () { navigateTo('stats');  });
 document.getElementById('tasks-nav-home').addEventListener('click',   function () { navigateTo('home');   });
 document.getElementById('tasks-nav-garden').addEventListener('click', function () { navigateTo('garden'); });
+document.getElementById('tasks-nav-stats').addEventListener('click',  function () { navigateTo('stats');  });
+document.getElementById('stats-nav-home').addEventListener('click',   function () { navigateTo('home');   });
+document.getElementById('stats-nav-garden').addEventListener('click', function () { navigateTo('garden'); });
+document.getElementById('stats-nav-tasks').addEventListener('click',  function () { navigateTo('tasks');  });
 
 // Garden sub-nav
 document.getElementById('garden-tab-daily').addEventListener('click',    function () { switchGardenTab('daily');    });
@@ -561,21 +609,409 @@ function applyDayBoundaries() {
 
 
 // ============================================
-// Step 1: Sign the visitor in anonymously
+// Auth architecture
+//
+// Google Sign-In is the primary account provider, but nobody is ever
+// forced through a login screen: on first visit the app immediately
+// signs the visitor in ANONYMOUSLY so they can start planting right
+// away. That anonymous account can later be upgraded to a Google
+// account (via linkWithPopup) without losing any of the guest's
+// existing garden data — the anonymous uid keeps its Firestore
+// documents, only the auth PROVIDER changes.
+//
+// currentUserProfile (see state block above) tracks the signed-in
+// identity shown in the auth widget and the Stats page profile
+// header. It's kept separate from `tasks`/garden data.
 // ============================================
-auth.signInAnonymously().catch(function (error) {
-  console.error('Sign-in failed:', error);
+
+var googleProvider = new firebase.auth.GoogleAuthProvider();
+
+// ---- Step 1: sign the visitor in anonymously (fallback identity) ----
+// Only signs in as a guest if there's truly no session yet — this is
+// checked inside the onIdTokenChanged observer below (`if (!user)`)
+// rather than fired unconditionally here, so it never races with a
+// Google redirect sign-in/link that's still being processed after
+// coming back from the redirect flow (see signInWithGoogle()).
+
+// ---- Where can redirect sign-in actually work? ----
+// signInWithRedirect() only completes when the Firebase auth handler is
+// served from the SAME ORIGIN as this app. If authDomain points at
+// <project>.firebaseapp.com while the app is served from localhost or a
+// custom domain, the sign-in result comes back through a cross-origin
+// iframe that Chrome 115+, Safari 16.1+ and Firefox 109+ all block, and
+// getRedirectResult() resolves with null forever.
+// See: https://firebase.google.com/docs/auth/web/redirect-best-practices
+var AUTH_DOMAIN        = (firebase.app().options.authDomain || '').toLowerCase();
+var APP_HOST           = location.hostname.toLowerCase();
+var REDIRECT_IS_USABLE = AUTH_DOMAIN === APP_HOST;
+
+if (!REDIRECT_IS_USABLE) {
+  console.warn(
+    'DISCIPLANT: authDomain (' + AUTH_DOMAIN + ') does not match this app\'s host (' +
+    APP_HOST + '). Redirect sign-in CANNOT complete here — popup only. ' +
+    'Fix by pointing authDomain at this domain and serving /__/auth/* from it.'
+  );
+}
+
+// ---- Catch the result of a redirect-based sign-in / link ----
+// We record a flag in sessionStorage before navigating away, so that on
+// the way back we can tell the difference between "no redirect was ever
+// in progress" (normal page load — stay quiet) and "a redirect WAS in
+// progress and came back empty" (the storage-partitioning failure —
+// surface a real error instead of failing silently).
+var redirectWasPending = false;
+try {
+  redirectWasPending = sessionStorage.getItem('disciplant:redirectPending') === '1';
+  sessionStorage.removeItem('disciplant:redirectPending');
+} catch (e) { /* sessionStorage unavailable (private mode) — ignore */ }
+
+auth.getRedirectResult().then(function (result) {
+  if (result && result.user) {
+    console.log('DISCIPLANT: redirect sign-in succeeded, uid =', result.user.uid);
+    authActionPending = false;
+    refreshIdentityUI(result.user);
+    closeAuthModal();
+    return;
+  }
+  if (redirectWasPending) {
+    authActionPending = false;
+    authActionError = 'Sign-in could not be completed. Please try again.';
+    console.error(
+      'DISCIPLANT: redirect result was lost. authDomain=' + AUTH_DOMAIN +
+      ' host=' + APP_HOST + ' — these must match for redirect sign-in to work.'
+    );
+    renderAuthModal();
+  }
+}).catch(function (error) {
+  authActionPending = false;
+  var code = error && error.code;
+  if (code === 'auth/credential-already-in-use') {
+    // The guest account can't take this Google credential because another
+    // account already owns it. Do NOT auto-fire another redirect here —
+    // that runs with no user gesture and can loop. Ask the user instead.
+    authActionError = 'That Google account is already in use. Tap Sign in with Google again to switch to it.';
+  } else if (code && code !== 'auth/no-auth-event') {
+    authActionError = 'Sign-in failed. Please try again.';
+    console.error('DISCIPLANT: redirect sign-in failed:', error);
+  }
+  renderAuthModal();
 });
+
+// ---- User profile doc (users/{uid}) — separate from garden data ----
+// Holds just identity info (display name, email, avatar, provider),
+// kept in sync with Firebase Auth on every sign-in. Garden data
+// itself stays in the existing gardens/{uid} collection untouched.
+var lastProfileSignature = null;
+
+function ensureUserProfileDoc(user) {
+  if (!user) return;
+
+  // The auth observer fires on every ID-token refresh (roughly hourly),
+  // not just on real identity changes. Only write when something the
+  // user would actually see has changed.
+  var signature = [
+    user.uid,
+    user.isAnonymous,
+    readUserField(user, 'displayName'),
+    readUserField(user, 'email'),
+    readUserField(user, 'photoURL'),
+  ].join('|');
+  if (signature === lastProfileSignature) return;
+  lastProfileSignature = signature;
+
+  var profileData = {
+    uid:         user.uid,
+    isAnonymous: user.isAnonymous,
+    displayName: readUserField(user, 'displayName'),
+    email:       readUserField(user, 'email'),
+    photoURL:    readUserField(user, 'photoURL'),
+    updatedAt:   firebase.firestore.FieldValue.serverTimestamp(),
+  };
+  db.collection('users').doc(user.uid).set(profileData, { merge: true })
+    .catch(function (error) {
+      console.error('DISCIPLANT: could not save profile doc:', error);
+    });
+}
+
+// Reads a field off the Firebase user, falling back to its linked
+// provider's own copy of that field. Needed because linkWithPopup()
+// doesn't always immediately copy the newly-linked provider's
+// displayName/email/photoURL onto the top-level user object — the
+// data IS there under providerData[0], just not yet mirrored up, so
+// without this fallback the profile header can show blank fields
+// right after linking until the next full page reload.
+function readUserField(user, field) {
+  if (user[field]) return user[field];
+  var providerEntry = (user.providerData || []).find(function (p) { return p && p[field]; });
+  return (providerEntry && providerEntry[field]) || null;
+}
+
+function applyUserToProfileState(user) {
+  currentUserProfile = {
+    uid:         user.uid,
+    isAnonymous: user.isAnonymous,
+    displayName: readUserField(user, 'displayName'),
+    email:       readUserField(user, 'email'),
+    photoURL:    readUserField(user, 'photoURL'),
+  };
+}
+
+// ---- Repaint everything that displays WHO is signed in ----
+// Called from two places, and it needs to be safe to call from both:
+//
+//   1. the auth observer below (covers page load, sign-out, and
+//      switching accounts), and
+//   2. directly in signInWithGoogle()'s success handler, so the widget
+//      updates the instant the popup closes instead of waiting on an
+//      observer round-trip.
+//
+// This is deliberately idempotent — running it twice in a row costs
+// nothing and paints the same result, which is what lets both callers
+// fire without coordinating.
+function refreshIdentityUI(user) {
+  if (!user) return;
+  applyUserToProfileState(user);
+  renderAuthWidget();
+  renderAuthModal();
+  ensureUserProfileDoc(user);
+  if (currentPage === 'stats' && authReady) renderProfileHeader();
+}
+
+// ---- Sign in with Google (upgrades a guest, or signs a new user in) ----
+// If the current session is anonymous, LINK the Google credential to it
+// first so the guest's existing plants/streaks carry over. If that Google
+// account is already used elsewhere (auth/credential-already-in-use), fall
+// back to a plain sign-in, which switches to that account's own garden.
+//
+// POPUP IS ALWAYS TRIED FIRST, and it is called directly off the click with
+// no intervening window.open() — the browser's user-activation token must
+// still be live at the moment signInWithPopup()/linkWithPopup() runs, or the
+// popup gets blocked. (An earlier version probed for popup support by
+// opening and closing a test window; that spent the activation token and
+// tripped popup blockers, i.e. it caused the very failure it tested for.)
+//
+// Redirect is used as a fallback ONLY when it can actually complete on this
+// origin — see REDIRECT_IS_USABLE above. Otherwise we show a real error
+// telling the user to allow pop-ups, rather than bouncing them through a
+// redirect that will silently lose the result.
+function signInWithGoogle() {
+  authActionPending = true;
+  authActionError   = null;
+  renderAuthModal();
+
+  var currentUser = auth.currentUser;
+  var isAnon      = !!(currentUser && currentUser.isAnonymous);
+
+  function startRedirectFlow() {
+    try { sessionStorage.setItem('disciplant:redirectPending', '1'); } catch (e) {}
+    return isAnon
+      ? currentUser.linkWithRedirect(googleProvider)
+      : auth.signInWithRedirect(googleProvider);
+    // Page navigates away here — nothing after this runs.
+  }
+
+  function fail(message, error) {
+    authActionPending = false;
+    authActionError   = message;
+    if (error) console.error('DISCIPLANT: Google sign-in failed:', error);
+    renderAuthModal();
+  }
+
+  var attempt = isAnon
+    ? currentUser.linkWithPopup(googleProvider)
+    : auth.signInWithPopup(googleProvider);
+
+  attempt
+    .then(function (result) {
+      // Repaint straight away from the credential we just got back,
+      // rather than waiting for the observer. For the anonymous-link
+      // case this is what makes the name and avatar appear the moment
+      // the popup closes.
+      authActionPending = false;
+      refreshIdentityUI((result && result.user) || auth.currentUser);
+      closeAuthModal();
+    })
+    .catch(function (error) {
+      var code = error && error.code;
+
+      if (code === 'auth/credential-already-in-use') {
+        // That Google account already has its own saved garden — sign
+        // into it directly instead of linking.
+        return auth.signInWithPopup(googleProvider)
+          .then(function (result2) {
+            authActionPending = false;
+            refreshIdentityUI((result2 && result2.user) || auth.currentUser);
+            closeAuthModal();
+          })
+          .catch(function (err2) {
+            fail('Sign-in failed. Please try again.', err2);
+          });
+      }
+
+      if (code === 'auth/popup-blocked' ||
+          code === 'auth/web-storage-unsupported' ||
+          code === 'auth/operation-not-supported-in-this-environment') {
+        if (REDIRECT_IS_USABLE) return startRedirectFlow();
+        return fail(
+          'Your browser blocked the sign-in window. Please allow pop-ups for this site and try again.',
+          error
+        );
+      }
+
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        // User backed out on purpose — not an error worth showing.
+        authActionPending = false;
+        renderAuthModal();
+        return;
+      }
+
+      fail('Sign-in failed. Please try again.', error);
+    });
+}
+
+// ---- Sign out (drops back to a fresh anonymous guest session) ----
+function signOutUser() {
+  auth.signOut()
+    .then(function () { return auth.signInAnonymously(); })
+    .then(function () { closeAuthModal(); })
+    .catch(function (error) {
+      console.error('DISCIPLANT: sign-out failed:', error);
+    });
+}
+
+// ---- Auth widget (persistent pill, top-right on every page) ----
+function renderAuthWidget() {
+  if (!authWidgetBtn) return;
+  var profile = currentUserProfile;
+
+  if (!profile.isAnonymous && profile.photoURL) {
+    authAvatarImg.src = profile.photoURL;
+    authAvatarImg.classList.remove('hidden');
+    authAvatarFallback.classList.add('hidden');
+  } else {
+    authAvatarImg.classList.add('hidden');
+    authAvatarFallback.classList.remove('hidden');
+    authAvatarFallback.textContent = profile.isAnonymous ? '🌱' : '🌻';
+  }
+
+  authWidgetLabel.textContent = profile.isAnonymous
+    ? 'Guest'
+    : (profile.displayName || profile.email || 'Signed in');
+}
+
+// ---- Auth modal (sign in / sign out) ----
+function openAuthModal() {
+  authActionError = null;
+  if (authModalEl) authModalEl.classList.remove('hidden');
+  renderAuthModal();
+}
+function closeAuthModal() {
+  if (authModalEl) authModalEl.classList.add('hidden');
+}
+
+var GOOGLE_G_ICON_SVG =
+  '<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">' +
+  '<path fill="#EA4335" d="M24 9.5c3.4 0 6.4 1.2 8.8 3.5l6.6-6.6C35.3 2.5 30 0 24 0 14.6 0 6.5 5.4 2.5 13.2l7.7 6C12.1 13 17.6 9.5 24 9.5z"/>' +
+  '<path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.7 7.2l7.4 5.7c4.3-4 6.8-9.9 6.8-17.4z"/>' +
+  '<path fill="#FBBC05" d="M10.2 19.2a14.5 14.5 0 0 0 0 9.6l-7.7 6a24 24 0 0 1 0-21.6l7.7 6z"/>' +
+  '<path fill="#34A853" d="M24 48c6 0 11.3-2 15.1-5.4l-7.4-5.7c-2 1.4-4.7 2.2-7.7 2.2-6.4 0-11.9-3.5-13.8-8.7l-7.7 6C6.5 42.6 14.6 48 24 48z"/>' +
+  '<path fill="none" d="M0 0h48v48H0z"/>' +
+  '</svg>';
+
+function renderAuthModal() {
+  if (!authModalBody) return;
+  var profile = currentUserProfile;
+
+  var avatarHtml = (!profile.isAnonymous && profile.photoURL)
+    ? '<img src="' + profile.photoURL + '" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />'
+    : (profile.isAnonymous ? '🌱' : '🌻');
+
+  var titleText = profile.isAnonymous
+    ? 'Guest Gardener'
+    : (profile.displayName || 'Signed in');
+
+  var subtitleText = profile.isAnonymous
+    ? 'You\u2019re gardening as a guest. Sign in with Google to save your garden to your account and access it anywhere.'
+    : (profile.email || 'Signed in with Google');
+
+  var actionHtml = profile.isAnonymous
+    ? (
+        '<button id="authGoogleBtn" class="auth-google-btn" type="button"' +
+        (authActionPending ? ' disabled' : '') + '>' +
+          GOOGLE_G_ICON_SVG +
+          '<span>' + (authActionPending ? 'Signing in…' : 'Sign in with Google') + '</span>' +
+        '</button>'
+      )
+    : (
+        '<button id="authSignOutBtn" class="auth-signout-btn" type="button">Sign Out</button>'
+      );
+
+  var errorHtml = authActionError
+    ? '<p class="auth-modal-error">' + escapeHtml(authActionError) + '</p>'
+    : '';
+
+  var noteHtml = profile.isAnonymous
+    ? '<p class="auth-modal-note">Your current garden stays exactly as it is — linking just adds Google sign-in on top.</p>'
+    : '';
+
+  authModalBody.innerHTML =
+    '<div class="auth-modal-avatar">' + avatarHtml + '</div>' +
+    '<h3 class="auth-modal-title">' + escapeHtml(titleText) + '</h3>' +
+    '<p class="auth-modal-subtitle">' + escapeHtml(subtitleText) + '</p>' +
+    actionHtml +
+    errorHtml +
+    noteHtml;
+
+  var googleBtn = document.getElementById('authGoogleBtn');
+  if (googleBtn) googleBtn.addEventListener('click', signInWithGoogle);
+
+  var signOutBtn = document.getElementById('authSignOutBtn');
+  if (signOutBtn) signOutBtn.addEventListener('click', signOutUser);
+}
+
+if (authWidgetBtn)     authWidgetBtn.addEventListener('click', openAuthModal);
+if (authModalClose)    authModalClose.addEventListener('click', closeAuthModal);
+if (authModalBackdrop) authModalBackdrop.addEventListener('click', closeAuthModal);
+
 
 // ============================================
 // Step 2: Listen to this user's data in real time
 // ============================================
-auth.onAuthStateChanged(function (user) {
-  if (!user) return;
+// onIdTokenChanged, NOT onAuthStateChanged.
+//
+// onAuthStateChanged only fires when *which user* is signed in changes.
+// Linking Google onto an anonymous guest keeps the SAME uid — the auth
+// state technically never changed — so that callback stays silent and
+// the widget goes on saying "Guest" until a manual page reload.
+// onIdTokenChanged additionally fires whenever the ID token is reissued,
+// which linking always does (the new token carries the new provider), so
+// the upgrade is picked up immediately.
+//
+// It also fires on routine hourly token refreshes. Everything below is
+// guarded to be a no-op in that case: refreshIdentityUI() just repaints,
+// ensureUserProfileDoc() skips unchanged data, and the snapshot listener
+// is left alone when the uid hasn't moved.
+auth.onIdTokenChanged(function (user) {
+  if (!user) {
+    // No session at all — sign in as a guest. Doing this here rather
+    // than unconditionally at script load means it can never race
+    // with a Google redirect sign-in/link still being processed on
+    // return from signInWithGoogle()'s redirect fallback: Firebase
+    // holds off firing this callback with `null` until any pending
+    // redirect result has been resolved, so by the time we get here
+    // with no user, there really isn't one yet.
+    auth.signInAnonymously().catch(function (error) {
+      console.error('Sign-in failed:', error);
+    });
+    return;
+  }
+
+  refreshIdentityUI(user);
+
   if (currentUserId === user.uid && unsubscribeSnapshot) return;
 
   currentUserId = user.uid;
-  console.log('Signed in as:', currentUserId);
+  console.log('Signed in as:', currentUserId, user.isAnonymous ? '(guest)' : '(Google)');
 
   if (unsubscribeSnapshot) {
     unsubscribeSnapshot();
@@ -599,6 +1035,16 @@ auth.onAuthStateChanged(function (user) {
               lastCleanDate:     t.lastCleanDate        || null,
               prevLastCleanDate: t.prevLastCleanDate    || null,
               totalGrowthDays:    t.totalGrowthDays       || 0,
+              // All-time longest streak this task has ever reached.
+              // Backfilled from the current streak on load in case a
+              // task already had a streak before this field existed.
+              maxStreak:         Math.max(t.maxStreak || 0, t.streak || 0),
+              // Per-day completion log — { "YYYY-MM-DD": true, ... } —
+              // one entry per day this task was actually checked off.
+              // Powers the Stats page heatmaps; only starts recording
+              // from whenever this field was introduced, so days
+              // before that won't have an entry.
+              history:           (t.history && typeof t.history === 'object') ? t.history : {},
               // Manual placement override — set when the user drags
               // this plant to a spot themselves. null/undefined means
               // "use the automatic layout" (see computePlantLayout).
@@ -634,6 +1080,8 @@ auth.onAuthStateChanged(function (user) {
       if (loadingState)      loadingState.classList.add('hidden');
       if (tasksLoadingState) tasksLoadingState.classList.add('hidden');
       if (mainContent)       mainContent.classList.remove('hidden');
+      if (statsLoadingState) statsLoadingState.classList.add('hidden');
+      if (statsContent)      statsContent.classList.remove('hidden');
 
       // Garden scene: only visible on garden page
       if (gardenSceneEl) gardenSceneEl.classList.toggle('hidden', currentPage !== 'garden');
@@ -661,6 +1109,8 @@ function saveData() {
       lastCleanDate:     t.lastCleanDate || null,
       prevLastCleanDate: t.prevLastCleanDate || null,
       totalGrowthDays:    t.totalGrowthDays || 0,
+      maxStreak:         Math.max(t.maxStreak || 0, t.streak || 0),
+      history:           t.history || {},
       posX:              (typeof t.posX === 'number') ? t.posX : null,
       posY:              (typeof t.posY === 'number') ? t.posY : null,
     };
@@ -697,6 +1147,8 @@ taskForm.addEventListener('submit', function (event) {
     lastCleanDate:     null,
     prevLastCleanDate: null,
     totalGrowthDays:    0,
+    maxStreak:         0,
+    history:           {},
     posX:              null,
     posY:              null,
   });
@@ -724,15 +1176,22 @@ function toggleTask(taskId, newChecked) {
   // cases, or any other date-comparison mismatch.
   var wasCompleted = task.completed;
   task.completed   = newChecked;
+  if (!task.history) task.history = {};
 
   if (newChecked && !wasCompleted) {
-    // Fresh completion — grow both streak and size, once.
+    // Fresh completion — grow both streak and size, once, and log
+    // today in this task's per-day history (powers the Stats page
+    // heatmaps).
     task.streak          = (task.streak || 0) + 1;
     task.totalGrowthDays = (task.totalGrowthDays || 0) + 1;
+    task.history[getTodayString()] = true;
+    task.maxStreak        = Math.max(task.maxStreak || 0, task.streak);
   } else if (!newChecked && wasCompleted) {
-    // Undoing a completion — reverse today's credit for both.
+    // Undoing a completion — reverse today's credit for both, and
+    // remove today's history entry so the heatmap reflects reality.
     task.streak          = Math.max(0, (task.streak || 0) - 1);
     task.totalGrowthDays = Math.max(0, (task.totalGrowthDays || 0) - 1);
+    delete task.history[getTodayString()];
   }
 
   saveData();
@@ -1958,12 +2417,488 @@ function onPlantDragEnd(e) {
 
 
 // ============================================
+// Stats page — yearly heatmaps + summary metric cards
+//
+// Two view modes, switched via #statsViewSelect:
+//  - Overall Garden Overview: a 371-day (53-week) heatmap where each
+//    day's intensity is the % of all current tasks completed that
+//    day, plus garden-wide summary cards.
+//  - Individual Plant View: the same grid for one selected task,
+//    binary (completed / not), plus that task's own summary cards.
+//
+// Data source: each task's own `history` map (see toggleTask()),
+// recording every calendar day it was actually checked off. Days
+// before this field existed have no entry and simply render as
+// "0% / not completed" — there's no way to recover completions that
+// predate the field.
+// ============================================
+
+// ---- Date helpers ----
+
+function formatDateStr(d) {
+  var yyyy = d.getFullYear();
+  var mm   = String(d.getMonth() + 1).padStart(2, '0');
+  var dd   = String(d.getDate()).padStart(2, '0');
+  return yyyy + '-' + mm + '-' + dd;
+}
+
+function getDateNDaysAgo(n) {
+  var d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - n);
+  return formatDateStr(d);
+}
+
+// Builds a GitHub-style grid: an array of weeks, each an array of 7
+// date strings (Sun–Sat), covering the last ~53 weeks up through
+// today. The very first week is aligned back to the preceding Sunday
+// so columns line up as real calendar weeks; the last week is padded
+// with nulls past today so it's always exactly 7 cells.
+function buildYearGrid() {
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  var totalDays = 371; // 53 weeks
+  var start = new Date(today);
+  start.setDate(start.getDate() - (totalDays - 1));
+  start.setDate(start.getDate() - start.getDay()); // back up to Sunday
+
+  var allDates = [];
+  var cur = new Date(start);
+  while (cur <= today) {
+    allDates.push(formatDateStr(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  var weeks = [];
+  for (var i = 0; i < allDates.length; i += 7) {
+    var week = allDates.slice(i, i + 7);
+    while (week.length < 7) week.push(null);
+    weeks.push(week);
+  }
+  return weeks;
+}
+
+// ---- Overall (all-tasks) day stats ----
+
+// "Total active tasks" is simplified to the current task count for
+// every date, since the app doesn't track how many tasks existed on
+// any given past day — see the module note above.
+function computeOverallDayStats(dateStr) {
+  var total     = tasks.length;
+  var completed = 0;
+  tasks.forEach(function (t) {
+    if (t.history && t.history[dateStr]) completed++;
+  });
+  var percent = total > 0 ? (completed / total) * 100 : 0;
+  return { completed: completed, total: total, percent: percent };
+}
+
+function heatStageForPercent(percent) {
+  if (percent <= 0)  return 0;
+  if (percent <= 33) return 1;
+  if (percent <= 66) return 2;
+  return 3;
+}
+
+// ---- Shared grid renderer ----
+
+// cellInfoFn(dateStr) -> { stage: 0-3, data: <anything> }
+// tooltipFn(dateStr, info) -> string shown on hover
+function renderHeatmapGrid(containerEl, weeks, cellInfoFn, tooltipFn) {
+  containerEl.innerHTML = '';
+  var grid = document.createElement('div');
+  grid.className = 'heatmap-grid';
+
+  weeks.forEach(function (week) {
+    var col = document.createElement('div');
+    col.className = 'heatmap-week';
+    week.forEach(function (dateStr) {
+      var cell = document.createElement('div');
+      cell.className = 'heatmap-cell';
+      if (!dateStr) {
+        cell.classList.add('heatmap-cell-empty');
+      } else {
+        var info = cellInfoFn(dateStr);
+        cell.classList.add('heat-stage-' + info.stage);
+        cell.dataset.tooltip = tooltipFn(dateStr, info);
+      }
+      col.appendChild(cell);
+    });
+    grid.appendChild(col);
+  });
+
+  containerEl.appendChild(grid);
+}
+
+// Hooks up hover tooltips for a heatmap container once — uses event
+// delegation so it keeps working after renderHeatmapGrid() replaces
+// the container's children on every re-render.
+function initHeatmapTooltips(containerEl) {
+  if (!containerEl || !heatmapTooltipEl) return;
+  containerEl.addEventListener('mouseover', function (e) {
+    var cell = e.target.closest('.heatmap-cell');
+    if (!cell || !cell.dataset.tooltip) return;
+    heatmapTooltipEl.textContent = cell.dataset.tooltip;
+    heatmapTooltipEl.classList.remove('hidden');
+  });
+  containerEl.addEventListener('mousemove', function (e) {
+    if (heatmapTooltipEl.classList.contains('hidden')) return;
+    heatmapTooltipEl.style.left = (e.clientX + 14) + 'px';
+    heatmapTooltipEl.style.top  = (e.clientY + 14) + 'px';
+  });
+  containerEl.addEventListener('mouseout', function (e) {
+    if (!e.target.closest('.heatmap-cell')) return;
+    heatmapTooltipEl.classList.add('hidden');
+  });
+}
+
+function renderOverallHeatmap() {
+  var container = document.getElementById('statsOverallHeatmap');
+  if (!container) return;
+  var weeks = buildYearGrid();
+
+  renderHeatmapGrid(
+    container,
+    weeks,
+    function (dateStr) {
+      var d = computeOverallDayStats(dateStr);
+      return { stage: heatStageForPercent(d.percent), data: d };
+    },
+    function (dateStr, info) {
+      var d = info.data;
+      return dateStr + ': ' + Math.round(d.percent) + '% of tasks completed (' +
+        d.completed + '/' + d.total + ' tasks)';
+    }
+  );
+}
+
+function renderIndividualHeatmap(taskId) {
+  var container = document.getElementById('statsIndividualHeatmap');
+  var titleEl   = document.getElementById('statsIndividualHeatmapTitle');
+  if (!container) return;
+
+  var task = tasks.find(function (t) { return t.id === taskId; });
+
+  if (titleEl) {
+    titleEl.textContent = task
+      ? (getCategoryById(task.categoryId).emoji + ' ' + task.text + ' — Yearly Activity')
+      : 'Yearly Activity';
+  }
+
+  if (!task) {
+    container.innerHTML = '<p class="empty-state">No task selected.</p>';
+    return;
+  }
+
+  var hist  = task.history || {};
+  var weeks = buildYearGrid();
+
+  renderHeatmapGrid(
+    container,
+    weeks,
+    function (dateStr) {
+      var done = !!hist[dateStr];
+      return { stage: done ? 3 : 0, data: { done: done } };
+    },
+    function (dateStr, info) {
+      return dateStr + ': ' + (info.data.done ? 'Completed' : 'Not Completed');
+    }
+  );
+}
+
+// ---- Summary metric cards ----
+
+function computeOverallStats() {
+  var maxGrowthTask    = null;
+  var allTimeMaxStreak = 0;
+  var currentMaxStreak = 0;
+  var weeklyGrowth     = 0;
+  var monthlyGrowth    = 0;
+
+  var last7  = []; for (var i = 0; i < 7;  i++) last7.push(getDateNDaysAgo(i));
+  var last30 = []; for (var j = 0; j < 30; j++) last30.push(getDateNDaysAgo(j));
+
+  tasks.forEach(function (t) {
+    var totalGrowthDays = t.totalGrowthDays || 0;
+    if (!maxGrowthTask || totalGrowthDays > (maxGrowthTask.totalGrowthDays || 0)) {
+      maxGrowthTask = t;
+    }
+    allTimeMaxStreak = Math.max(allTimeMaxStreak, t.maxStreak || 0, t.streak || 0);
+    currentMaxStreak = Math.max(currentMaxStreak, t.streak || 0);
+
+    var hist = t.history || {};
+    last7.forEach(function (d)  { if (hist[d]) weeklyGrowth++; });
+    last30.forEach(function (d) { if (hist[d]) monthlyGrowth++; });
+  });
+
+  return {
+    maxGrowthTask:    maxGrowthTask,
+    allTimeMaxStreak: allTimeMaxStreak,
+    currentMaxStreak: currentMaxStreak,
+    weeklyGrowth:     weeklyGrowth,
+    monthlyGrowth:    monthlyGrowth,
+  };
+}
+
+function computeIndividualStats(taskId) {
+  var task = tasks.find(function (t) { return t.id === taskId; });
+  if (!task) return null;
+
+  var cat              = getCategoryById(task.categoryId);
+  var totalGrowthDays  = task.totalGrowthDays || 0;
+  var stageIdx         = getStageIndexForDays(totalGrowthDays);
+  var scale            = computeScaleForDays(totalGrowthDays);
+  var heightMeters     = computeHeightMeters(scale);
+  var streak           = task.streak || 0;
+  var maxStreak         = Math.max(task.maxStreak || 0, streak);
+
+  var last7  = []; for (var i = 0; i < 7;  i++) last7.push(getDateNDaysAgo(i));
+  var last30 = []; for (var j = 0; j < 30; j++) last30.push(getDateNDaysAgo(j));
+  var hist   = task.history || {};
+
+  return {
+    task:            task,
+    cat:             cat,
+    stageIdx:        stageIdx,
+    heightMeters:    heightMeters,
+    streak:          streak,
+    maxStreak:       maxStreak,
+    weekCompletions:  last7.filter(function (d) { return hist[d]; }).length,
+    monthCompletions: last30.filter(function (d) { return hist[d]; }).length,
+  };
+}
+
+function statCardHtml(emoji, label, value, sub) {
+  return (
+    '<div class="stat-card">' +
+      '<div class="stat-card-emoji">' + emoji + '</div>' +
+      '<div class="stat-card-body">' +
+        '<div class="stat-card-label">' + escapeHtml(label) + '</div>' +
+        '<div class="stat-card-value">' + escapeHtml(value) + '</div>' +
+        (sub ? '<div class="stat-card-sub">' + escapeHtml(sub) + '</div>' : '') +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function renderOverallCards() {
+  var container = document.getElementById('statsOverallCards');
+  if (!container) return;
+
+  if (tasks.length === 0) {
+    container.innerHTML = '<p class="empty-state">No tasks yet — add one on the Tasks page to see your stats here.</p>';
+    return;
+  }
+
+  var s      = computeOverallStats();
+  var maxCat = s.maxGrowthTask ? getCategoryById(s.maxGrowthTask.categoryId) : null;
+
+  container.innerHTML =
+    statCardHtml(
+      maxCat ? maxCat.emoji : '🌳',
+      'Max Plant',
+      maxCat ? s.maxGrowthTask.text : '—',
+      maxCat ? ((s.maxGrowthTask.totalGrowthDays || 0) + ' days grown · ' + maxCat.species) : ''
+    ) +
+    statCardHtml('🏆', 'All-Time Max Streak',    s.allTimeMaxStreak + ' day' + (s.allTimeMaxStreak === 1 ? '' : 's'), '') +
+    statCardHtml('🔥', 'Current Highest Streak', s.currentMaxStreak + ' day' + (s.currentMaxStreak === 1 ? '' : 's'), '') +
+    statCardHtml('📅', 'Weekly Growth',          s.weeklyGrowth + ' completion' + (s.weeklyGrowth === 1 ? '' : 's'), 'last 7 days') +
+    statCardHtml('📈', 'Monthly Growth',         s.monthlyGrowth + ' completion' + (s.monthlyGrowth === 1 ? '' : 's'), 'last 30 days');
+}
+
+function renderIndividualCards(taskId) {
+  var container = document.getElementById('statsIndividualCards');
+  if (!container) return;
+
+  if (tasks.length === 0) {
+    container.innerHTML = '<p class="empty-state">No tasks yet — add one on the Tasks page to see your stats here.</p>';
+    return;
+  }
+
+  var s = computeIndividualStats(taskId);
+  if (!s) {
+    container.innerHTML = '<p class="empty-state">No task selected.</p>';
+    return;
+  }
+
+  container.innerHTML =
+    statCardHtml(
+      s.cat.emoji,
+      'Current Stage & Height',
+      'Stage ' + s.stageIdx + ' · ' + formatHeightMeters(s.heightMeters),
+      s.cat.species + ' · ' + (s.task.totalGrowthDays || 0) + ' days grown'
+    ) +
+    statCardHtml('🔥', 'Current Streak',    s.streak + ' day' + (s.streak === 1 ? '' : 's'), '') +
+    statCardHtml('🏆', 'Max Streak',        s.maxStreak + ' day' + (s.maxStreak === 1 ? '' : 's'), '') +
+    statCardHtml('📅', 'Growth This Week',  s.weekCompletions + ' completion' + (s.weekCompletions === 1 ? '' : 's'), 'last 7 days') +
+    statCardHtml('📈', 'Growth This Month', s.monthCompletions + ' completion' + (s.monthCompletions === 1 ? '' : 's'), 'last 30 days');
+}
+
+// ---- View mode wiring ----
+
+// Rebuilds the single stats dropdown: "Overall" plus one entry per
+// plant. Replaces the old two-dropdown (view mode + task) setup —
+// picking a plant directly switches into Individual Plant View for
+// that plant, no separate selector needed. Keeps the previous
+// selection if it's still valid, otherwise falls back to Overall.
+function populateStatsViewSelect() {
+  var sel = document.getElementById('statsViewSelect');
+  if (!sel) return;
+
+  var prevValue = sel.value;
+  sel.innerHTML = '';
+
+  var overallOpt = document.createElement('option');
+  overallOpt.value = 'overall';
+  overallOpt.textContent = '🌻 Overall Garden Overview';
+  sel.appendChild(overallOpt);
+
+  tasks.forEach(function (t) {
+    var cat = getCategoryById(t.categoryId);
+    var opt = document.createElement('option');
+    opt.value = String(t.id);
+    opt.textContent = cat.emoji + ' ' + t.text;
+    sel.appendChild(opt);
+  });
+
+  var validValues = ['overall'].concat(tasks.map(function (t) { return String(t.id); }));
+  sel.value = (validValues.indexOf(prevValue) !== -1) ? prevValue : 'overall';
+}
+
+function renderStatsView() {
+  var viewSelEl        = document.getElementById('statsViewSelect');
+  var overallViewEl    = document.getElementById('statsOverallView');
+  var individualViewEl = document.getElementById('statsIndividualView');
+  var value = viewSelEl ? viewSelEl.value : 'overall';
+
+  if (value !== 'overall') {
+    var taskId = parseInt(value, 10);
+
+    if (overallViewEl)    overallViewEl.classList.add('hidden');
+    if (individualViewEl) individualViewEl.classList.remove('hidden');
+
+    renderIndividualHeatmap(taskId);
+    renderIndividualCards(taskId);
+  } else {
+    if (overallViewEl)    overallViewEl.classList.remove('hidden');
+    if (individualViewEl) individualViewEl.classList.add('hidden');
+
+    renderOverallHeatmap();
+    renderOverallCards();
+  }
+}
+
+// ============================================
+// Profile identity header (Stats page)
+// ============================================
+// Garden level/badge — derived from LIFETIME growth days summed
+// across every plant the user has ever grown, so it reflects total
+// gardening effort rather than any single plant's progress.
+var GARDEN_LEVELS = [
+  { min: 0,   label: 'Level 1 — Seedling Starter' },
+  { min: 10,  label: 'Level 2 — Sprout Novice' },
+  { min: 30,  label: 'Level 3 — Growing Gardener' },
+  { min: 75,  label: 'Level 4 — Bloom Keeper' },
+  { min: 150, label: 'Level 5 — Flourishing Grower' },
+  { min: 300, label: 'Level 6 — Master Gardener' },
+];
+
+function computeGardenLevel(lifetimeGrowthDays) {
+  var current = GARDEN_LEVELS[0];
+  GARDEN_LEVELS.forEach(function (lvl) {
+    if (lifetimeGrowthDays >= lvl.min) current = lvl;
+  });
+  return current.label;
+}
+
+function renderProfileHeader() {
+  if (!profileHeaderEl) return;
+
+  var profile = currentUserProfile;
+
+  var lifetimeGrowthDays = 0;
+  var longestStreak      = 0;
+  tasks.forEach(function (t) {
+    lifetimeGrowthDays += (t.totalGrowthDays || 0);
+    longestStreak = Math.max(longestStreak, t.maxStreak || 0, t.streak || 0);
+  });
+  var totalActivePlants = tasks.length;
+  var levelLabel = computeGardenLevel(lifetimeGrowthDays);
+
+  var avatarHtml = (!profile.isAnonymous && profile.photoURL)
+    ? '<img class="profile-avatar-img" src="' + profile.photoURL + '" alt="" />'
+    : '<div class="profile-avatar-fallback">' + (profile.isAnonymous ? '\uD83C\uDF31' : '\uD83C\uDF3B') + '</div>';
+
+  var nameText  = profile.isAnonymous ? 'Guest Gardener' : (profile.displayName || 'Gardener');
+  var emailText = profile.isAnonymous ? 'Not signed in — sign in to save your garden to an account' : (profile.email || '');
+
+  var actionHtml = profile.isAnonymous
+    ? '<button id="profileActionBtn" class="profile-action-btn" type="button">Sign in with Google</button>'
+    : '<button id="profileActionBtn" class="profile-action-btn is-signout" type="button">Sign Out</button>';
+
+  profileHeaderEl.innerHTML =
+    '<div class="profile-header-top">' +
+      avatarHtml +
+      '<div class="profile-id-block">' +
+        '<div class="profile-name">' + escapeHtml(nameText) + '</div>' +
+        '<div class="profile-email">' + escapeHtml(emailText) + '</div>' +
+        '<span class="profile-badge">' + escapeHtml(levelLabel) + '</span>' +
+      '</div>' +
+      actionHtml +
+    '</div>' +
+    '<div class="profile-quick-stats">' +
+      '<div class="profile-quick-stat">' +
+        '<div class="profile-quick-stat-value">' + longestStreak + '</div>' +
+        '<div class="profile-quick-stat-label">Longest Streak</div>' +
+      '</div>' +
+      '<div class="profile-quick-stat">' +
+        '<div class="profile-quick-stat-value">' + totalActivePlants + '</div>' +
+        '<div class="profile-quick-stat-label">Active Plants</div>' +
+      '</div>' +
+      '<div class="profile-quick-stat">' +
+        '<div class="profile-quick-stat-value">' + lifetimeGrowthDays + '</div>' +
+        '<div class="profile-quick-stat-label">Lifetime Growth Days</div>' +
+      '</div>' +
+    '</div>';
+
+  var actionBtn = document.getElementById('profileActionBtn');
+  if (actionBtn) {
+    actionBtn.addEventListener('click', function () {
+      if (profile.isAnonymous) {
+        openAuthModal();
+      } else {
+        signOutUser();
+      }
+    });
+  }
+}
+
+function renderStatsPage() {
+  populateStatsViewSelect();
+  renderStatsView();
+  renderProfileHeader();
+}
+
+// Wire the dropdowns once — renderStatsView() itself is what redraws
+// the page content each time either selection changes.
+var statsViewSelectEl = document.getElementById('statsViewSelect');
+if (statsViewSelectEl) statsViewSelectEl.addEventListener('change', renderStatsView);
+
+// Tooltip hookup — done once; both containers get their children
+// replaced on every render, but delegation means this still works.
+initHeatmapTooltips(document.getElementById('statsOverallHeatmap'));
+initHeatmapTooltips(document.getElementById('statsIndividualHeatmap'));
+
+
+// ============================================
 // Main render — called after every state change
 // ============================================
 function render() {
   renderTaskList();
   renderGarden();
   renderDevPanel();
+  if (currentPage === 'stats' && authReady) renderStatsPage();
 }
 
 
