@@ -1174,6 +1174,21 @@ body {
     0 4px 14px rgba(0, 0, 0, 0.30);
 }
 
+.cta-tertiary {
+  background: #2F5F63;
+  color: #EAF6F2;
+  margin: 22px auto 0;
+  box-shadow:
+    0 6px 26px rgba(47, 95, 99, 0.50),
+    0 2px 8px rgba(0, 0, 0, 0.30);
+}
+
+.cta-tertiary:hover {
+  box-shadow:
+    0 10px 36px rgba(47, 95, 99, 0.60),
+    0 4px 14px rgba(0, 0, 0, 0.30);
+}
+
 /* Copy card */
 .home-copy {
   margin: 34px 0 0;
@@ -1210,7 +1225,9 @@ body {
   z-index: 20;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  row-gap: 6px;
   padding: 14px 18px;
 }
 
@@ -2540,11 +2557,12 @@ body {
 }
 
 /* ========================================
-   Plant skins — row button + picker modal
+   Plant skins — task-row pip + Greenhouse page
    ======================================== */
 
 /* Task-row button. The pip carries the skin's three key colours, so
-   the row itself tells you what that plant is wearing. */
+   the row itself tells you what that plant is wearing — tapping it
+   jumps to the Greenhouse with that plant's skins already open. */
 .task-item button.skin-btn {
   border: none;
   background: none;
@@ -2580,58 +2598,245 @@ body {
   vertical-align: middle;
 }
 
-/* ---- Picker modal ---- */
+/* ========================================
+   Greenhouse page
+   ======================================== */
 
-.skin-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 10002;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
+.page-greenhouse {
+  background: rgba(8, 5, 2, 0.42);
 }
 
-.skin-modal-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(8, 5, 2, 0.62);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+.greenhouse-nav {
+  background: rgba(8, 5, 2, 0.18);
+  border-bottom: 1px solid rgba(251, 247, 238, 0.07);
 }
 
-.skin-modal-card {
-  position: relative;
-  width: 100%;
-  max-width: 420px;
-  max-height: 84vh;
-  overflow-y: auto;
-  background: rgba(251, 247, 238, 0.98);
-  border-radius: 20px;
-  padding: 26px 22px 22px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
-  text-align: center;
+.greenhouse-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 12px 18px 72px;
 }
 
-.skin-modal-title {
+.greenhouse-header {
+  margin: 4px 0 18px;
+}
+
+.greenhouse-title {
   font-family: 'DM Serif Display', Georgia, serif;
-  font-size: 1.2rem;
+  font-size: 1.62rem;
+  font-weight: 400;
+  color: #FBF7EE;
+  margin: 0 0 5px;
+  letter-spacing: 0.01em;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
+}
+
+.greenhouse-subtitle {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.88rem;
+  line-height: 1.62;
+  color: rgba(240, 232, 214, 0.84);
+  margin: 0;
+  max-width: 54ch;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+}
+
+.greenhouse-empty {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.9rem;
+  color: rgba(240, 232, 214, 0.82);
+  text-align: center;
+  padding: 34px 12px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+}
+
+.greenhouse-empty.hidden {
+  display: none !important;
+}
+
+
+/* ---- One card per plant ---- */
+
+.plant-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.plant-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 14px 10px 12px;
+  border-radius: 16px;
+  border: 2px solid rgba(217, 207, 184, 0.55);
+  border-top-width: 4px;
+  background: linear-gradient(180deg, #F4EEDC 0%, #E7DCC4 60%, #D3C4A6 100%);
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+  -webkit-appearance: none;
+  appearance: none;
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.28),
+    0 1px 0 rgba(255, 255, 255, 0.55) inset;
+  transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
+}
+
+.plant-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(58, 107, 74, 0.55);
+}
+
+.plant-card:focus-visible {
+  outline: 2px solid #8FBF7F;
+  outline-offset: 3px;
+}
+
+.plant-card.open {
+  border-color: #3A6B4A;
+  box-shadow:
+    0 0 0 3px rgba(58, 107, 74, 0.22),
+    0 10px 34px rgba(0, 0, 0, 0.34);
+}
+
+/* Species tint on the top edge, matching the category badges. */
+.plant-card[data-category="education"]   { border-top-color: #3d7a50; }
+.plant-card[data-category="exercise"]    { border-top-color: #c99a1e; }
+.plant-card[data-category="mindfulness"] { border-top-color: #6858a8; }
+.plant-card[data-category="sleep"]       { border-top-color: #3464a0; }
+.plant-card[data-category="chores"]      { border-top-color: #8a6040; }
+.plant-card[data-category="misc"]        { border-top-color: #9c4c48; }
+
+/* Fixed-height stage so every card lines up whatever the plant. */
+.plant-card-art {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 134px;
+  width: 100%;
+  overflow: hidden;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.25));
+}
+
+.plant-card-art svg {
+  margin-bottom: -6px;
+}
+
+.plant-card-name {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.32;
   color: #2E2A22;
-  margin: 0 0 4px;
-  padding: 0 22px;
   overflow-wrap: anywhere;
 }
 
-.skin-modal-subtitle {
+.plant-card-species {
   font-family: 'Nunito', sans-serif;
-  font-size: 0.80rem;
+  font-size: 0.72rem;
+  color: #7d6d58;
+}
+
+.plant-card-skin {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(46, 42, 34, 0.09);
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #4a4034;
+}
+
+.plant-card.open .plant-card-skin {
+  background: rgba(58, 107, 74, 0.16);
+  color: #2c5a3c;
+}
+
+
+/* ---- The skin section that unfolds under a card ----
+   Spans the whole grid, so it always drops onto its own row
+   directly beneath the card that opened it. ---- */
+
+.skin-drawer {
+  grid-column: 1 / -1;
+  background: rgba(251, 247, 238, 0.97);
+  border-radius: 18px;
+  padding: 16px 16px 18px;
+  box-shadow:
+    0 10px 44px rgba(0, 0, 0, 0.32),
+    0 1px 0 rgba(255, 255, 255, 0.55) inset;
+  animation: skinDrawerIn 0.22s ease-out;
+}
+
+@keyframes skinDrawerIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.skin-drawer-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.skin-drawer-heading {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+
+.skin-drawer-title {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 1.14rem;
+  font-weight: 400;
+  color: #2E2A22;
+  margin: 0 0 3px;
+  overflow-wrap: anywhere;
+}
+
+.skin-drawer-subtitle {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.78rem;
   color: #9a836a;
-  margin: 0 0 18px;
+  margin: 0;
+}
+
+.skin-drawer-close {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(46, 42, 34, 0.08);
+  color: #6f6353;
+  font-size: 0.82rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.16s, color 0.16s;
+}
+
+.skin-drawer-close:hover {
+  background: rgba(46, 42, 34, 0.16);
+  color: #2E2A22;
+}
+
+.skin-drawer-close:focus-visible {
+  outline: 2px solid #3A6B4A;
+  outline-offset: 2px;
 }
 
 .skin-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
   gap: 12px;
 }
 
@@ -2702,13 +2907,26 @@ body {
   font-size: 0.78rem;
 }
 
+@media (max-width: 600px) {
+  .greenhouse-title { font-size: 1.38rem; }
+  .greenhouse-content { padding: 12px 14px 72px; }
+  .plant-card-grid { grid-template-columns: repeat(auto-fill, minmax(134px, 1fr)); gap: 10px; }
+  .plant-card-art { height: 116px; }
+  .skin-drawer { padding: 14px 12px 16px; }
+  .skin-grid { grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 10px; }
+}
+
 @media (max-width: 420px) {
   .skin-tile-art { height: 100px; }
   .skin-tile-note { font-size: 0.64rem; }
+  .plant-card-art { height: 104px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .task-item button.skin-btn,
+  .plant-card,
   .skin-tile { transition: none; }
-  .skin-tile:hover { transform: none; }
+  .skin-tile:hover,
+  .plant-card:hover { transform: none; }
+  .skin-drawer { animation: none; }
 }

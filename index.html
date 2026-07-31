@@ -106,6 +106,7 @@
       </div>
 
       <button class="cta-btn cta-secondary" id="btn-to-tasks">TO TASKS</button>
+      <button class="cta-btn cta-tertiary" id="btn-to-greenhouse">TO GREENHOUSE</button>
     </div>
   </div>
 
@@ -121,6 +122,8 @@
       <button class="nav-btn" id="garden-nav-tasks">Tasks</button>
       <span class="nav-sep">·</span>
       <button class="nav-btn" id="garden-nav-stats">Stats</button>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="garden-nav-greenhouse">Greenhouse</button>
     </nav>
     <p id="loadingState" class="loading-state">🌱 Loading your garden...</p>
 
@@ -143,6 +146,8 @@
       <span class="nav-current">Tasks</span>
       <span class="nav-sep">·</span>
       <button class="nav-btn" id="tasks-nav-stats">Stats</button>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="tasks-nav-greenhouse">Greenhouse</button>
     </nav>
 
     <p id="tasksLoadingState" class="loading-state">🌱 Loading your garden...</p>
@@ -194,6 +199,8 @@
       <button class="nav-btn" id="stats-nav-tasks">Tasks</button>
       <span class="nav-sep">·</span>
       <span class="nav-current">Stats</span>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="stats-nav-greenhouse">Greenhouse</button>
     </nav>
 
     <p id="statsLoadingState" class="loading-state">🌱 Loading your garden...</p>
@@ -243,6 +250,42 @@
     </div>
   </div>
 
+  <!-- ================================================
+       PAGE: GREENHOUSE
+       ================================================
+       One card per plant (task). Tap a card and a skin
+       section unfolds directly beneath it, full width of
+       the grid. Picking a skin repaints the card AND the
+       plant out in the garden, immediately.
+       ================================================ -->
+  <div id="page-greenhouse" class="page page-greenhouse hidden">
+    <nav class="site-nav greenhouse-nav">
+      <button class="nav-btn" id="greenhouse-nav-home">Home</button>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="greenhouse-nav-garden">Garden</button>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="greenhouse-nav-tasks">Tasks</button>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="greenhouse-nav-stats">Stats</button>
+      <span class="nav-sep">&middot;</span>
+      <span class="nav-current">Greenhouse</span>
+    </nav>
+
+    <p id="greenhouseLoadingState" class="loading-state">🌱 Loading your garden...</p>
+
+    <div id="greenhouseContent" class="greenhouse-content hidden">
+      <header class="greenhouse-header">
+        <h2 class="greenhouse-title">The Greenhouse</h2>
+        <p class="greenhouse-subtitle">Every plant you’re growing, and every look it can wear. Tap a plant to open its skins — whatever you pick shows up in the garden straight away.</p>
+      </header>
+
+      <!-- Plant cards + inline skin drawers (populated by JS) -->
+      <div id="greenhouseGrid" class="plant-card-grid"></div>
+
+      <p id="greenhouseEmpty" class="greenhouse-empty hidden">🌱 No plants yet — add a task on the Tasks page and it will show up here.</p>
+    </div>
+  </div>
+
   <!-- Shared tooltip for heatmap cells, positioned via JS on hover -->
   <div id="heatmapTooltip" class="heatmap-tooltip hidden"></div>
 
@@ -262,15 +305,6 @@
     <div class="auth-modal-card">
       <button id="authModalClose" class="auth-modal-close" aria-label="Close">✕</button>
       <div class="auth-modal-body" id="authModalBody"></div>
-    </div>
-  </div>
-
-  <!-- Skin picker — choose how one plant looks -->
-  <div id="skinModal" class="skin-modal hidden">
-    <div class="skin-modal-backdrop" id="skinModalBackdrop"></div>
-    <div class="skin-modal-card">
-      <button id="skinModalClose" class="auth-modal-close" aria-label="Close">✕</button>
-      <div class="skin-modal-body" id="skinModalBody"></div>
     </div>
   </div>
 

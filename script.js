@@ -17,7 +17,11 @@
 // 5. The sky background reflects the current local time and
 //    updates every 60 seconds so it stays live.
 // 6. Multi-page navigation: Home / Garden / Tasks (with
-//    category subpages). All show/hide via JS, no reload.
+//    category subpages) / Stats / Greenhouse. All show/hide
+//    via JS, no reload.
+// 7. Greenhouse page: one card per plant. Open a card and pick
+//    a skin; the card and the plant in the garden both repaint,
+//    because both read the same task.skinId.
 // ============================================
 
 
@@ -243,6 +247,11 @@ const pageHomeEl   = document.getElementById('page-home');
 const pageGardenEl = document.getElementById('page-garden');
 const pageTasksEl  = document.getElementById('page-tasks');
 const pageStatsEl  = document.getElementById('page-stats');
+const pageGreenhouseEl = document.getElementById('page-greenhouse');
+
+// Greenhouse page elements
+const greenhouseLoadingState = document.getElementById('greenhouseLoadingState');
+const greenhouseContent      = document.getElementById('greenhouseContent');
 
 // Stats page elements
 const statsLoadingState = document.getElementById('statsLoadingState');
@@ -284,6 +293,9 @@ const authModalBody      = document.getElementById('authModalBody');
     pageStatsEl:       pageStatsEl,
     statsLoadingState: statsLoadingState,
     statsContent:      statsContent,
+    pageGreenhouseEl:       pageGreenhouseEl,
+    greenhouseLoadingState: greenhouseLoadingState,
+    greenhouseContent:      greenhouseContent,
   };
   Object.keys(required).forEach(function (key) {
     if (!required[key]) {
@@ -423,6 +435,7 @@ function navigateTo(page) {
   if (pageGardenEl) pageGardenEl.classList.toggle('hidden', page !== 'garden');
   if (pageTasksEl)  pageTasksEl.classList.toggle('hidden',  page !== 'tasks');
   if (pageStatsEl)  pageStatsEl.classList.toggle('hidden',  page !== 'stats');
+  if (pageGreenhouseEl) pageGreenhouseEl.classList.toggle('hidden', page !== 'greenhouse');
 
   // Garden scene: only visible on garden page once auth is ready
   if (gardenSceneEl) gardenSceneEl.classList.toggle('hidden', page !== 'garden' || !authReady);
@@ -455,11 +468,18 @@ function navigateTo(page) {
     if (authReady) renderStatsPage();
   }
 
+  if (page === 'greenhouse') {
+    if (greenhouseLoadingState) greenhouseLoadingState.classList.toggle('hidden', authReady);
+    if (greenhouseContent) greenhouseContent.classList.toggle('hidden', !authReady);
+    if (authReady) renderGreenhouse();
+  }
+
   // Scroll the destination page back to top
   if (page === 'tasks'  && pageTasksEl)  pageTasksEl.scrollTop  = 0;
   if (page === 'garden' && pageGardenEl) pageGardenEl.scrollTop = 0;
   if (page === 'home'   && pageHomeEl)   pageHomeEl.scrollTop   = 0;
   if (page === 'stats'  && pageStatsEl)  pageStatsEl.scrollTop  = 0;
+  if (page === 'greenhouse' && pageGreenhouseEl) pageGreenhouseEl.scrollTop = 0;
 }
 
 function switchTaskTab(tabId) {
@@ -498,6 +518,16 @@ document.getElementById('tasks-nav-stats').addEventListener('click',  function (
 document.getElementById('stats-nav-home').addEventListener('click',   function () { navigateTo('home');   });
 document.getElementById('stats-nav-garden').addEventListener('click', function () { navigateTo('garden'); });
 document.getElementById('stats-nav-tasks').addEventListener('click',  function () { navigateTo('tasks');  });
+
+// Greenhouse — reachable from the home page and from every nav bar
+document.getElementById('btn-to-greenhouse').addEventListener('click',        function () { navigateTo('greenhouse'); });
+document.getElementById('garden-nav-greenhouse').addEventListener('click',    function () { navigateTo('greenhouse'); });
+document.getElementById('tasks-nav-greenhouse').addEventListener('click',     function () { navigateTo('greenhouse'); });
+document.getElementById('stats-nav-greenhouse').addEventListener('click',     function () { navigateTo('greenhouse'); });
+document.getElementById('greenhouse-nav-home').addEventListener('click',      function () { navigateTo('home');   });
+document.getElementById('greenhouse-nav-garden').addEventListener('click',    function () { navigateTo('garden'); });
+document.getElementById('greenhouse-nav-tasks').addEventListener('click',     function () { navigateTo('tasks');  });
+document.getElementById('greenhouse-nav-stats').addEventListener('click',     function () { navigateTo('stats');  });
 
 // Garden sub-nav
 document.getElementById('garden-tab-daily').addEventListener('click',    function () { switchGardenTab('daily');    });
@@ -1085,6 +1115,8 @@ auth.onIdTokenChanged(function (user) {
       if (mainContent)       mainContent.classList.remove('hidden');
       if (statsLoadingState) statsLoadingState.classList.add('hidden');
       if (statsContent)      statsContent.classList.remove('hidden');
+      if (greenhouseLoadingState) greenhouseLoadingState.classList.add('hidden');
+      if (greenhouseContent)      greenhouseContent.classList.remove('hidden');
 
       // Garden scene: only visible on garden page
       if (gardenSceneEl) gardenSceneEl.classList.toggle('hidden', currentPage !== 'garden');
@@ -1255,16 +1287,17 @@ function renderFilteredList(catId, listEl, emptyEl) {
       li.appendChild(badge);
     }
 
-    // Skin button — the pip shows the plant's current colours, so
-    // you can tell what a task is wearing without opening anything.
+    // Skin pip — shows the plant's current colours right on the
+    // row, and doubles as a shortcut into the Greenhouse, where
+    // skins are actually chosen.
     var skinBtn       = document.createElement('button');
     skinBtn.type      = 'button';
     skinBtn.className = 'skin-btn';
     skinBtn.innerHTML = skinPipHtml(getSkin(task.categoryId, getTaskSkinId(task)));
-    skinBtn.setAttribute('aria-label', 'Change how this ' + cat.species + ' looks');
-    skinBtn.title     = 'Change how this ' + cat.species + ' looks';
+    skinBtn.setAttribute('aria-label', 'Open this ' + cat.species + ' in the Greenhouse');
+    skinBtn.title     = 'Change how this ' + cat.species + ' looks — opens the Greenhouse';
     (function (id) {
-      skinBtn.addEventListener('click', function () { openSkinModal(id); });
+      skinBtn.addEventListener('click', function () { openPlantSkins(id); });
     }(task.id));
     li.appendChild(skinBtn);
 
@@ -3400,6 +3433,7 @@ function render() {
   renderGarden();
   renderDevPanel();
   if (currentPage === 'stats' && authReady) renderStatsPage();
+  if (currentPage === 'greenhouse' && authReady) renderGreenhouse();
 }
 
 
@@ -3755,41 +3789,68 @@ setDevMode(devModeEnabled);
 
 
 // ============================================
-// Skin picker
+// Greenhouse — the plant skin page
 // ============================================
-// Lives on the Tasks page rather than on the plant itself: a plant in
-// the garden is already press-and-hold-to-move, so it has no spare
-// tap left to give.
+// Every task is a plant, and every plant gets a card here. Tapping a
+// card unfolds a skin section directly beneath it — full width of the
+// grid — with one tile per skin available to that plant's species.
+// Choosing a tile repaints the card AND the plant standing out in the
+// garden, because both read the same task.skinId.
+//
+// This replaces the old per-row picker modal on the Tasks page; the
+// pip button on a task row is now just a shortcut that jumps here.
 // ============================================
 
-var skinModalEl       = document.getElementById('skinModal');
-var skinModalBody     = document.getElementById('skinModalBody');
-var skinModalClose    = document.getElementById('skinModalClose');
-var skinModalBackdrop = document.getElementById('skinModalBackdrop');
+var greenhouseGridEl  = document.getElementById('greenhouseGrid');
+var greenhouseEmptyEl = document.getElementById('greenhouseEmpty');
 
-// Which task the picker is currently open for.
-var skinModalTaskId = null;
+// Which plant's skin section is currently unfolded (null = none).
+var greenhouseOpenTaskId = null;
+
+// Set for exactly one render when a card is freshly opened, so the
+// section scrolls itself into view then — but never on the re-render
+// that follows picking a skin, which would yank the page around.
+var greenhouseScrollPending = false;
 
 // Skins are always previewed fully grown — at seed stage almost every
 // skin looks the same, which makes for a useless choice.
 var SKIN_PREVIEW_STAGE = 3;
 
-// The three-colour chip used on the task row and on each tile.
+// The three-colour chip used on task rows, plant cards and skin tiles.
 function skinPipHtml(skin) {
   var s = (skin && skin.swatch) || ['#8FBF7F', '#5C8267', '#274F3C'];
   return '<span class="skin-pip" style="background:linear-gradient(135deg,' +
          s[0] + ' 0 33%,' + s[1] + ' 33% 66%,' + s[2] + ' 66% 100%)"></span>';
 }
 
-function openSkinModal(taskId) {
-  skinModalTaskId = taskId;
-  if (skinModalEl) skinModalEl.classList.remove('hidden');
-  renderSkinModal();
+function skinCountLabel(n) {
+  return n + (n === 1 ? ' skin' : ' skins');
 }
 
-function closeSkinModal() {
-  skinModalTaskId = null;
-  if (skinModalEl) skinModalEl.classList.add('hidden');
+
+// ---- Opening / closing a plant's skin section --------------------
+
+function toggleGreenhousePlant(taskId) {
+  if (greenhouseOpenTaskId === taskId) {
+    greenhouseOpenTaskId = null;          // tapping an open card closes it
+  } else {
+    greenhouseOpenTaskId    = taskId;
+    greenhouseScrollPending = true;
+  }
+  renderGreenhouse();
+}
+
+function closeGreenhousePlant() {
+  greenhouseOpenTaskId = null;
+  renderGreenhouse();
+}
+
+// Used by the pip shortcut on the Tasks page: jump to the Greenhouse
+// with this plant's skins already open.
+function openPlantSkins(taskId) {
+  greenhouseOpenTaskId    = taskId;
+  greenhouseScrollPending = true;
+  navigateTo('greenhouse');
 }
 
 function setTaskSkin(taskId, skinId) {
@@ -3797,23 +3858,26 @@ function setTaskSkin(taskId, skinId) {
   if (!task) return;
   task.skinId = skinId;
   saveData();
+  // One render repaints the card here, the pip on the Tasks page and
+  // the plant out in the garden — they all read task.skinId.
   render();
-  renderSkinModal();
 }
 
-function renderSkinModal() {
-  if (!skinModalBody) return;
 
-  var task = tasks.find(function (t) { return t.id === skinModalTaskId; });
-  if (!task) { closeSkinModal(); return; }
+// ---- The skin section that unfolds under a card ------------------
 
-  var cat     = getCategoryById(task.categoryId);
-  var current = getTaskSkinId(task);
+function buildSkinDrawer(task, cat) {
+  var drawer       = document.createElement('div');
+  drawer.className = 'skin-drawer';
+  drawer.id        = 'skin-drawer-' + task.id;
 
-  var tiles = getSkinsFor(task.categoryId).map(function (skin) {
-    // Compare against the *resolved* skin so the tile for the default
-    // is still shown as selected when a task carries an unknown id.
-    var selected = (skin.id === getSkin(task.categoryId, current).id);
+  var skins   = getSkinsFor(task.categoryId);
+  // Compare against the *resolved* skin so the tile for the default is
+  // still shown as selected when a task carries an unknown id.
+  var current = getSkin(task.categoryId, getTaskSkinId(task)).id;
+
+  var tiles = skins.map(function (skin) {
+    var selected = (skin.id === current);
     return (
       '<button type="button" class="skin-tile' + (selected ? ' selected' : '') + '"' +
         ' data-skin-id="' + skin.id + '"' +
@@ -3828,24 +3892,93 @@ function renderSkinModal() {
     );
   }).join('');
 
-  skinModalBody.innerHTML =
-    '<h3 class="skin-modal-title">' + escapeHtml(task.text) + '</h3>' +
-    '<p class="skin-modal-subtitle">' + cat.emoji + ' ' + escapeHtml(cat.species) +
-      ' · shown at full growth</p>' +
+  drawer.innerHTML =
+    '<div class="skin-drawer-head">' +
+      '<div class="skin-drawer-heading">' +
+        '<h3 class="skin-drawer-title">' + escapeHtml(task.text) + '</h3>' +
+        '<p class="skin-drawer-subtitle">' + cat.emoji + ' ' + escapeHtml(cat.species) +
+          ' \u00b7 ' + skinCountLabel(skins.length) + ' \u00b7 shown at full growth</p>' +
+      '</div>' +
+      '<button type="button" class="skin-drawer-close" aria-label="Close skins">\u2715</button>' +
+    '</div>' +
     '<div class="skin-grid">' + tiles + '</div>';
 
-  skinModalBody.querySelectorAll('.skin-tile').forEach(function (tile) {
+  drawer.querySelectorAll('.skin-tile').forEach(function (tile) {
     tile.addEventListener('click', function () {
       setTaskSkin(task.id, tile.getAttribute('data-skin-id'));
     });
   });
+
+  var closeBtn = drawer.querySelector('.skin-drawer-close');
+  if (closeBtn) closeBtn.addEventListener('click', closeGreenhousePlant);
+
+  return drawer;
 }
 
-if (skinModalClose)    skinModalClose.addEventListener('click', closeSkinModal);
-if (skinModalBackdrop) skinModalBackdrop.addEventListener('click', closeSkinModal);
 
+// ---- The page ----------------------------------------------------
+
+function renderGreenhouse() {
+  if (!greenhouseGridEl) return;
+
+  // A task can be removed on the Tasks page while its skin section is
+  // open here — don't leave a dangling id behind.
+  if (greenhouseOpenTaskId !== null &&
+      !tasks.some(function (t) { return t.id === greenhouseOpenTaskId; })) {
+    greenhouseOpenTaskId = null;
+  }
+
+  greenhouseGridEl.innerHTML = '';
+  if (greenhouseEmptyEl) greenhouseEmptyEl.classList.toggle('hidden', tasks.length > 0);
+
+  tasks.forEach(function (task) {
+    var cat  = getCategoryById(task.categoryId);
+    var skin = getSkin(task.categoryId, getTaskSkinId(task));
+    var open = (task.id === greenhouseOpenTaskId);
+
+    var card              = document.createElement('button');
+    card.type             = 'button';
+    card.className        = 'plant-card' + (open ? ' open' : '');
+    card.dataset.category = task.categoryId;
+    card.setAttribute('aria-expanded', open ? 'true' : 'false');
+    card.setAttribute('aria-controls', 'skin-drawer-' + task.id);
+    card.title = 'Change how this ' + cat.species + ' looks';
+
+    card.innerHTML =
+      '<span class="plant-card-art">' +
+        getPlantSVG(task.categoryId, SKIN_PREVIEW_STAGE, skin.id, 84) +
+      '</span>' +
+      '<span class="plant-card-name">' + escapeHtml(task.text) + '</span>' +
+      '<span class="plant-card-species">' + cat.emoji + ' ' +
+        escapeHtml(cat.species) + '</span>' +
+      '<span class="plant-card-skin">' + skinPipHtml(skin) +
+        escapeHtml(skin.name) + '</span>';
+
+    (function (id) {
+      card.addEventListener('click', function () { toggleGreenhousePlant(id); });
+    }(task.id));
+
+    greenhouseGridEl.appendChild(card);
+
+    // The section spans the full grid width, so it always lands on its
+    // own row directly beneath the card that opened it.
+    if (open) greenhouseGridEl.appendChild(buildSkinDrawer(task, cat));
+  });
+
+  if (greenhouseScrollPending && greenhouseOpenTaskId !== null) {
+    greenhouseScrollPending = false;
+    var openDrawer = document.getElementById('skin-drawer-' + greenhouseOpenTaskId);
+    if (openDrawer && openDrawer.scrollIntoView) {
+      requestAnimationFrame(function () {
+        openDrawer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    }
+  }
+}
+
+// Escape closes an open skin section.
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape' && skinModalEl && !skinModalEl.classList.contains('hidden')) {
-    closeSkinModal();
+  if (e.key === 'Escape' && currentPage === 'greenhouse' && greenhouseOpenTaskId !== null) {
+    closeGreenhousePlant();
   }
 });
