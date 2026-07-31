@@ -551,6 +551,44 @@ body {
   transition: opacity 0.8s ease;
 }
 
+/* Height tooltip — small dark pill that appears above a plant only
+   while it's hovered, showing its current height in meters. Sits
+   outside .plant-visual so it stays a fixed, readable size no matter
+   how big/small the plant itself has scaled. */
+.plant-height-tag {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%) translateY(4px);
+  margin-bottom: 6px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: rgba(20, 16, 10, 0.86);
+  border: 1px solid rgba(242, 184, 75, 0.45);
+  color: #F2B84B;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  z-index: 5;
+}
+
+.garden-plant:hover .plant-height-tag {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+@media (max-width: 600px) {
+  .plant-height-tag {
+    font-size: 0.66rem;
+    padding: 2px 7px;
+  }
+}
+
 .plant-label-tag {
   position: absolute;
   top: 100%;
