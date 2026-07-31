@@ -265,6 +265,24 @@
     </div>
   </div>
 
+  <!-- Skin picker — choose how one plant looks -->
+  <div id="skinModal" class="skin-modal hidden">
+    <div class="skin-modal-backdrop" id="skinModalBackdrop"></div>
+    <div class="skin-modal-card">
+      <button id="skinModalClose" class="auth-modal-close" aria-label="Close">✕</button>
+      <div class="skin-modal-body" id="skinModalBody"></div>
+    </div>
+  </div>
+
+  <!-- Shared gradient/pattern store for plant skins. Skins inject
+       their <defs> here once, so every plant on screen — including
+       both halves of a growth-stage crossfade — can reference the
+       same gradient without duplicating element ids. -->
+  <svg id="skinDefsSprite" width="0" height="0" aria-hidden="true" focusable="false"
+       style="position:absolute;width:0;height:0;overflow:hidden;pointer-events:none;">
+    <defs></defs>
+  </svg>
+
   <!-- ================================================
        DEVELOPER MODE — live state inspector
        Toggle with the 🛠 button or Ctrl/Cmd+Shift+D

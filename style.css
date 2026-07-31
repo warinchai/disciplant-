@@ -2538,3 +2538,177 @@ body {
     font-size: 1.1rem;
   }
 }
+
+/* ========================================
+   Plant skins — row button + picker modal
+   ======================================== */
+
+/* Task-row button. The pip carries the skin's three key colours, so
+   the row itself tells you what that plant is wearing. */
+.task-item button.skin-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 3px;
+  border-radius: 8px;
+  line-height: 0;
+  opacity: 0.55;
+  transition: opacity 0.18s, background 0.18s, transform 0.18s;
+}
+
+.task-item:hover button.skin-btn { opacity: 1; }
+
+.task-item button.skin-btn:hover {
+  background: rgba(58, 107, 74, 0.10);
+  transform: scale(1.08);
+}
+
+.task-item button.skin-btn:focus-visible {
+  outline: 2px solid #3A6B4A;
+  outline-offset: 2px;
+  opacity: 1;
+}
+
+.skin-pip {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1px solid rgba(46, 42, 34, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  vertical-align: middle;
+}
+
+/* ---- Picker modal ---- */
+
+.skin-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.skin-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 5, 2, 0.62);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.skin-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  max-height: 84vh;
+  overflow-y: auto;
+  background: rgba(251, 247, 238, 0.98);
+  border-radius: 20px;
+  padding: 26px 22px 22px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+.skin-modal-title {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 1.2rem;
+  color: #2E2A22;
+  margin: 0 0 4px;
+  padding: 0 22px;
+  overflow-wrap: anywhere;
+}
+
+.skin-modal-subtitle {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.80rem;
+  color: #9a836a;
+  margin: 0 0 18px;
+}
+
+.skin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.skin-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 12px 10px 11px;
+  border-radius: 14px;
+  border: 2px solid rgba(217, 207, 184, 0.7);
+  background: linear-gradient(180deg, #EFE7D3 0%, #E3D8BE 62%, #CFC0A0 100%);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
+}
+
+.skin-tile:hover {
+  border-color: rgba(58, 107, 74, 0.55);
+  transform: translateY(-2px);
+}
+
+.skin-tile:focus-visible {
+  outline: 2px solid #3A6B4A;
+  outline-offset: 2px;
+}
+
+.skin-tile.selected {
+  border-color: #3A6B4A;
+  box-shadow: 0 0 0 3px rgba(58, 107, 74, 0.18);
+}
+
+/* Fixed-height stage so tiles line up whatever the plant's height. */
+.skin-tile-art {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 118px;
+  width: 100%;
+  overflow: hidden;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.22));
+}
+
+.skin-tile-art svg {
+  margin-bottom: -6px;
+}
+
+.skin-tile-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #2E2A22;
+}
+
+.skin-tile-note {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: #6f6353;
+}
+
+.skin-tile.selected .skin-tile-name::after {
+  content: '✓';
+  color: #3A6B4A;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 420px) {
+  .skin-tile-art { height: 100px; }
+  .skin-tile-note { font-size: 0.64rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-item button.skin-btn,
+  .skin-tile { transition: none; }
+  .skin-tile:hover { transform: none; }
+}
