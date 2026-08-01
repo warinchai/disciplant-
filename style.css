@@ -440,14 +440,27 @@ body {
    in empty space above it. */
 .garden-fence-shadow {
   position: absolute;
-  top: calc(0% + 42px);
+  /* Matches the fence strip's own top (-7%) + height (42px) exactly,
+     so the shadow always starts right at the fence's actual bottom
+     edge instead of a fixed pixel offset that drifted away from it
+     on taller/shorter viewports — that drift was what produced a
+     stray, disconnected dark-green sliver above the real fence base. */
+  top: calc(-7% + 42px);
   left: 0;
   width: 100%;
-  height: 16px;
+  height: 26px;
   z-index: 1;
   pointer-events: none;
-  background: linear-gradient(to bottom, rgba(30, 50, 15, 0.30), transparent);
-  filter: blur(2px);
+  /* Softer, wider falloff (three stops instead of a flat two-stop
+     drop) plus a bigger blur so it reads as a gentle contact shadow
+     rather than a hard-edged stripe. */
+  background: linear-gradient(
+    to bottom,
+    rgba(20, 40, 12, 0.26) 0%,
+    rgba(20, 40, 12, 0.12) 45%,
+    rgba(20, 40, 12, 0) 100%
+  );
+  filter: blur(5px);
 }
 
 /* Night dimming — toggled via .scene-night on #gardenScene (see
@@ -467,7 +480,7 @@ body {
     height: 32px;
   }
   .garden-fence-shadow {
-    top: calc(0% + 32px);
+    top: calc(-7% + 32px);
   }
 }
 
