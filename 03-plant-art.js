@@ -805,7 +805,7 @@ var PLANT_SVG_DATA = {
 //   mindfulness  petal-outer(-light) petal-mid(-light)
 //                petal-inner(-light) center center-dark leaf-light
 //                leaf leaf-dark pad pad-dark
-//   sleep        bud bud-shade bud-hilite stem stem-light
+//   sleep        bud bud-pale bud-shade calyx stem stem-light
 //   chores       culm-light culm culm-mid node node-dark leaf-light
 //                leaf leaf-dark
 //   finance      leaf leaf-mid leaf-dark outline sheen bloom
@@ -905,12 +905,570 @@ function skinRipple(x, y, rx, colour, opacity, width) {
          '" opacity="' + (opacity === undefined ? 1 : opacity) + '"/>';
 }
 
+// A soft jelly sweet sitting on the soil, used by the candy skin.
+// Deliberately lopsided — wider on the right, settled on the left —
+// so a row of them never reads as a line of stamped domes. (x, y) is
+// where it meets the ground; it grows upward from there.
+function skinGumdrop(x, y, s, colour, hilite) {
+  var g = '<g transform="translate(' + x + ',' + y + ') scale(' + s + ')">' +
+    '<path d="M0,0 C-4.7,0 -6.3,-2.0 -5.7,-4.6' +
+    ' C-5.2,-7.0 -3.2,-8.5 -0.2,-8.7' +
+    ' C3.0,-8.9 5.3,-7.1 5.8,-4.6' +
+    ' C6.3,-2.1 4.6,0 0,0 Z" fill="' + colour + '"/>';
+  if (hilite) {
+    g += '<path d="M-3.2,-5.8 C-2.7,-7.2 -1.4,-8.0 0.2,-7.8' +
+         ' C-1.2,-7.1 -2.2,-6.5 -2.7,-5.3 Z" fill="' + hilite + '"/>';
+  }
+  return g + '</g>';
+}
+
+// A tall almond eye with one catchlight, used by the alien skin.
+// r is the half-width; the eye stands 1.5x that above and below its
+// centre, which is what gives it the narrow off-world look.
+function skinAlienEye(x, y, r, colour, glint) {
+  var out = '<g transform="translate(' + x + ',' + y + ')">' +
+    '<path d="M' + (-r) + ',0' +
+    ' C' + (-r) + ',' + (-r * 1.16) + ' ' + (-r * 0.52) + ',' + (-r * 1.5) + ' 0,' + (-r * 1.5) +
+    ' C' + (r * 0.52) + ',' + (-r * 1.5) + ' ' + r + ',' + (-r * 1.16) + ' ' + r + ',0' +
+    ' C' + r + ',' + (r * 1.16) + ' ' + (r * 0.52) + ',' + (r * 1.5) + ' 0,' + (r * 1.5) +
+    ' C' + (-r * 0.52) + ',' + (r * 1.5) + ' ' + (-r) + ',' + (r * 1.16) + ' ' + (-r) + ',0 Z"' +
+    ' fill="' + colour + '"/>';
+  if (glint) {
+    out += '<path d="M' + (-r * 0.16) + ',' + (-r * 0.96) +
+      ' C' + (r * 0.36) + ',' + (-r * 0.96) + ' ' + (r * 0.56) + ',' + (-r * 0.44) + ' ' + (r * 0.24) + ',' + (-r * 0.24) +
+      ' C' + (-r * 0.10) + ',' + (-r * 0.46) + ' ' + (-r * 0.36) + ',' + (-r * 0.70) + ' ' + (-r * 0.16) + ',' + (-r * 0.96) + ' Z"' +
+      ' fill="' + glint + '"/>';
+  }
+  return out + '</g>';
+}
+
+// A tapered feeler with a knob on the end, used by the alien skin.
+// Travels only upward from (x, y) so it can start inside a canopy or
+// cap and still read as emerging from it. tilt is a lean as a share
+// of the length: negative leans left, positive right.
+function skinAntenna(x, y, len, tilt, colour, knob) {
+  var dx = len * tilt;
+  var tipX = x + dx, tipY = y - len;
+  var w = len * 0.095;
+  return '<path d="M' + (x - w) + ',' + y +
+    ' C' + (x - w + dx * 0.28) + ',' + (y - len * 0.46) +
+    ' ' + (tipX - len * 0.16) + ',' + (tipY + len * 0.30) + ' ' + tipX + ',' + tipY +
+    ' C' + (tipX + len * 0.11) + ',' + (tipY + len * 0.32) +
+    ' ' + (x + w + dx * 0.28) + ',' + (y - len * 0.46) + ' ' + (x + w) + ',' + y + ' Z"' +
+    ' fill="' + colour + '"/>' +
+    skinDot(tipX, tipY, (len * 0.17).toFixed(2), knob, 1);
+}
+
+// A pitted rock hanging in a canopy, used by the nebula skin. The
+// outline is deliberately lopsided and the craters sit off-centre,
+// so a handful of them never reads as a row of stamped pebbles.
+// s scales it about (x, y) — a rock at s=1 is roughly 12 across —
+// and rot turns it so no two share a silhouette.
+function skinAsteroid(x, y, s, colour, shade, rot) {
+  return '<g transform="translate(' + x + ',' + y + ') rotate(' + (rot || 0) + ') scale(' + s + ')">' +
+    '<path d="M-6,-1.2 C-6.2,-3.6 -4.4,-5.5 -2,-6.1' +
+    ' C0.7,-6.8 3.7,-5.9 5.1,-3.8' +
+    ' C6.4,-1.8 6.3,1.5 4.7,3.4' +
+    ' C3.1,5.3 0.2,6.2 -2.3,5.5' +
+    ' C-4.8,4.8 -5.8,2.5 -6,-1.2 Z" fill="' + colour + '"/>' +
+    '<path d="M5.1,-3.8 C6.4,-1.8 6.3,1.5 4.7,3.4' +
+    ' C3.1,5.3 0.2,6.2 -2.3,5.5' +
+    ' C1.3,4.7 3.7,1.3 3.4,-2.6 Z" fill="' + shade + '"/>' +
+    '<path d="M-3.4,-2.2 C-2.2,-3.3 -0.5,-3.0 -0.1,-1.7' +
+    ' C0.2,-0.5 -0.9,0.5 -2.3,0.2' +
+    ' C-3.5,-0.1 -4.2,-1.2 -3.4,-2.2 Z" fill="' + shade + '" opacity="0.8"/>' +
+    '<path d="M0.5,2.3 C1.4,1.7 2.6,2.0 2.7,2.9' +
+    ' C2.8,3.8 1.7,4.4 0.8,4.0' +
+    ' C0.0,3.6 -0.3,2.8 0.5,2.3 Z" fill="' + shade + '" opacity="0.55"/></g>';
+}
+
+// A small world hanging where a fruit would, used by the nebula
+// skin. The ring is drawn in two halves — the back arc before the
+// body, the front arc after — so it genuinely passes behind the
+// planet instead of lying flat across it. Pass ring as null for a
+// bare moon; r is the body radius.
+function skinPlanet(x, y, r, colour, shade, ring) {
+  var rx = (r * 1.95).toFixed(2), ry = (r * 0.55).toFixed(2);
+  var w = Math.max(0.55, r * 0.2).toFixed(2);
+  var q = (r * 0.55).toFixed(2), n = (-r).toFixed(2), p = r.toFixed(2), nq = (-r * 0.55).toFixed(2);
+  var out = '<g transform="translate(' + x + ',' + y + ')">';
+  if (ring) {
+    out += '<g transform="rotate(-20)"><path d="M-' + rx + ',0 A' + rx + ',' + ry +
+           ' 0 0,1 ' + rx + ',0" fill="none" stroke="' + ring + '" stroke-width="' + w +
+           '" stroke-linecap="round" opacity="0.7"/></g>';
+  }
+  out += '<path d="M0,' + n + ' C' + q + ',' + n + ' ' + p + ',' + nq + ' ' + p + ',0' +
+         ' C' + p + ',' + q + ' ' + q + ',' + p + ' 0,' + p +
+         ' C' + nq + ',' + p + ' ' + n + ',' + q + ' ' + n + ',0' +
+         ' C' + n + ',' + nq + ' ' + nq + ',' + n + ' 0,' + n + ' Z" fill="' + colour + '"/>' +
+         '<path d="M0,' + n + ' C' + q + ',' + n + ' ' + p + ',' + nq + ' ' + p + ',0' +
+         ' C' + p + ',' + q + ' ' + q + ',' + p + ' 0,' + p +
+         ' C' + (r * 0.32).toFixed(2) + ',' + (r * 0.46).toFixed(2) +
+         ' ' + (r * 0.32).toFixed(2) + ',' + (-r * 0.46).toFixed(2) + ' 0,' + n + ' Z"' +
+         ' fill="' + shade + '"/>';
+  if (ring) {
+    out += '<g transform="rotate(-20)"><path d="M-' + rx + ',0 A' + rx + ',' + ry +
+           ' 0 0,0 ' + rx + ',0" fill="none" stroke="' + ring + '" stroke-width="' + w +
+           '" stroke-linecap="round"/></g>';
+  }
+  return out + '</g>';
+}
+
+// Rounds a computed coordinate to two decimals so generated path
+// data stays readable instead of carrying float dust.
+function skinN(v) { return Math.round(v * 100) / 100; }
+
+// A framed numeric readout hanging in the air, used by the cyber
+// skin. Corner ticks only — a full box would box the plant in and
+// read as a border, which the art doesn't use anywhere — with the
+// digits centred between them. `size` is the digit height and the
+// frame measures itself off the string, so '7' and '100%' both sit
+// in a well-proportioned bracket. Keep strings short: the frame is
+// roughly (len * size * 0.58 + size * 0.8) wide, so a five-character
+// readout at size 4 already spans a quarter of the 80-unit canvas.
+function skinReadout(x, y, size, text, colour, opacity) {
+  var hw = (text.length * size * 0.58) / 2 + size * 0.4;
+  var hh = size * 0.78;
+  var t  = size * 0.36;
+  var L = skinN(x - hw), R = skinN(x + hw);
+  var T = skinN(y - hh), B = skinN(y + hh);
+  return '<g opacity="' + (opacity === undefined ? 0.9 : opacity) + '">' +
+    '<path d="M' + skinN(L + t) + ',' + T + 'H' + L + 'V' + skinN(T + t) +
+    ' M' + L + ',' + skinN(B - t) + 'V' + B + 'H' + skinN(L + t) +
+    ' M' + skinN(R - t) + ',' + T + 'H' + R + 'V' + skinN(T + t) +
+    ' M' + R + ',' + skinN(B - t) + 'V' + B + 'H' + skinN(R - t) + '"' +
+    ' fill="none" stroke="' + colour + '" stroke-width="' + skinN(Math.max(0.32, size * 0.1)) + '"' +
+    ' stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<text x="' + skinN(x) + '" y="' + skinN(y + size * 0.35) + '" fill="' + colour + '"' +
+    ' font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"' +
+    ' font-size="' + size + '" text-anchor="middle">' + text + '</text></g>';
+}
+
+// An L-shaped circuit trace ending in a solder dot, used by the
+// cyber skin to tether a floating readout back to the plant. Runs
+// horizontally from (x, y) by dx, then vertically by dy, so start it
+// on the culm and finish it at the edge of a readout frame.
+function skinTrace(x, y, dx, dy, colour, opacity) {
+  var mx = skinN(x + dx), my = skinN(y + dy);
+  return '<g opacity="' + (opacity === undefined ? 0.7 : opacity) + '">' +
+    '<path d="M' + skinN(x) + ',' + skinN(y) + 'H' + mx + 'V' + my + '" fill="none"' +
+    ' stroke="' + colour + '" stroke-width="0.45"' +
+    ' stroke-linecap="round" stroke-linejoin="round"/>' +
+    skinDot(mx, my, 0.85, colour, 1) + '</g>';
+}
+
+// A struck coin lying face-up on the soil, used by the luck skins.
+// Not a plain disc: the blank is a touch out of round, the rim sits
+// heavier on the lower-right, and the inner field is nudged up-left
+// off centre, so the light always reads as coming from the same
+// place and a pair of them never looks like two stamped circles.
+// r is the coin radius; rot turns the whole thing, glint is
+// optional — leave it off for coins meant to sit further back.
+function skinCoin(x, y, r, face, edge, glint, rot) {
+  var s = r / 5;
+  var out = '<g transform="translate(' + x + ',' + y + ') rotate(' + (rot || 0) +
+    ') scale(' + skinN(s) + ')">' +
+    '<path d="M0.1,-5 C3,-4.9 5,-2.8 5,0.1' +
+    ' C5,3.1 2.7,5 -0.4,5' +
+    ' C-3.3,5 -5,2.8 -5,-0.3' +
+    ' C-5,-3.2 -2.8,-5.1 0.1,-5 Z" fill="' + edge + '"/>' +
+    '<path d="M-0.3,-3.9 C2.1,-3.9 3.8,-2.3 3.8,-0.1' +
+    ' C3.8,2.1 2,3.6 -0.4,3.6' +
+    ' C-2.7,3.6 -4.1,2 -4,-0.2' +
+    ' C-3.9,-2.4 -2.5,-3.9 -0.3,-3.9 Z" fill="' + face + '"/>';
+  if (glint) {
+    out += '<path d="M-2.4,-1.3 C-2,-2.6 -0.8,-3.3 0.7,-3.1' +
+      ' C-0.4,-2.4 -1.3,-1.5 -1.6,-0.4 Z" fill="' + glint + '"/>';
+  }
+  return out + '</g>';
+}
+
+// A squat cauldron brimming over, used by the luck skins. (x, y) is
+// where it meets the ground and it grows upward, so it can be
+// dropped straight onto the soil line. s scales it — a pot at s=1 is
+// about 17 across. The spill on top is one lumpy path rather than a
+// stack of discs, which keeps it reading as loose coin at small
+// sizes instead of a pile of circles.
+function skinPot(x, y, s, body, shade, rim, gold, glint) {
+  var out = '<g transform="translate(' + x + ',' + y + ') scale(' + s + ')">' +
+    '<path d="M-6.8,-0.4 C-8.5,-2.8 -8.7,-6.4 -7.1,-9.2' +
+    ' L7.1,-9.2 C8.7,-6.4 8.5,-2.8 6.8,-0.4' +
+    ' C3.2,1.5 -3.2,1.5 -6.8,-0.4 Z" fill="' + body + '"/>' +
+    '<path d="M7.1,-9.2 C8.7,-6.4 8.5,-2.8 6.8,-0.4' +
+    ' C4.9,0.6 2.5,1.1 0.1,1.2' +
+    ' C3.4,-1.5 4.6,-5.3 4.1,-9.2 Z" fill="' + shade + '"/>' +
+    '<path d="M-5.7,-9.6 C-4.8,-12.1 -2.6,-13.2 -0.7,-12.3' +
+    ' C0.4,-13.8 2.9,-13.7 3.7,-12' +
+    ' C5.3,-12.2 6.2,-11 5.8,-9.6' +
+    ' C2,-8.6 -1.9,-8.6 -5.7,-9.6 Z" fill="' + gold + '"/>';
+  if (glint) {
+    out += '<path d="M-3.6,-10.2 C-3.2,-11.5 -1.9,-12.2 -0.6,-11.8' +
+      ' C-1.7,-11.3 -2.5,-10.8 -2.9,-10 Z" fill="' + glint + '"/>' +
+      skinDot(3.1, -11.1, 0.55, glint, 0.85);
+  }
+  out += '<path d="M-8.3,-9.5 C-5.5,-11.1 5.5,-11.1 8.3,-9.5' +
+    ' C5.7,-8.2 -5.7,-8.2 -8.3,-9.5 Z" fill="' + rim + '"/>';
+  return out + '</g>';
+}
+
+// A band of colour arcing over the soil, used by the luck skins.
+// Drawn as separate stroked arcs from the outside in, so the bands
+// stay even at any radius, and swept between two angles (measured
+// the usual way, 0 = right, 90 = straight up) rather than as a full
+// half-dome — a quarter arc landing behind a pot reads as a rainbow
+// with an end, which a symmetrical hoop never does. Keep the opacity
+// low enough that the plant still wins wherever they overlap.
+function skinRainbowArc(cx, cy, r, a0, a1, width, opacity, bands) {
+  var cols = bands || ['#E2574C', '#EF9A3D', '#F2D24B', '#5CBB5F', '#4A8FD4', '#8A5FC0'];
+  var w = width || 1.7;
+  var large = Math.abs(a1 - a0) > 180 ? 1 : 0;
+  var sweep = a1 < a0 ? 1 : 0;
+  var out = '<g opacity="' + (opacity === undefined ? 0.55 : opacity) + '">';
+  for (var i = 0; i < cols.length; i++) {
+    var rr = r - i * w;
+    if (rr <= w) break;
+    var x0 = skinN(cx + rr * Math.cos(a0 * Math.PI / 180));
+    var y0 = skinN(cy - rr * Math.sin(a0 * Math.PI / 180));
+    var x1 = skinN(cx + rr * Math.cos(a1 * Math.PI / 180));
+    var y1 = skinN(cy - rr * Math.sin(a1 * Math.PI / 180));
+    out += '<path d="M' + x0 + ',' + y0 + ' A' + skinN(rr) + ',' + skinN(rr) +
+      ' 0 ' + large + ',' + sweep + ' ' + x1 + ',' + y1 + '" fill="none"' +
+      ' stroke="' + cols[i] + '" stroke-width="' + skinN(w * 0.94) + '"' +
+      ' stroke-linecap="round"/>';
+  }
+  return out + '</g>';
+}
+
+// A pair of flat shades, used by the beach skin. Authored at a
+// nominal 20 units wide and scaled to `w`, so the same pair sits on
+// a tiny bud or on a full-grown disc without being redrawn. The
+// lenses taper outward-down and the brow bar dips across the bridge
+// rather than running straight — two matching rounded rectangles
+// read as clip art, this reads as something actually worn. Pass rot
+// to knock them off level; glint is optional.
+function skinSunglasses(x, y, w, rot, lens, frame, glint) {
+  var s = w / 20;
+  var out = '<g transform="translate(' + x + ',' + y + ') rotate(' + (rot || 0) +
+    ') scale(' + skinN(s) + ')">' +
+    '<path d="M-10.1,-3.3 C-11.9,-3.1 -13.0,-2.3 -13.5,-1.0' +
+    ' L-12.3,-0.6 C-11.8,-1.6 -11.0,-2.2 -9.8,-2.3 Z" fill="' + frame + '"/>' +
+    '<path d="M10.1,-3.3 C11.9,-3.1 13.0,-2.3 13.5,-1.0' +
+    ' L12.3,-0.6 C11.8,-1.6 11.0,-2.2 9.8,-2.3 Z" fill="' + frame + '"/>' +
+    '<path d="M-9.7,-2.5 C-10.0,0.5 -8.4,3.1 -5.6,3.4' +
+    ' C-3.0,3.7 -1.3,2.0 -1.1,-0.7 L-1.0,-2.7 Z" fill="' + lens + '"/>' +
+    '<path d="M9.7,-2.5 C10.0,0.5 8.4,3.1 5.6,3.4' +
+    ' C3.0,3.7 1.3,2.0 1.1,-0.7 L1.0,-2.7 Z" fill="' + lens + '"/>' +
+    '<path d="M-10.4,-3.6 C-4.2,-4.7 4.2,-4.7 10.4,-3.6' +
+    ' L10.1,-1.8 C7.0,-2.5 3.6,-2.9 1.4,-2.6' +
+    ' C0.5,-1.9 -0.5,-1.9 -1.4,-2.6' +
+    ' C-3.6,-2.9 -7.0,-2.5 -10.1,-1.8 Z" fill="' + frame + '"/>';
+  if (glint) {
+    out += '<path d="M-8.3,-1.5 C-7.3,-2.2 -5.7,-2.3 -4.7,-1.8' +
+      ' C-6.3,-0.9 -7.3,0.3 -7.7,1.5 Z" fill="' + glint + '" opacity="0.75"/>';
+  }
+  return out + '</g>';
+}
+
+// A straw sun hat perched at an angle, used by the beach skin.
+// (x, y) is the middle of the brim and `w` its full width. Drawn
+// back-brim → crown → band → front brim, so the near edge of the
+// brim genuinely passes in front of the crown instead of the whole
+// thing reading as a dome stuck on a disc. The brim is a touch
+// wider on the right and the crown leans with it, which is what
+// lets a tilted hat still look like it is resting on something.
+function skinStrawHat(x, y, w, rot, straw, shade, band) {
+  var s = w / 20;
+  return '<g transform="translate(' + x + ',' + y + ') rotate(' + (rot || 0) +
+    ') scale(' + skinN(s) + ')">' +
+    '<path d="M-10.0,0.5 C-9.5,-1.7 -5.3,-3.0 0.1,-3.0' +
+    ' C5.4,-3.0 9.5,-1.6 10.0,0.7' +
+    ' C9.2,2.7 5.1,3.7 -0.3,3.6' +
+    ' C-5.5,3.5 -9.3,2.5 -10.0,0.5 Z" fill="' + straw + '"/>' +
+    '<path d="M-5.7,-2.1 C-6.1,-5.8 -4.3,-8.8 -0.7,-9.2' +
+    ' C2.9,-9.5 5.2,-7.1 5.6,-2.8' +
+    ' C5.7,-2.0 5.7,-1.6 5.7,-1.4' +
+    ' C2.1,-0.4 -2.6,-0.6 -5.7,-2.1 Z" fill="' + straw + '"/>' +
+    '<path d="M2.4,-9.0 C4.4,-8.0 5.4,-5.7 5.6,-2.8' +
+    ' C5.7,-2.0 5.7,-1.5 5.7,-1.4' +
+    ' C4.2,-1.0 2.5,-0.7 0.7,-0.7' +
+    ' C3.1,-3.0 3.6,-6.3 2.4,-9.0 Z" fill="' + shade + '"/>' +
+    '<path d="M-5.8,-2.4 C-2.4,-1.1 2.3,-1.0 5.7,-2.3' +
+    ' L5.7,-0.6 C2.3,0.6 -2.4,0.5 -5.8,-0.8 Z" fill="' + band + '"/>' +
+    '<path d="M-10.0,0.5 C-9.3,2.5 -5.5,3.5 -0.3,3.6' +
+    ' C5.1,3.7 9.2,2.7 10.0,0.7' +
+    ' C6.4,2.0 -6.3,2.1 -10.0,0.5 Z" fill="' + shade + '"/></g>';
+}
+
+// A scallop shell lying on the sand, used by the beach skin. The
+// hinge is at (x, y) and it fans upward from there, so it can be
+// dropped straight onto the soil line. The top edge is a run of
+// uneven lobes rather than a clean fan, and the shade wedge covers
+// the left side only, so a handful of them never reads as repeated
+// stamps. A shell at s=1 is about 14 across; rot turns it.
+function skinSeashell(x, y, s, rot, shell, shade) {
+  return '<g transform="translate(' + x + ',' + y + ') rotate(' + (rot || 0) +
+    ') scale(' + s + ')">' +
+    '<path d="M0,0 C-4.3,-0.9 -7.1,-3.5 -7.4,-6.5' +
+    ' C-6.0,-5.3 -4.6,-5.9 -4.0,-7.3' +
+    ' C-2.9,-5.6 -1.4,-5.9 -0.6,-7.7' +
+    ' C0.5,-5.9 2.0,-5.7 2.9,-7.2' +
+    ' C3.8,-5.7 5.3,-5.4 6.5,-6.6' +
+    ' C6.3,-3.3 3.9,-0.6 0,0 Z" fill="' + shell + '"/>' +
+    '<path d="M0,0 C-4.3,-0.9 -7.1,-3.5 -7.4,-6.5' +
+    ' C-6.0,-5.3 -4.6,-5.9 -4.0,-7.3' +
+    ' C-3.1,-4.7 -1.7,-2.0 0,0 Z" fill="' + shade + '"/></g>';
+}
+
+// A stoppered flask sitting on the soil, used by the witch skin.
+// (x, y) is where it meets the ground and it grows upward. The body
+// is a lopsided round-bottomed flask — fuller on the right, the neck
+// set a little left of centre — so two of them at different scales
+// never read as the same bottle twice. The brew is a separate path
+// with a wavy meniscus that sits inside the glass rather than
+// filling it edge to edge, which is what keeps the glass reading as
+// glass without any transparency. A flask at s=1 is about 10 across
+// and 15 tall; `glint` is optional and adds the streak and bubbles.
+function skinPotion(x, y, s, glass, liquid, cork, glint) {
+  var out = '<g transform="translate(' + x + ',' + y + ') scale(' + s + ')">' +
+    '<path d="M-4.6,-4.4 C-4.9,-7.4 -3.4,-9.7 -1.7,-10.5' +
+    ' L-1.7,-12.5 L1.9,-12.5 L1.9,-10.3' +
+    ' C3.7,-9.4 5.1,-7.2 4.8,-4.3' +
+    ' C4.5,-1.6 2.3,0.1 -0.2,0.1' +
+    ' C-2.7,0.1 -4.4,-1.7 -4.6,-4.4 Z" fill="' + glass + '"/>' +
+    '<path d="M-4.4,-5.2 C-2.9,-4.5 -1.4,-4.2 0.2,-4.3' +
+    ' C1.9,-4.4 3.3,-4.8 4.6,-5.5' +
+    ' C4.6,-2.4 2.4,-0.4 -0.2,-0.4' +
+    ' C-2.7,-0.4 -4.3,-2.3 -4.4,-5.2 Z" fill="' + liquid + '"/>' +
+    '<path d="M-2.1,-12.3 L2.3,-12.3 L2.0,-14.8' +
+    ' C1.0,-15.4 -1.0,-15.4 -1.8,-14.8 Z" fill="' + cork + '"/>';
+  if (glint) {
+    out += '<path d="M-3.3,-7.6 C-3.8,-5.6 -3.6,-3.4 -2.6,-1.7' +
+      ' C-4.0,-3.2 -4.4,-5.7 -3.3,-7.6 Z" fill="' + glint + '" opacity="0.8"/>' +
+      skinDot(0.9, -2.6, 0.6, glint, 0.7) +
+      skinDot(-1.4, -1.6, 0.4, glint, 0.55);
+  }
+  return out + '</g>';
+}
+
+// A pointed felt hat perched on a plant, used by the witch skin.
+// (x, y) is the middle of the brim and `w` its full width, matching
+// skinStrawHat so the two are interchangeable. Drawn back-brim →
+// cone → shade → band → buckle → front brim, so the near edge of the
+// brim passes in front of the cone. The cone climbs to the right and
+// its tip flops over into a curl rather than ending in a clean
+// point — a straight triangle reads as a party hat, the flop reads
+// as felt with some age on it.
+function skinWitchHat(x, y, w, rot, felt, shade, band, buckle) {
+  var s = w / 20;
+  var out = '<g transform="translate(' + x + ',' + y + ') rotate(' + (rot || 0) +
+    ') scale(' + skinN(s) + ')">' +
+    '<path d="M-10.2,0.4 C-9.4,-2.0 -4.8,-3.4 0.4,-3.3' +
+    ' C5.6,-3.2 9.6,-1.7 10.1,0.8' +
+    ' C9.2,3.0 4.8,4.1 -0.6,4.0' +
+    ' C-5.8,3.9 -9.4,2.6 -10.2,0.4 Z" fill="' + felt + '"/>' +
+    '<path d="M-5.6,-2.4 C-5.0,-7.6 -3.2,-11.8 -0.4,-14.2' +
+    ' C1.2,-15.6 3.6,-15.7 4.8,-14.3' +
+    ' C5.9,-13.0 5.6,-11.2 4.0,-10.6' +
+    ' C4.8,-11.6 4.4,-12.8 3.2,-12.9' +
+    ' C2.0,-13.0 1.2,-12.2 0.6,-11.0' +
+    ' C1.6,-8.0 3.4,-5.0 5.4,-2.8' +
+    ' C1.8,-1.5 -2.2,-1.4 -5.6,-2.4 Z" fill="' + felt + '"/>' +
+    '<path d="M0.6,-11.0 C1.6,-8.0 3.4,-5.0 5.4,-2.8' +
+    ' C3.7,-2.2 1.9,-1.9 0.1,-1.85' +
+    ' C2.1,-5.0 1.9,-8.2 0.6,-11.0 Z" fill="' + shade + '"/>' +
+    '<path d="M-5.4,-4.6 C-2.0,-3.4 2.2,-3.4 5.1,-4.7' +
+    ' L5.4,-2.7 C2.2,-1.4 -2.0,-1.4 -5.5,-2.6 Z" fill="' + band + '"/>';
+  if (buckle) {
+    out += '<path d="M-1.3,-4.2 L1.3,-4.3 L1.3,-2.2 L-1.3,-2.1 Z" fill="' + buckle + '"/>' +
+      '<path d="M-0.5,-3.7 L0.5,-3.75 L0.5,-2.8 L-0.5,-2.75 Z" fill="' + band + '"/>';
+  }
+  return out + '<path d="M-10.2,0.4 C-9.4,2.6 -5.8,3.9 -0.6,4.0' +
+    ' C4.8,4.1 9.2,3.0 10.1,0.8' +
+    ' C6.5,2.2 -6.4,2.3 -10.2,0.4 Z" fill="' + shade + '"/></g>';
+}
+
+// An eighth note drifting off a plant, used by the disco skin. The
+// head is a tilted lozenge rather than a circle and the stem sits
+// against its right shoulder, so it reads as printed music at four
+// or five units tall. Pass `beamed` for a pair joined by a sloped
+// beam — mixing singles and pairs is what stops a handful of notes
+// from looking like a repeated stamp. A single note at s=1 is about
+// 8 wide and 14 tall, measured from the head centre at (x, y).
+function skinNote(x, y, s, rot, colour, beamed) {
+  function head(dx) {
+    return '<g transform="translate(' + dx + ',0)">' +
+      '<path d="M-3.1,1.4 C-3.4,-0.2 -2.0,-2.0 -0.2,-2.3' +
+      ' C1.4,-2.6 2.6,-1.7 2.4,-0.2' +
+      ' C2.2,1.4 0.7,2.7 -1.0,2.8' +
+      ' C-2.3,2.9 -3.0,2.4 -3.1,1.4 Z" fill="' + colour + '"/></g>';
+  }
+  var out = '<g transform="translate(' + x + ',' + y + ') rotate(' + (rot || 0) +
+    ') scale(' + s + ')">';
+  if (beamed) {
+    out += head(-4.6) + head(3.4) +
+      '<path d="M-2.2,-0.7 L-1.2,-1.2 L-1.2,-10.6 L-2.2,-10.2 Z" fill="' + colour + '"/>' +
+      '<path d="M5.8,-0.7 L6.8,-1.2 L6.8,-11.6 L5.8,-11.2 Z" fill="' + colour + '"/>' +
+      '<path d="M-2.2,-10.2 L6.8,-11.6 L6.8,-9.4 L-2.2,-8.0 Z" fill="' + colour + '"/>';
+  } else {
+    out += head(0) +
+      '<path d="M1.4,-0.9 L2.4,-1.4 L2.4,-10.8 L1.4,-10.4 Z" fill="' + colour + '"/>' +
+      '<path d="M2.4,-10.8 C5.0,-9.6 6.1,-7.6 5.0,-5.2' +
+      ' C5.4,-7.3 4.4,-8.7 2.4,-9.4 Z" fill="' + colour + '"/>';
+  }
+  return out + '</g>';
+}
+
+// A speaker cabinet standing on the soil, used by the disco skin.
+// (x, y) is where it meets the ground and it grows upward. The box
+// is drawn as a front face plus one side panel in shade — the face
+// leans back a little at the top and the side is only visible on
+// the right — so a cabinet reads as a solid object rather than a
+// rectangle, and two of them at different scales look like a stack
+// rather than a repeat. A cabinet at s=1 is about 14 across and 16
+// tall; rot tips it off square.
+function skinSpeaker(x, y, s, rot, cab, shade, cone, dust) {
+  return '<g transform="translate(' + x + ',' + y + ') rotate(' + (rot || 0) +
+    ') scale(' + s + ')">' +
+    '<path d="M-6.2,0 L-5.6,-15.4 L5.4,-16.2 L6.2,-0.6 Z" fill="' + cab + '"/>' +
+    '<path d="M5.4,-16.2 L7.7,-14.9 L8.3,0.4 L6.2,-0.6 Z" fill="' + shade + '"/>' +
+    '<path d="M-5.5,-14.6 L5.2,-15.3 L5.2,-14.2 L-5.5,-13.5 Z" fill="' + shade +
+    '" opacity="0.65"/>' +
+    skinDot(-0.2, -4.6, 3.7, cone) +
+    skinDot(-0.2, -4.6, 1.4, dust) +
+    skinDot(-0.2, -11.2, 2.1, cone) +
+    skinDot(-0.2, -11.2, 0.75, dust) +
+    '</g>';
+}
+
+// A mirror ball hanging above a plant, used by the disco skin. The
+// cord is drawn first so the ball sits on the end of it, and the
+// facets are a handful of off-centre quads plus one shaded crescent
+// rather than a full lat-long grid — at eight or ten units across a
+// full grid turns to mush, while three bright quads still read as
+// mirrored tiles. Pass cordTop as the y to hang it from (0 is the
+// top of the frame), or null for a ball floating free.
+function skinDiscoBall(x, y, r, ball, facet, shade, glint, cordTop) {
+  var s = r / 6;
+  var out = '';
+  if (cordTop !== undefined && cordTop !== null) {
+    out += '<path d="M' + skinN(x - 0.32) + ',' + skinN(cordTop) +
+      ' H' + skinN(x + 0.32) + ' V' + skinN(y - r * 0.88) +
+      ' H' + skinN(x - 0.32) + ' Z" fill="' + shade + '"/>';
+  }
+  out += '<g transform="translate(' + x + ',' + y + ') scale(' + skinN(s) + ')">' +
+    skinDot(0, 0, 6, ball) +
+    '<path d="M3.2,-5.1 C6.0,-3.2 6.9,0.6 5.3,3.4' +
+    ' C3.7,6.0 0.4,6.8 -2.3,5.6' +
+    ' C2.0,4.3 4.5,-0.6 3.2,-5.1 Z" fill="' + shade + '"/>' +
+    '<path d="M-3.6,-3.8 L-0.7,-4.6 L-0.3,-1.9 L-3.2,-1.1 Z" fill="' + facet + '"/>' +
+    '<path d="M0.5,-1.5 L3.2,-2.1 L3.4,0.7 L0.7,1.3 Z" fill="' + facet +
+    '" opacity="0.72"/>' +
+    '<path d="M-4.4,0.7 L-1.7,0.1 L-1.3,2.6 L-3.8,3.2 Z" fill="' + facet +
+    '" opacity="0.58"/></g>';
+  if (glint) {
+    out += skinSparkle(skinN(x - r * 0.52), skinN(y - r * 0.6), skinN(r * 0.55), glint, 0.9);
+  }
+  return out;
+}
+
+// A sprung treasure chest sitting on the soil, used by the pirate
+// skin. (x, y) is where it meets the ground and it grows upward, so
+// it can be dropped straight onto the soil line. The lid is thrown
+// back and drawn *before* the body, so the front boards genuinely
+// overlap it instead of the whole thing reading as a box with a
+// triangle stuck on. The hoard inside is one lumpy path rather than
+// a stack of discs — at four or five units across a pile of circles
+// turns to porridge, while one uneven ridge still reads as coin. The
+// body is a touch wider at the foot and the right side panel is the
+// only one visible, so two chests at different scales never look
+// like the same stamp twice. A chest at s=1 is about 17 across.
+function skinTreasureChest(x, y, s, rot, wood, shade, band, gold, glint) {
+  var out = '<g transform="translate(' + x + ',' + y + ') rotate(' + (rot || 0) +
+    ') scale(' + s + ')">' +
+    '<path d="M-7.4,-7.6 C-8.6,-10.8 -7.3,-13.6 -4.4,-14.8' +
+    ' C-1.2,-16.1 3.1,-15.4 5.3,-13.5' +
+    ' L6.5,-8.2 C3.2,-10.0 -2.9,-9.8 -7.4,-7.6 Z" fill="' + wood + '"/>' +
+    '<path d="M-4.4,-14.8 C-1.2,-16.1 3.1,-15.4 5.3,-13.5' +
+    ' L4.5,-10.8 C2.3,-12.4 -1.3,-12.8 -3.9,-12.0 Z" fill="' + shade + '"/>' +
+    '<path d="M-6.3,-8.3 C-4.3,-10.2 -0.9,-10.8 1.3,-9.5' +
+    ' C2.7,-10.7 5.1,-10.3 5.7,-8.7' +
+    ' C2.1,-7.3 -2.7,-7.1 -6.3,-8.3 Z" fill="' + gold + '"/>' +
+    '<path d="M-7.2,-0.2 L-6.6,-7.7 L6.3,-8.1 L7.2,0.2 Z" fill="' + wood + '"/>' +
+    '<path d="M6.3,-8.1 L8.1,-7.1 L8.8,0.7 L7.2,0.2 Z" fill="' + shade + '"/>' +
+    '<path d="M-7.0,-4.6 L6.7,-5.0 L6.8,-3.7 L-6.9,-3.3 Z" fill="' + band +
+    '" opacity="0.85"/>' +
+    '<path d="M-3.5,-7.8 L-2.3,-7.8 L-2.0,0.0 L-3.3,0.0 Z" fill="' + band + '"/>' +
+    '<path d="M2.5,-8.0 L3.7,-8.0 L4.2,0.1 L2.9,0.1 Z" fill="' + band + '"/>' +
+    skinDot(0.1, -4.1, 1.35, band) +
+    skinDot(0.1, -4.1, 0.5, gold);
+  if (glint) {
+    out += '<path d="M-5.6,-13.0 C-4.6,-14.2 -2.9,-14.8 -1.3,-14.5' +
+      ' C-3.0,-13.9 -4.3,-13.4 -5.0,-12.4 Z" fill="' + glint + '" opacity="0.7"/>' +
+      skinDot(-2.6, -8.9, 0.5, glint, 0.8);
+  }
+  return out + '</g>';
+}
+
+// A deck gun on a wheeled carriage, used by the pirate skin. (x, y)
+// is where the wheels meet the ground and it grows upward. The
+// barrel sits nose-up with the shade running along its underside,
+// which is what gives a flat quad the roundness of cast iron, and
+// the far wheel is drawn in shade behind the carriage while the near
+// one sits in front, so the whole thing has a side to it. A cannon
+// at s=1 is about 14 across and 9 tall; rot tips it off level.
+function skinCannon(x, y, s, rot, iron, shade, wood, trim) {
+  return '<g transform="translate(' + x + ',' + y + ') rotate(' + (rot || 0) +
+    ') scale(' + s + ')">' +
+    skinDot(1.6, -1.8, 1.6, shade) +
+    skinDot(1.6, -1.8, 0.5, trim) +
+    '<path d="M-4.4,-5.0 L3.4,-4.4 L2.6,-1.6 L-4.2,-1.6 Z" fill="' + wood + '"/>' +
+    '<path d="M3.4,-4.4 L2.6,-1.6 L1.0,-1.6 L1.6,-4.3 Z" fill="' + shade +
+    '" opacity="0.45"/>' +
+    '<path d="M-5.2,-9.0 L5.2,-8.2 L5.2,-5.4 L-5.2,-4.4 Z" fill="' + iron + '"/>' +
+    skinDot(-5.2, -6.7, 2.3, iron) +
+    '<path d="M-5.2,-6.5 L5.2,-6.6 L5.2,-5.4 L-5.2,-4.4 Z" fill="' + shade + '"/>' +
+    '<path d="M4.8,-8.4 L7.1,-8.3 L7.1,-5.3 L4.8,-5.4 Z" fill="' + iron + '"/>' +
+    skinDot(6.9, -6.8, 0.8, shade) +
+    skinDot(-2.6, -1.9, 1.9, wood) +
+    skinDot(-2.6, -1.9, 0.6, trim) +
+    '</g>';
+}
+
+// A playing card, used by the joker skin. (x, y) is the middle of
+// the card and it is drawn a hair out of true — the long edges are
+// not quite parallel and the pip sits slightly off centre — so a
+// handful of them scattered around a plant never reads as one
+// rectangle copied four times. The right-hand strip of shade is what
+// stops it looking like a flat sticker. A card at s=1 is about 9
+// across and 13 tall; rot lays it flat on the soil or tips it in
+// mid-air.
+function skinPlayingCard(x, y, s, rot, face, ink, shade) {
+  return '<g transform="translate(' + x + ',' + y + ') rotate(' + (rot || 0) +
+    ') scale(' + s + ')">' +
+    '<path d="M-4.3,-6.1 L4.0,-6.6 L4.5,6.1 L-3.9,6.6 Z" fill="' + face + '"/>' +
+    '<path d="M4.0,-6.6 L4.5,6.1 L2.5,6.2 L2.1,-6.5 Z" fill="' + shade +
+    '" opacity="0.5"/>' +
+    '<path d="M0.2,-3.1 L2.1,-0.2 L0.4,3.0 L-1.6,0.0 Z" fill="' + ink + '"/>' +
+    '<path d="M-2.9,-5.0 L-2.0,-3.6 L-2.8,-2.1 L-3.7,-3.5 Z" fill="' + ink +
+    '" opacity="0.85"/></g>';
+}
+
+// A single motley lozenge, used by the joker skin as confetti and as
+// the pip on a costume. Kept deliberately taller than it is wide so
+// it reads as harlequin diamond rather than as a rotated square.
+function skinDiamondChip(x, y, s, rot, colour, opacity) {
+  return '<g transform="translate(' + x + ',' + y + ') rotate(' + (rot || 0) +
+    ') scale(' + s + ')">' +
+    '<path d="M0,-2.5 L1.5,0 L0,2.5 L-1.5,0 Z" fill="' + colour +
+    '" opacity="' + (opacity === undefined ? 1 : opacity) + '"/></g>';
+}
+
 
 // ---- The skins ---------------------------------------------------
 
 var PLANT_SKINS = {
 
-  education: [
+ education: [
     {
       id: 'classic',
       name: 'Heartwood',
@@ -954,8 +1512,198 @@ var PLANT_SKINS = {
         },
       },
     },
+    {
+      id: 'aurelian',
+      name: 'Aurelian',
+      note: 'Struck in gold, down to the last acorn.',
+      swatch: ['#F7D257', '#C9922A', '#4E3A19'],
+      defs:
+        '<linearGradient id="sk-aurelian-canopy" x1="0.1" y1="0" x2="0.35" y2="1">' +
+          '<stop offset="0" stop-color="#FFE894"/>' +
+          '<stop offset="0.5" stop-color="#F3C64C"/>' +
+          '<stop offset="1" stop-color="#D19A2C"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-aurelian-canopy-dark" x1="0.1" y1="0" x2="0.35" y2="1">' +
+          '<stop offset="0" stop-color="#D6A536"/>' +
+          '<stop offset="1" stop-color="#A87A1C"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-aurelian-bark" x1="0" y1="0" x2="1" y2="0.2">' +
+          '<stop offset="0" stop-color="#8A6C31"/>' +
+          '<stop offset="1" stop-color="#6A5124"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-canopy':      'url(#sk-aurelian-canopy)',
+        '--c-canopy-dark': 'url(#sk-aurelian-canopy-dark)',
+        '--c-bark':        'url(#sk-aurelian-bark)',
+        '--c-bark-dark':   '#4B3717',
+        '--c-leaf':        '#F5CE5C',
+        '--c-leaf-dark':   '#C2902A',
+        '--c-stem':        '#7E6029',
+        '--c-stem-dark':   '#4E3A19',
+        '--c-seed':        '#F2D88C',
+        '--c-seed-dark':   '#C7A346',
+        '--c-shadow':      'rgba(72,50,6,0.20)',
+      },
+      extras: {
+        0: function (a) {
+          return skinSparkle(a.canopy[0] + 9, a.canopy[1] - 8, 2.2, '#FFF4C4', 0.9) +
+                 skinSparkle(a.canopy[0] - 8, a.canopy[1] + 2, 1.4, '#FFE9A0', 0.7);
+        },
+        1: function (a) {
+          return skinSparkle(a.canopy[0] - 14, a.canopy[1] - 10, 2.4, '#FFF4C4', 0.9) +
+                 skinSparkle(a.canopy[0] + 15, a.canopy[1] - 3,  1.7, '#FFE9A0', 0.72);
+        },
+        2: function (a) {
+          return skinSparkle(a.canopy[0] - 12, a.canopy[1] - 9,  2.6, '#FFF4C4', 0.92) +
+                 skinSparkle(a.canopy[0] + 3,  a.canopy[1] - 14, 1.8, '#FFEEB0', 0.8) +
+                 skinSparkle(a.canopy[0] + 11, a.canopy[1] + 4,  2.1, '#FFE9A0', 0.7) +
+                 skinDot(a.canopy[0] - 4, a.canopy[1] + 8, 0.9, '#FFF4C4', 0.6);
+        },
+        3: function (a) {
+          return skinSparkle(a.canopy[0] - 16, a.canopy[1] - 8,  3.0, '#FFF4C4', 0.92) +
+                 skinSparkle(a.canopy[0] - 2,  a.canopy[1] - 18, 2.1, '#FFEEB0', 0.82) +
+                 skinSparkle(a.canopy[0] + 17, a.canopy[1] + 3,  2.6, '#FFE9A0', 0.75) +
+                 skinSparkle(a.canopy[0] + 6,  a.canopy[1] + 18, 1.9, '#FFF4C4', 0.65) +
+                 skinDot(a.canopy[0] - 21, a.canopy[1] + 10, 1.1, '#FFF4C4', 0.55) +
+                 skinDot(a.canopy[0] + 9,  a.canopy[1] - 9,  0.9, '#FFF4C4', 0.5);
+        },
+      },
+    },
+    {
+      id: 'prismbloom',
+      name: 'Prismbloom',
+      note: 'A crown that never settled on one colour.',
+      swatch: ['#FF6B6B', '#FFE14D', '#4FA8F5'],
+      defs:
+        '<linearGradient id="sk-prismbloom-canopy" x1="0" y1="0.15" x2="1" y2="0.85">' +
+          '<stop offset="0" stop-color="#FF7B72"/>' +
+          '<stop offset="0.2" stop-color="#FFA945"/>' +
+          '<stop offset="0.4" stop-color="#FFE45C"/>' +
+          '<stop offset="0.6" stop-color="#5FD97A"/>' +
+          '<stop offset="0.8" stop-color="#54AEF7"/>' +
+          '<stop offset="1" stop-color="#B072F2"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-prismbloom-canopy-dark" x1="0" y1="0.15" x2="1" y2="0.85">' +
+          '<stop offset="0" stop-color="#D8514F"/>' +
+          '<stop offset="0.2" stop-color="#DE7C22"/>' +
+          '<stop offset="0.4" stop-color="#DCBB2E"/>' +
+          '<stop offset="0.6" stop-color="#38AC55"/>' +
+          '<stop offset="0.8" stop-color="#2F80C9"/>' +
+          '<stop offset="1" stop-color="#7F49C6"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-prismbloom-bark" x1="0" y1="0" x2="1" y2="0.3">' +
+          '<stop offset="0" stop-color="#9A7A8E"/>' +
+          '<stop offset="1" stop-color="#6E5470"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-canopy':      'url(#sk-prismbloom-canopy)',
+        '--c-canopy-dark': 'url(#sk-prismbloom-canopy-dark)',
+        '--c-bark':        'url(#sk-prismbloom-bark)',
+        '--c-bark-dark':   '#503A56',
+        '--c-leaf':        'url(#sk-prismbloom-canopy)',
+        '--c-leaf-dark':   'url(#sk-prismbloom-canopy-dark)',
+        '--c-stem':        '#7E6084',
+        '--c-stem-dark':   '#523C58',
+        '--c-seed':        '#F2A9C4',
+        '--c-seed-dark':   '#C56E97',
+        '--c-shadow':      'rgba(60,26,74,0.18)',
+      },
+      extras: {
+        0: function (a) {
+          return skinSparkle(a.canopy[0] + 9, a.canopy[1] - 9, 2.1, '#FFE45C', 0.9) +
+                 skinSparkle(a.canopy[0] - 9, a.canopy[1] + 1, 1.5, '#7FD4F7', 0.8);
+        },
+        1: function (a) {
+          return skinSparkle(a.canopy[0] - 14, a.canopy[1] - 11, 2.3, '#FF8FA8', 0.9) +
+                 skinSparkle(a.canopy[0] + 15, a.canopy[1] - 4,  1.8, '#7FD4F7', 0.8) +
+                 skinDot(a.canopy[0] + 5, a.canopy[1] + 6, 0.9, '#FFE45C', 0.75);
+        },
+        2: function (a) {
+          return skinSparkle(a.canopy[0] - 13, a.canopy[1] - 10, 2.5, '#FF8FA8', 0.92) +
+                 skinSparkle(a.canopy[0] + 4,  a.canopy[1] - 15, 1.9, '#FFE45C', 0.85) +
+                 skinSparkle(a.canopy[0] + 12, a.canopy[1] + 3,  2.2, '#7FD4F7', 0.85) +
+                 skinDot(a.canopy[0] - 5, a.canopy[1] + 9, 1.0, '#C79BF5', 0.8);
+        },
+        3: function (a) {
+          return skinSparkle(a.canopy[0] - 17, a.canopy[1] - 7,  2.9, '#FF8FA8', 0.92) +
+                 skinSparkle(a.canopy[0] - 1,  a.canopy[1] - 19, 2.2, '#FFE45C', 0.88) +
+                 skinSparkle(a.canopy[0] + 18, a.canopy[1] + 2,  2.6, '#7FD4F7', 0.88) +
+                 skinSparkle(a.canopy[0] + 7,  a.canopy[1] + 19, 2.0, '#8CE9A2', 0.8) +
+                 skinDot(a.canopy[0] - 20, a.canopy[1] + 12, 1.2, '#C79BF5', 0.8) +
+                 skinDot(a.canopy[0] + 10, a.canopy[1] - 10, 1.0, '#FFE45C', 0.7);
+        },
+      },
+    },
+    {
+      id: 'nebulark',
+      name: 'Nebulark',
+      note: 'Deep-space crown, fruiting small worlds and drifting rock.',
+      swatch: ['#7C5AC4', '#2E1B57', '#4FD8D0'],
+      defs:
+        '<radialGradient id="sk-nebulark-canopy" cx="0.36" cy="0.26" r="0.88">' +
+          '<stop offset="0" stop-color="#9068E0"/>' +
+          '<stop offset="0.5" stop-color="#5D3CA8"/>' +
+          '<stop offset="1" stop-color="#33206A"/>' +
+        '</radialGradient>' +
+        '<linearGradient id="sk-nebulark-canopy-dark" x1="0.2" y1="0" x2="0.5" y2="1">' +
+          '<stop offset="0" stop-color="#2E1A5C"/>' +
+          '<stop offset="1" stop-color="#1B0F3D"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-nebulark-bark" x1="0" y1="0" x2="1" y2="0.25">' +
+          '<stop offset="0" stop-color="#4A3A72"/>' +
+          '<stop offset="1" stop-color="#332654"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-canopy':      'url(#sk-nebulark-canopy)',
+        '--c-canopy-dark': 'url(#sk-nebulark-canopy-dark)',
+        '--c-bark':        'url(#sk-nebulark-bark)',
+        '--c-bark-dark':   '#231A44',
+        '--c-leaf':        '#7C5AC4',
+        '--c-leaf-dark':   '#4A2E90',
+        '--c-stem':        '#4C3B78',
+        '--c-stem-dark':   '#2B1F4C',
+        '--c-seed':        '#9A82D6',
+        '--c-seed-dark':   '#63499E',
+        '--c-shadow':      'rgba(18,8,44,0.26)',
+      },
+      extras: {
+        0: function (a) {
+          return skinSparkle(a.canopy[0] - 12, a.canopy[1] - 6, 1.8, '#CFE6FF', 0.85) +
+                 skinSparkle(a.canopy[0] + 12, a.canopy[1] - 11, 1.4, '#9FD8F0', 0.7) +
+                 skinDot(a.canopy[0] + 4, a.canopy[1] - 16, 0.7, '#EDE3FF', 0.6);
+        },
+        1: function (a) {
+          return skinPlanet(a.canopy[0] + 17, a.canopy[1] - 14, 3.0, '#E0768F', '#B4506D', null) +
+                 skinSparkle(a.canopy[0] - 16, a.canopy[1] - 8, 2.0, '#CFE6FF', 0.85) +
+                 skinDot(a.canopy[0] - 6, a.canopy[1] - 18, 0.8, '#EDE3FF', 0.6);
+        },
+        2: function (a) {
+          return skinPlanet(a.canopy[0] - 10, a.canopy[1] - 8, 4.0, '#E0768F', '#B4506D', '#F3D08A') +
+                 skinAsteroid(a.canopy[0] + 9, a.canopy[1] - 11, 0.42, '#9A8CC4', '#665A96', 18) +
+                 skinAsteroid(a.canopy[0] + 4, a.canopy[1] + 7, 0.34, '#8E80B8', '#5C5188', -34) +
+                 skinPlanet(a.canopy[0] + 13, a.canopy[1] + 2, 2.4, '#63D6CC', '#37A49C', null) +
+                 skinSparkle(a.canopy[0] - 3, a.canopy[1] - 16, 1.8, '#CFE6FF', 0.85) +
+                 skinDot(a.canopy[0] + 1, a.canopy[1] + 12, 0.8, '#EDE3FF', 0.65);
+        },
+        3: function (a) {
+          return skinPlanet(a.canopy[0] - 14, a.canopy[1] - 6, 5.2, '#E0768F', '#B4506D', '#F3D08A') +
+                 skinAsteroid(a.canopy[0] + 14, a.canopy[1] - 12, 0.55, '#9A8CC4', '#665A96', 22) +
+                 skinAsteroid(a.canopy[0] + 10, a.canopy[1] + 14, 0.46, '#8E80B8', '#5C5188', -28) +
+                 skinPlanet(a.canopy[0] - 20, a.canopy[1] + 9, 3.0, '#63D6CC', '#37A49C', null) +
+                 skinPlanet(a.canopy[0] + 3, a.canopy[1] + 21, 2.6, '#F0A860', '#C07636', null) +
+                 skinSparkle(a.canopy[0] - 6, a.canopy[1] - 19, 2.4, '#CFE6FF', 0.9) +
+                 skinSparkle(a.canopy[0] + 22, a.canopy[1] + 2, 1.9, '#9FD8F0', 0.8) +
+                 skinDot(a.canopy[0] + 4, a.canopy[1] - 8, 0.9, '#EDE3FF', 0.65) +
+                 skinDot(a.canopy[0] - 18, a.canopy[1] - 15, 0.7, '#EDE3FF', 0.55);
+        },
+      },
+    },
   ],
 
+  // ---- SUNFLOWER (Exercise) ----
+  // Base art untouched. Every look below is vars + defs + extras only.
+  // Token set for this species: seed seed-line stem leaf-light leaf
+  // leaf-dark petal petal-dark disc disc-dark disc-seed (+ shadow).
   exercise: [
     {
       id: 'classic',
@@ -1005,8 +1753,254 @@ var PLANT_SKINS = {
         },
       },
     },
+    {
+      // The hard part of a gold sunflower is that the plant is
+      // already yellow, so a straight hue swap changes nothing. What
+      // separates metal from petal here is the ramp: every petal runs
+      // dark bronze at the base to near-white at the tip, which is how
+      // a struck surface catches light, and the leaves and stem go
+      // gold too so nothing is left behind as an organic green.
+      id: 'midas',
+      name: 'Midas Bloom',
+      note: 'Struck from metal, still turning to face the light.',
+      swatch: ['#FFF0B4', '#D6A72C', '#7A5209'],
+      defs:
+        '<linearGradient id="sk-midas-petal" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#B57F16"/>' +
+          '<stop offset="0.45" stop-color="#EFC44E"/>' +
+          '<stop offset="1" stop-color="#FFF0B4"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-midas-petal-dark" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#8F6209"/>' +
+          '<stop offset="0.5" stop-color="#D6A72C"/>' +
+          '<stop offset="1" stop-color="#F4DA8C"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-midas-leaf" x1="0" y1="1" x2="0.3" y2="0">' +
+          '<stop offset="0" stop-color="#9C7A1B"/>' +
+          '<stop offset="1" stop-color="#DCB748"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-midas-leaf-light" x1="0" y1="1" x2="0.3" y2="0">' +
+          '<stop offset="0" stop-color="#C6A031"/>' +
+          '<stop offset="1" stop-color="#F1DA92"/>' +
+        '</linearGradient>' +
+        '<radialGradient id="sk-midas-disc" cx="0.38" cy="0.32" r="0.78">' +
+          '<stop offset="0" stop-color="#E8C155"/>' +
+          '<stop offset="1" stop-color="#9A6E12"/>' +
+        '</radialGradient>' +
+        '<radialGradient id="sk-midas-disc-dark" cx="0.4" cy="0.3" r="0.8">' +
+          '<stop offset="0" stop-color="#A8791A"/>' +
+          '<stop offset="1" stop-color="#6B4708"/>' +
+        '</radialGradient>' +
+        '<linearGradient id="sk-midas-stem" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#96731A"/>' +
+          '<stop offset="1" stop-color="#CFA835"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-petal':      'url(#sk-midas-petal)',
+        '--c-petal-dark': 'url(#sk-midas-petal-dark)',
+        '--c-disc':       'url(#sk-midas-disc)',
+        '--c-disc-dark':  'url(#sk-midas-disc-dark)',
+        '--c-disc-seed':  '#E8C866',
+        '--c-leaf-light': 'url(#sk-midas-leaf-light)',
+        '--c-leaf':       'url(#sk-midas-leaf)',
+        '--c-leaf-dark':  '#9C7A1B',
+        '--c-stem':       'url(#sk-midas-stem)',
+        '--c-seed':       '#EBCB72',
+        '--c-seed-line':  '#9C7A1B',
+        '--c-shadow':     'rgba(92,64,10,0.24)',
+      },
+      extras: {
+        0: function (a) {
+          return skinSparkle(a.canopy[0] + 8, a.canopy[1] - 4, 1.5, '#FFF4CE', 0.7);
+        },
+        1: function (a) {
+          return skinCoin(58, 120.5, 2.6, '#F2CE68', '#B58A18', '#FFF4CE', -12) +
+                 skinSparkle(a.canopy[0] - 8, a.canopy[1] - 6, 1.8, '#FFF4CE', 0.8);
+        },
+        2: function (a) {
+          return skinCoin(23, 121, 3.0, '#F2CE68', '#B58A18', '#FFF4CE', 18) +
+                 skinCoin(59, 120.5, 2.5, '#E7C158', '#A87D12', null, -24) +
+                 skinSparkle(a.canopy[0] - 17, a.canopy[1] - 13, 2.3, '#FFF4CE', 0.85) +
+                 skinSparkle(a.canopy[0] + 15, a.canopy[1] - 19, 1.7, '#FFF4CE', 0.6);
+        },
+        3: function (a) {
+          return skinCoin(21, 121.5, 3.4, '#F2CE68', '#B58A18', '#FFF4CE', -14) +
+                 skinCoin(27, 120, 2.6, '#E7C158', '#A87D12', null, 26) +
+                 skinCoin(60, 120.5, 3.0, '#F2CE68', '#B58A18', '#FFF4CE', 9) +
+                 skinSparkle(a.canopy[0] - 23, a.canopy[1] - 17, 2.9, '#FFF4CE', 0.9) +
+                 skinSparkle(a.canopy[0] + 21, a.canopy[1] - 24, 2.2, '#FFF4CE', 0.7) +
+                 skinSparkle(a.canopy[0] + 4,  a.canopy[1] - 37, 1.7, '#FFF4CE', 0.55) +
+                 skinDot(a.canopy[0] - 27, a.canopy[1] + 8, 1.0, '#FFF4CE', 0.5);
+        },
+      },
+    },
+    {
+      // Grow-a-Garden flavour: the whole spectrum on one head. Rather
+      // than tinting every petal the same, the two petal tokens carry
+      // two different ramps — warm and cool — and the base art already
+      // alternates them around the ring, so the flower reads as a
+      // colour wheel without a single path being touched.
+      id: 'chromabloom',
+      name: 'Chromabloom',
+      note: 'Every petal caught a different part of the light.',
+      swatch: ['#FBC55F', '#F2717F', '#7B5ED8'],
+      defs:
+        '<linearGradient id="sk-chromabloom-petal" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#F2717F"/>' +
+          '<stop offset="0.45" stop-color="#FBC55F"/>' +
+          '<stop offset="1" stop-color="#8FE3A5"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-chromabloom-petal-dark" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#8E6BE0"/>' +
+          '<stop offset="0.5" stop-color="#5FB8EE"/>' +
+          '<stop offset="1" stop-color="#7CE5D6"/>' +
+        '</linearGradient>' +
+        '<radialGradient id="sk-chromabloom-disc" cx="0.4" cy="0.34" r="0.8">' +
+          '<stop offset="0" stop-color="#FFF1BC"/>' +
+          '<stop offset="0.5" stop-color="#F58BD1"/>' +
+          '<stop offset="1" stop-color="#7B5ED8"/>' +
+        '</radialGradient>' +
+        '<radialGradient id="sk-chromabloom-disc-dark" cx="0.42" cy="0.3" r="0.85">' +
+          '<stop offset="0" stop-color="#C86FE0"/>' +
+          '<stop offset="1" stop-color="#4B3AA6"/>' +
+        '</radialGradient>' +
+        '<linearGradient id="sk-chromabloom-leaf" x1="0" y1="1" x2="1" y2="0">' +
+          '<stop offset="0" stop-color="#46C8A8"/>' +
+          '<stop offset="1" stop-color="#9BE879"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-chromabloom-leaf-light" x1="0" y1="1" x2="1" y2="0">' +
+          '<stop offset="0" stop-color="#7BE0C6"/>' +
+          '<stop offset="1" stop-color="#C6F196"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-chromabloom-stem" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#4FC7B4"/>' +
+          '<stop offset="1" stop-color="#8FD86A"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-chromabloom-seed" x1="0" y1="1" x2="0.4" y2="0">' +
+          '<stop offset="0" stop-color="#8E6BE0"/>' +
+          '<stop offset="1" stop-color="#F9A8CE"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-petal':      'url(#sk-chromabloom-petal)',
+        '--c-petal-dark': 'url(#sk-chromabloom-petal-dark)',
+        '--c-disc':       'url(#sk-chromabloom-disc)',
+        '--c-disc-dark':  'url(#sk-chromabloom-disc-dark)',
+        '--c-disc-seed':  '#FFE9A6',
+        '--c-leaf-light': 'url(#sk-chromabloom-leaf-light)',
+        '--c-leaf':       'url(#sk-chromabloom-leaf)',
+        '--c-leaf-dark':  '#2FA893',
+        '--c-stem':       'url(#sk-chromabloom-stem)',
+        '--c-seed':       'url(#sk-chromabloom-seed)',
+        '--c-seed-line':  '#6B4FC4',
+        '--c-shadow':     'rgba(90,50,140,0.22)',
+      },
+      extras: {
+        0: function (a) {
+          return skinSparkle(a.canopy[0] + 8, a.canopy[1] - 5, 1.5, '#FFE1F2', 0.75) +
+                 skinDot(a.canopy[0] - 9, a.canopy[1] + 3, 0.8, '#A8E8DC', 0.6);
+        },
+        1: function (a) {
+          return skinSparkle(a.canopy[0] + 9,  a.canopy[1] - 7, 1.9, '#FFE1F2', 0.8) +
+                 skinSparkle(a.canopy[0] - 11, a.canopy[1] + 2, 1.4, '#C9EBFF', 0.6) +
+                 skinDot(a.canopy[0] + 13, a.canopy[1] + 9, 0.9, '#D6F5C4', 0.55);
+        },
+        2: function (a) {
+          return skinSparkle(a.canopy[0] - 18, a.canopy[1] - 12, 2.4, '#FFE1F2', 0.85) +
+                 skinSparkle(a.canopy[0] + 16, a.canopy[1] - 18, 1.8, '#C9EBFF', 0.7) +
+                 skinSparkle(a.canopy[0] + 6,  a.canopy[1] - 28, 1.4, '#FFF0B8', 0.55) +
+                 skinDot(a.canopy[0] - 21, a.canopy[1] + 10, 1.0, '#D6F5C4', 0.55);
+        },
+        3: function (a) {
+          return skinRainbowArc(40, 121, 32, 58, 6, 1.5, 0.38) +
+                 skinSparkle(a.canopy[0] - 24, a.canopy[1] - 16, 3.0, '#FFE1F2', 0.9) +
+                 skinSparkle(a.canopy[0] + 22, a.canopy[1] - 25, 2.2, '#C9EBFF', 0.7) +
+                 skinSparkle(a.canopy[0] + 3,  a.canopy[1] - 38, 1.7, '#FFF0B8', 0.6) +
+                 skinDot(a.canopy[0] - 28, a.canopy[1] + 4, 1.1, '#D6F5C4', 0.5);
+        },
+      },
+    },
+    {
+      // Sun-bleached rather than recoloured: the petals lose their
+      // saturation the way anything does after a season outdoors, and
+      // the disc swaps its flat brown for a userSpaceOnUse sand
+      // pattern. Because that pattern is tied to the canvas and not to
+      // each shape, the disc and its darker inner well share one
+      // continuous grain instead of each carrying its own tiling.
+      // The hat only shows up at full growth — a seedling in a sun hat
+      // is a joke, a grown sunflower in one is a character.
+      id: 'beachcomber',
+      name: 'Beachcomber',
+      note: 'Sun-bleached, sand-dusted, and in no hurry.',
+      swatch: ['#FBD98E', '#D9B98A', '#2F5D6B'],
+      defs:
+        '<pattern id="sk-beachcomber-sand" patternUnits="userSpaceOnUse" width="7" height="7">' +
+          '<rect width="7" height="7" fill="#D9B98A"/>' +
+          '<circle cx="1.6" cy="2.1" r="0.55" fill="#EFDCBB"/>' +
+          '<circle cx="5.1" cy="1.2" r="0.40" fill="#C09B6C"/>' +
+          '<path d="M3.0,4.2 C3.6,3.9 4.1,4.3 3.9,4.9 C3.4,5.2 2.8,4.8 3.0,4.2 Z" fill="#EFDCBB"/>' +
+          '<circle cx="6.2" cy="5.4" r="0.45" fill="#C09B6C"/>' +
+          '<circle cx="0.8" cy="5.9" r="0.35" fill="#EFDCBB" opacity="0.7"/>' +
+        '</pattern>' +
+        '<pattern id="sk-beachcomber-sand-dark" patternUnits="userSpaceOnUse" width="7" height="7">' +
+          '<rect width="7" height="7" fill="#BC9765"/>' +
+          '<circle cx="2.2" cy="1.5" r="0.5" fill="#D6B187"/>' +
+          '<circle cx="5.6" cy="3.1" r="0.38" fill="#A37E4E"/>' +
+          '<path d="M1.4,5.0 C2.0,4.7 2.5,5.1 2.3,5.7 C1.8,6.0 1.2,5.6 1.4,5.0 Z" fill="#D6B187"/>' +
+          '<circle cx="4.9" cy="6.0" r="0.42" fill="#A37E4E"/>' +
+        '</pattern>' +
+        '<linearGradient id="sk-beachcomber-petal" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#F0BE68"/>' +
+          '<stop offset="1" stop-color="#FFF0C6"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-beachcomber-petal-dark" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#E0A94F"/>' +
+          '<stop offset="1" stop-color="#FBDFA0"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-petal':      'url(#sk-beachcomber-petal)',
+        '--c-petal-dark': 'url(#sk-beachcomber-petal-dark)',
+        '--c-disc':       'url(#sk-beachcomber-sand)',
+        '--c-disc-dark':  'url(#sk-beachcomber-sand-dark)',
+        '--c-disc-seed':  '#E9D0A6',
+        '--c-leaf-light': '#A3CBAB',
+        '--c-leaf':       '#7FB894',
+        '--c-leaf-dark':  '#5E9A7C',
+        '--c-stem':       '#6FA383',
+        '--c-seed':       'url(#sk-beachcomber-sand)',
+        '--c-seed-line':  '#B08A55',
+        '--c-shadow':     'rgba(120,95,55,0.20)',
+      },
+      extras: {
+        0: function () {
+          return skinSeashell(55, 121, 0.36, 18, '#F7E3CE', '#DFC3A0');
+        },
+        1: function (a) {
+          return skinSeashell(23, 121.5, 0.40, -15, '#F4DCC0', '#D8B892') +
+                 skinSunglasses(a.canopy[0], a.canopy[1] - 0.6, 8.5, -3,
+                                '#2F5D6B', '#F0E2C2', '#A9DCE4');
+        },
+        2: function (a) {
+          return skinSeashell(22, 121.5, 0.44, -18, '#F4DCC0', '#D8B892') +
+                 skinSeashell(58, 120.5, 0.32, 24, '#F7E3CE', '#DFC3A0') +
+                 skinSunglasses(a.canopy[0], a.canopy[1] - 1.2, 15, -2,
+                                '#2F5D6B', '#F0E2C2', '#A9DCE4');
+        },
+        3: function (a) {
+          return skinSeashell(20, 121.5, 0.46, -16, '#F4DCC0', '#D8B892') +
+                 skinSeashell(60, 120.5, 0.34, 22, '#F7E3CE', '#DFC3A0') +
+                 skinDot(29, 120.5, 0.9, '#EFDCBB', 0.8) +
+                 skinSunglasses(a.canopy[0], a.canopy[1] - 1.5, 21, -2,
+                                '#2F5D6B', '#F0E2C2', '#A9DCE4') +
+                 skinStrawHat(a.canopy[0] - 13, a.canopy[1] - 22, 21, -17,
+                              '#EBD7A2', '#CDB275', '#7FBEC0');
+        },
+      },
+    },
   ],
 
+  // Lotus skins. 'inkandgold' is gone, replaced by 'corsair'; the
+  // base art in PLANT_SVG_DATA.mindfulness is untouched — every look
+  // below is vars + defs + extras only.
   mindfulness: [
     {
       id: 'classic',
@@ -1016,45 +2010,324 @@ var PLANT_SKINS = {
       vars: {},
     },
     {
-      id: 'inkandgold',
-      name: 'Ink & Gold',
-      note: 'Ivory petals over lacquer-dark pads.',
-      swatch: ['#FFFDF6', '#C9A24F', '#1E3A33'],
+      id: 'goldleaf',
+      name: 'Gilded Sovereign',
+      note: 'Beaten gold from pad to petal tip.',
+      swatch: ['#FFF6D2', '#E8B23C', '#8A5E17'],
       defs:
-        '<linearGradient id="sk-inkandgold-inner" x1="0" y1="1" x2="0" y2="0">' +
-          '<stop offset="0" stop-color="#8C6326"/>' +
+        '<linearGradient id="sk-goldleaf-outer" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#E4B043"/>' +
+          '<stop offset="1" stop-color="#FFE9A6"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-goldleaf-mid" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#B77F1E"/>' +
+          '<stop offset="1" stop-color="#F0C55C"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-goldleaf-inner" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#7E5312"/>' +
+          '<stop offset="0.55" stop-color="#C08A24"/>' +
+          '<stop offset="1" stop-color="#EFC65F"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-petal-outer-light': '#FFF6D2',
+        '--c-petal-outer':       'url(#sk-goldleaf-outer)',
+        '--c-petal-mid-light':   '#F5CE72',
+        '--c-petal-mid':         'url(#sk-goldleaf-mid)',
+        '--c-petal-inner-light': '#D9A63C',
+        '--c-petal-inner':       'url(#sk-goldleaf-inner)',
+        '--c-center':            '#FFF7DA',
+        '--c-center-dark':       '#C98A1E',
+        '--c-pad':               '#6B6228',
+        '--c-pad-dark':          '#443F16',
+        '--c-leaf-light':        '#A08C3C',
+        '--c-leaf':              '#77692A',
+        '--c-leaf-dark':         '#514812',
+        '--c-shadow':            'rgba(58,44,8,0.34)',
+      },
+      extras: {
+        0: function (a) {
+          return skinCoin(a.base[0] - 12, a.base[1] + 1.5, 1.7, '#F7D774', '#B98B2C', '#FFF3C4', -14) +
+                 skinSparkle(a.top[0] + 4, a.top[1] - 1, 1.4, '#FFF3C4', 0.75);
+        },
+        1: function (a) {
+          return skinCoin(a.base[0] - 14, a.base[1] + 2, 2.0, '#F7D774', '#B98B2C', '#FFF3C4', -8) +
+                 skinCoin(a.base[0] + 13, a.base[1] + 0.5, 1.5, '#E7C25C', '#A87C22', null, 16) +
+                 skinSparkle(a.top[0] + 4.5, a.top[1] + 2, 1.6, '#FFF3C4', 0.8);
+        },
+        2: function (a) {
+          return skinRipple(a.base[0], a.base[1] - 1, 20, '#D9AE4A', 0.34) +
+                 skinRipple(a.base[0], a.base[1] + 2, 25, '#D9AE4A', 0.18) +
+                 skinCoin(a.base[0] - 17, a.base[1] + 2, 2.1, '#F7D774', '#B98B2C', '#FFF3C4', -12) +
+                 skinCoin(a.base[0] + 16, a.base[1] + 1.5, 1.7, '#E7C25C', '#A87C22', null, 22) +
+                 skinSparkle(a.canopy[0] + 7, a.canopy[1] - 6, 1.8, '#FFF3C4', 0.8);
+        },
+        3: function (a) {
+          return skinRipple(a.base[0], a.base[1] - 1, 25, '#D9AE4A', 0.36) +
+                 skinRipple(a.base[0], a.base[1] + 2.5, 31, '#D9AE4A', 0.2) +
+                 skinCoin(a.base[0] - 20, a.base[1] + 2, 2.4, '#F7D774', '#B98B2C', '#FFF3C4', -16) +
+                 skinCoin(a.base[0] + 18, a.base[1] + 2.5, 2.0, '#F0CB68', '#B08222', '#FFF3C4', 9) +
+                 skinCoin(a.base[0] + 25, a.base[1] - 0.5, 1.5, '#E0B848', '#9C731C', null, 30) +
+                 skinSparkle(a.canopy[0] - 9, a.canopy[1] - 4, 2.1, '#FFF6D2', 0.85) +
+                 skinSparkle(a.top[0] + 8, a.top[1] + 8, 1.5, '#FFF6D2', 0.6);
+        },
+      },
+    },
+    {
+      id: 'prism',
+      name: 'Prismbloom',
+      note: 'A different colour in every ring of petals.',
+      swatch: ['#5FD08A', '#7B6BE8', '#EF7BA8'],
+      defs:
+        '<linearGradient id="sk-prism-outer" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#2FB4B0"/>' +
+          '<stop offset="0.5" stop-color="#4CC77E"/>' +
+          '<stop offset="1" stop-color="#B6E45C"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-prism-outer-light" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#5FD2CD"/>' +
+          '<stop offset="0.5" stop-color="#7EDD9C"/>' +
+          '<stop offset="1" stop-color="#D3F084"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-prism-mid" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#2E92E0"/>' +
+          '<stop offset="0.5" stop-color="#6A6FE4"/>' +
+          '<stop offset="1" stop-color="#A45FDC"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-prism-mid-light" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#5FB0EC"/>' +
+          '<stop offset="0.5" stop-color="#8E92EE"/>' +
+          '<stop offset="1" stop-color="#C088E9"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-prism-inner" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#E24C6E"/>' +
+          '<stop offset="0.45" stop-color="#EF8A3D"/>' +
+          '<stop offset="1" stop-color="#F2D24B"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-prism-inner-light" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#EF7B96"/>' +
+          '<stop offset="0.45" stop-color="#F5A868"/>' +
+          '<stop offset="1" stop-color="#F8E183"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-petal-outer-light': 'url(#sk-prism-outer-light)',
+        '--c-petal-outer':       'url(#sk-prism-outer)',
+        '--c-petal-mid-light':   'url(#sk-prism-mid-light)',
+        '--c-petal-mid':         'url(#sk-prism-mid)',
+        '--c-petal-inner-light': 'url(#sk-prism-inner-light)',
+        '--c-petal-inner':       'url(#sk-prism-inner)',
+        '--c-center':            '#FFF3B0',
+        '--c-center-dark':       '#F0B93C',
+        '--c-pad':               '#33BCA4',
+        '--c-pad-dark':          '#1C8377',
+        '--c-leaf-light':        '#8FE2B4',
+        '--c-leaf':              '#4CC58C',
+        '--c-leaf-dark':         '#2A9A6E',
+        '--c-shadow':            'rgba(26,86,112,0.3)',
+      },
+      extras: {
+        0: function (a) {
+          return skinSparkle(a.top[0] - 6, a.top[1] + 1, 1.5, '#8FE9FF', 0.8) +
+                 skinDot(a.base[0] + 9, a.base[1] - 4, 0.8, '#F5A0C8', 0.75);
+        },
+        1: function (a) {
+          return skinRainbowArc(a.base[0], a.base[1], 18, 176, 132, 1.1, 0.4) +
+                 skinSparkle(a.top[0] + 5, a.top[1] + 3, 1.6, '#FFF3B0', 0.85) +
+                 skinDot(a.base[0] + 12, a.base[1] - 8, 0.9, '#7FD4FF', 0.7);
+        },
+        2: function (a) {
+          return skinRainbowArc(a.base[0], a.base[1] + 1, 26, 178, 128, 1.3, 0.4) +
+                 skinRainbowArc(a.base[0], a.base[1] + 1, 22, 2, 44, 1.1, 0.32) +
+                 skinSparkle(a.canopy[0] - 9, a.canopy[1] - 5, 1.9, '#8FE9FF', 0.85) +
+                 skinSparkle(a.top[0] + 7, a.top[1] + 6, 1.4, '#F5A0C8', 0.7) +
+                 skinDot(a.base[0] - 20, a.base[1] - 12, 0.9, '#C6A0F5', 0.7);
+        },
+        3: function (a) {
+          return skinRainbowArc(a.base[0], a.base[1] + 2, 34, 178, 134, 1.5, 0.38) +
+                 skinRainbowArc(a.base[0], a.base[1] + 2, 30, 2, 42, 1.3, 0.3) +
+                 skinSparkle(a.top[0] - 3, a.top[1] - 4, 2.3, '#FFF6DA', 0.9) +
+                 skinSparkle(a.canopy[0] + 15, a.canopy[1] - 2, 1.7, '#8FE9FF', 0.75) +
+                 skinSparkle(a.canopy[0] - 16, a.canopy[1] + 8, 1.4, '#F5A0C8', 0.7) +
+                 skinDot(a.base[0] + 22, a.base[1] - 24, 1.0, '#C6A0F5', 0.7) +
+                 skinDot(a.base[0] - 24, a.base[1] - 18, 0.8, '#B6E45C', 0.7);
+        },
+      },
+    },
+    {
+      id: 'harlequin',
+      name: 'Wild Card',
+      note: 'Motley stripes, and the deck never far away.',
+      swatch: ['#C0263A', '#3E9B4F', '#6B3FA0'],
+      defs:
+        // Hard-stop diagonals: banded per petal half, so the two
+        // halves of one petal never line up and the whole bloom
+        // reads as stitched motley instead of striped wallpaper.
+        '<linearGradient id="sk-harlequin-mid" x1="0" y1="1" x2="1" y2="0">' +
+          '<stop offset="0" stop-color="#3E9B4F"/>' +
+          '<stop offset="0.34" stop-color="#3E9B4F"/>' +
+          '<stop offset="0.34" stop-color="#6B3FA0"/>' +
+          '<stop offset="0.67" stop-color="#6B3FA0"/>' +
+          '<stop offset="0.67" stop-color="#3E9B4F"/>' +
+          '<stop offset="1" stop-color="#3E9B4F"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-harlequin-mid-light" x1="0" y1="1" x2="1" y2="0">' +
+          '<stop offset="0" stop-color="#8B5FC4"/>' +
+          '<stop offset="0.38" stop-color="#8B5FC4"/>' +
+          '<stop offset="0.38" stop-color="#5CB86D"/>' +
+          '<stop offset="0.72" stop-color="#5CB86D"/>' +
+          '<stop offset="0.72" stop-color="#8B5FC4"/>' +
+          '<stop offset="1" stop-color="#8B5FC4"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-harlequin-inner" x1="1" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#C0263A"/>' +
+          '<stop offset="0.36" stop-color="#C0263A"/>' +
+          '<stop offset="0.36" stop-color="#2F8543"/>' +
+          '<stop offset="0.7" stop-color="#2F8543"/>' +
+          '<stop offset="0.7" stop-color="#C0263A"/>' +
+          '<stop offset="1" stop-color="#C0263A"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-harlequin-inner-light" x1="1" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#D94456"/>' +
+          '<stop offset="0.42" stop-color="#D94456"/>' +
+          '<stop offset="0.42" stop-color="#4FA765"/>' +
+          '<stop offset="0.76" stop-color="#4FA765"/>' +
+          '<stop offset="0.76" stop-color="#D94456"/>' +
+          '<stop offset="1" stop-color="#D94456"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-petal-outer-light': '#8B5FC4',
+        '--c-petal-outer':       '#6B3FA0',
+        '--c-petal-mid-light':   'url(#sk-harlequin-mid-light)',
+        '--c-petal-mid':         'url(#sk-harlequin-mid)',
+        '--c-petal-inner-light': 'url(#sk-harlequin-inner-light)',
+        '--c-petal-inner':       'url(#sk-harlequin-inner)',
+        '--c-center':            '#F2E27A',
+        '--c-center-dark':       '#C9A83E',
+        '--c-pad':               '#357F4A',
+        '--c-pad-dark':          '#1D4A2E',
+        '--c-leaf-light':        '#79B486',
+        '--c-leaf':              '#4E8F5C',
+        '--c-leaf-dark':         '#356B42',
+        '--c-shadow':            'rgba(38,14,54,0.35)',
+      },
+      extras: {
+        0: function (a) {
+          return skinPlayingCard(a.base[0] - 10, a.base[1] - 2.5, 0.22, -76, '#F5EFE0', '#C0263A', '#B9A78E');
+        },
+        1: function (a) {
+          return skinPlayingCard(a.base[0] - 13, a.base[1] - 1.5, 0.27, -82, '#F5EFE0', '#C0263A', '#B9A78E') +
+                 skinPlayingCard(a.base[0] + 12, a.base[1] - 0.5, 0.24, 97, '#F5EFE0', '#6B3FA0', '#B9A78E') +
+                 skinDiamondChip(a.top[0] + 5, a.top[1] + 2, 0.45, 12, '#F2E27A', 0.85);
+        },
+        2: function (a) {
+          return skinPlayingCard(a.base[0] - 16, a.base[1] - 12, 0.3, -24, '#F5EFE0', '#C0263A', '#B9A78E') +
+                 skinPlayingCard(a.base[0] + 17, a.base[1] - 3, 0.27, 104, '#F5EFE0', '#3E9B4F', '#B9A78E') +
+                 skinPlayingCard(a.canopy[0] + 16, a.canopy[1] + 6, 0.26, 21, '#F5EFE0', '#6B3FA0', '#B9A78E') +
+                 skinDiamondChip(a.base[0] - 21, a.base[1] - 24, 0.5, -16, '#3E9B4F', 0.8) +
+                 skinDiamondChip(a.top[0] + 8, a.top[1] + 4, 0.42, 24, '#F2E27A', 0.85);
+        },
+        3: function (a) {
+          return skinPlayingCard(a.base[0] - 22, a.base[1] - 15, 0.35, -28, '#F5EFE0', '#C0263A', '#B9A78E') +
+                 skinPlayingCard(a.base[0] - 15, a.base[1] - 3, 0.3, -101, '#F5EFE0', '#6B3FA0', '#B9A78E') +
+                 skinPlayingCard(a.base[0] + 23, a.base[1] - 18, 0.33, 26, '#F5EFE0', '#3E9B4F', '#B9A78E') +
+                 skinPlayingCard(a.canopy[0] + 19, a.canopy[1] - 8, 0.26, 15, '#F5EFE0', '#C0263A', '#B9A78E') +
+                 skinDiamondChip(a.canopy[0] - 20, a.canopy[1] - 6, 0.55, -18, '#6B3FA0', 0.8) +
+                 skinDiamondChip(a.top[0] + 6, a.top[1] - 3, 0.5, 14, '#F2E27A', 0.9) +
+                 skinDiamondChip(a.base[0] + 27, a.base[1] - 30, 0.4, 32, '#3E9B4F', 0.75);
+        },
+      },
+    },
+    {
+      id: 'corsair',
+      name: "Corsair's Bounty",
+      note: 'Sailcloth and salvaged plank, moored over dark water.',
+      swatch: ['#F2E7CB', '#9C6B38', '#C9A24F'],
+      defs:
+        // Hard stops down the petal give the mid ring the look of
+        // caulked planking without a pattern, so it holds up at both
+        // the seedling scale and the full bloom's 0.21 scale.
+        '<linearGradient id="sk-corsair-plank" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#77492A"/>' +
+          '<stop offset="0.32" stop-color="#77492A"/>' +
+          '<stop offset="0.33" stop-color="#9C6B38"/>' +
+          '<stop offset="0.63" stop-color="#9C6B38"/>' +
+          '<stop offset="0.64" stop-color="#8A5C31"/>' +
+          '<stop offset="1" stop-color="#AE7C45"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-corsair-plank-light" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#96683C"/>' +
+          '<stop offset="0.36" stop-color="#96683C"/>' +
+          '<stop offset="0.37" stop-color="#B5844E"/>' +
+          '<stop offset="0.7" stop-color="#B5844E"/>' +
+          '<stop offset="0.71" stop-color="#A67540"/>' +
+          '<stop offset="1" stop-color="#C4955C"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-corsair-gold" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#7E5A1B"/>' +
           '<stop offset="1" stop-color="#D9B369"/>' +
         '</linearGradient>',
       vars: {
-        '--c-petal-outer-light': '#FFFDF6',
-        '--c-petal-outer':       '#F3E9D2',
-        '--c-petal-mid-light':   '#E9DAB6',
-        '--c-petal-mid':         '#D6BE8A',
-        '--c-petal-inner-light': '#C8A45E',
-        '--c-petal-inner':       'url(#sk-inkandgold-inner)',
-        '--c-center':            '#FFF0B8',
-        '--c-center-dark':       '#DFB94F',
-        '--c-pad':               '#25453C',
-        '--c-pad-dark':          '#15292A',
-        '--c-leaf-light':        '#4A7A66',
-        '--c-leaf':              '#2F5A4C',
-        '--c-leaf-dark':         '#1E4034',
-        '--c-shadow':            'rgba(8,28,26,0.34)',
+        '--c-petal-outer-light': '#F2E7CB',
+        '--c-petal-outer':       '#DCCBA4',
+        '--c-petal-mid-light':   'url(#sk-corsair-plank-light)',
+        '--c-petal-mid':         'url(#sk-corsair-plank)',
+        '--c-petal-inner-light': '#C9A24F',
+        '--c-petal-inner':       'url(#sk-corsair-gold)',
+        '--c-center':            '#F5E2A2',
+        '--c-center-dark':       '#B98B2C',
+        '--c-pad':               '#26534E',
+        '--c-pad-dark':          '#143034',
+        '--c-leaf-light':        '#4E8478',
+        '--c-leaf':              '#2F6156',
+        '--c-leaf-dark':         '#1D453D',
+        '--c-shadow':            'rgba(9,29,32,0.36)',
       },
       extras: {
+        0: function (a) {
+          return skinCoin(a.base[0] - 10, a.base[1] + 1, 1.6, '#E9C468', '#8A6520', '#F7E4A8', -18) +
+                 skinCoin(a.base[0] + 8, a.base[1] + 1.5, 1.2, '#D8B052', '#7A5718', null, 24);
+        },
+        1: function (a) {
+          return skinTreasureChest(a.base[0] - 13, a.base[1] + 1.5, 0.3, -5,
+                   '#8A5C31', '#5F3C1E', '#4A4A4A', '#E9C468', '#F7E4A8') +
+                 skinCoin(a.base[0] + 11, a.base[1] + 1, 1.5, '#E9C468', '#8A6520', '#F7E4A8', 12);
+        },
         2: function (a) {
-          return skinRipple(a.base[0], a.base[1] - 1, 19, '#C9A24F', 0.35) +
-                 skinRipple(a.base[0], a.base[1] + 1.5, 24, '#C9A24F', 0.18);
+          return skinRipple(a.base[0], a.base[1] - 1, 20, '#5E9C93', 0.35) +
+                 skinRipple(a.base[0], a.base[1] + 2, 25, '#5E9C93', 0.2) +
+                 skinTreasureChest(a.base[0] - 16, a.base[1] + 2, 0.42, -6,
+                   '#8A5C31', '#5F3C1E', '#4A4A4A', '#E9C468', '#F7E4A8') +
+                 skinCannon(a.base[0] + 16, a.base[1] + 1.5, 0.34, -6,
+                   '#3E4348', '#23272B', '#7A4F27', '#C9A24F') +
+                 skinCoin(a.base[0] - 6, a.base[1] + 2.5, 1.4, '#E9C468', '#8A6520', '#F7E4A8', 20);
         },
         3: function (a) {
-          return skinRipple(a.base[0], a.base[1] - 1, 24, '#C9A24F', 0.38) +
-                 skinRipple(a.base[0], a.base[1] + 2, 30, '#C9A24F', 0.20) +
-                 skinSparkle(a.canopy[0] + 1, a.canopy[1] - 6, 2.0, '#FFF0B8', 0.7);
+          return skinRipple(a.base[0], a.base[1] - 1, 25, '#5E9C93', 0.36) +
+                 skinRipple(a.base[0], a.base[1] + 2.5, 31, '#5E9C93', 0.2) +
+                 skinTreasureChest(a.base[0] - 20, a.base[1] + 2, 0.5, -7,
+                   '#8A5C31', '#5F3C1E', '#4A4A4A', '#E9C468', '#F7E4A8') +
+                 skinCannon(a.base[0] + 20, a.base[1] + 2.5, 0.42, -5,
+                   '#3E4348', '#23272B', '#7A4F27', '#C9A24F') +
+                 skinCoin(a.base[0] - 8, a.base[1] + 3, 1.7, '#E9C468', '#8A6520', '#F7E4A8', -10) +
+                 skinCoin(a.base[0] + 8, a.base[1] + 3.5, 1.4, '#D8B052', '#7A5718', null, 26) +
+                 skinSparkle(a.canopy[0] + 2, a.canopy[1] - 5, 1.7, '#F7E4A8', 0.7);
         },
       },
     },
   ],
 
+  // ---- LAVENDER (sleep) skins --------------------------------------
+  // Tokens the lavender art actually exposes: --c-bud (the main
+  // whorl tone), --c-bud-pale (the alternating tone), --c-bud-shade
+  // (the solid backing plate behind the spike), --c-calyx, --c-stem,
+  // --c-stem-light and --c-shadow.
+  //
+  // The spike reads by alternation, not by outline: every whorl
+  // flips which tone sits on the centre bract and which on the two
+  // side bracts. So a skin has one job it must not get wrong —
+  // --c-bud and --c-bud-pale have to stay clearly apart in value.
+  // Two similar tones and the whole head collapses into one blob.
+  // --c-bud-shade should stay darker than both, since it is the
+  // plate the wedges between petals are read against.
   sleep: [
     {
       id: 'classic',
@@ -1064,32 +2337,220 @@ var PLANT_SKINS = {
       vars: {},
     },
     {
-      id: 'honeydusk',
-      name: 'Honeydusk',
-      note: 'Warm amber buds on dusty olive stems.',
-      swatch: ['#FFF3DC', '#F2CE8E', '#A8B27A'],
+      id: 'midas',
+      name: 'Midas Hour',
+      note: 'Struck gold from calyx to tip, with the spill to prove it.',
+      swatch: ['#FFF1C6', '#E3A93C', '#8A5F14'],
       defs:
-        '<linearGradient id="sk-honeydusk-bud" x1="0" y1="1" x2="0.3" y2="0">' +
-          '<stop offset="0" stop-color="#E8B96A"/>' +
-          '<stop offset="1" stop-color="#FBE1AE"/>' +
+        '<linearGradient id="sk-midas-bud" x1="0" y1="1" x2="0.35" y2="0">' +
+          '<stop offset="0" stop-color="#B8801E"/>' +
+          '<stop offset="0.55" stop-color="#E3A93C"/>' +
+          '<stop offset="1" stop-color="#F7CE6C"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-midas-bud-pale" x1="0" y1="1" x2="0.35" y2="0">' +
+          '<stop offset="0" stop-color="#F0CB7C"/>' +
+          '<stop offset="1" stop-color="#FFF3D2"/>' +
         '</linearGradient>',
       vars: {
-        '--c-bud':        'url(#sk-honeydusk-bud)',
-        '--c-bud-shade':  '#DDA95C',
-        '--c-bud-hilite': '#FFF6E4',
-        '--c-stem':       '#94A06A',
-        '--c-stem-light': '#BFC895',
-        '--c-shadow':     'rgba(70,52,10,0.16)',
+        '--c-bud':        'url(#sk-midas-bud)',
+        '--c-bud-pale':   'url(#sk-midas-bud-pale)',
+        '--c-bud-shade':  '#8A5F14',
+        '--c-calyx':      '#8F7A32',
+        '--c-stem':       '#7C8A4C',
+        '--c-stem-light': '#AEBC77',
+        '--c-shadow':     'rgba(84,58,8,0.18)',
       },
+      // The coins arrive before the pot does: one at the sprout,
+      // a scatter by mid-growth, the full spill only at the end.
       extras: {
+        1: function (a) {
+          return skinCoin(a.base[0] - 11, a.base[1] - 1, 2.3, '#F6D06A', '#C08F26', '#FFF3C8', -12) +
+                 skinSparkle(a.canopy[0] + 8, a.canopy[1] - 5, 1.9, '#FFF3C8', 0.85);
+        },
         2: function (a) {
-          return skinDot(a.canopy[0] - 11, a.canopy[1] - 4, 0.9, '#FFE9BE', 0.75) +
-                 skinDot(a.canopy[0] + 12, a.canopy[1] + 6, 0.7, '#FFE9BE', 0.6);
+          return skinCoin(a.base[0] - 13, a.base[1] - 0.5, 2.6, '#F6D06A', '#C08F26', '#FFF3C8', -16) +
+                 skinCoin(a.base[0] + 11, a.base[1] + 1, 2.1, '#EFC459', '#B8862B', null, 13) +
+                 skinSparkle(a.canopy[0] - 11, a.canopy[1] - 7, 2.3, '#FFF3C8', 0.85) +
+                 skinSparkle(a.canopy[0] + 12, a.canopy[1] + 5, 1.5, '#FFF3C8', 0.6);
         },
         3: function (a) {
-          return skinDot(a.canopy[0] - 14, a.canopy[1] - 10, 1.1, '#FFE9BE', 0.8) +
-                 skinDot(a.canopy[0] + 15, a.canopy[1] + 4, 0.9, '#FFE9BE', 0.62) +
-                 skinDot(a.canopy[0] + 6,  a.canopy[1] - 22, 0.8, '#FFE9BE', 0.5);
+          return skinPot(a.base[0] - 16, a.base[1] + 0.5, 0.62,
+                         '#463522', '#2F2416', '#6B5433', '#F0C25C', '#FFF3C8') +
+                 skinCoin(a.base[0] + 13, a.base[1] - 0.5, 2.7, '#F6D06A', '#C08F26', '#FFF3C8', 18) +
+                 skinCoin(a.base[0] + 8.5, a.base[1] + 1.5, 2.2, '#EFC459', '#B8862B', null, -8) +
+                 skinSparkle(a.canopy[0] - 13, a.canopy[1] - 10, 2.6, '#FFF3C8', 0.9) +
+                 skinSparkle(a.canopy[0] + 13, a.canopy[1] + 2, 1.8, '#FFF3C8', 0.7) +
+                 skinSparkle(a.top[0] + 6, a.top[1] - 3, 1.5, '#FFF3C8', 0.6);
+        },
+      },
+    },
+    {
+      id: 'prism',
+      name: 'Prism Spike',
+      note: 'Every whorl catches a different part of the light.',
+      swatch: ['#F2568E', '#F2D74B', '#4A9BE8'],
+      // Both gradients are objectBoundingBox, so each bract carries
+      // the whole sweep inside its own outline. That keeps the
+      // iridescence identical at every growth stage — a gradient run
+      // across the plant instead would leave the sprout stuck on the
+      // red end and only pay off at full height. The saturated sweep
+      // and the pastel one run in different directions so touching
+      // petals never land on the same colour at their shared edge.
+      defs:
+        '<linearGradient id="sk-prism-bud" x1="0" y1="1" x2="0.85" y2="0">' +
+          '<stop offset="0" stop-color="#F2568E"/>' +
+          '<stop offset="0.22" stop-color="#F7913F"/>' +
+          '<stop offset="0.42" stop-color="#EFD048"/>' +
+          '<stop offset="0.62" stop-color="#4FC97E"/>' +
+          '<stop offset="0.82" stop-color="#4A9BE8"/>' +
+          '<stop offset="1" stop-color="#9B6BE8"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-prism-bud-pale" x1="0.15" y1="0" x2="1" y2="1">' +
+          '<stop offset="0" stop-color="#FBF3C6"/>' +
+          '<stop offset="0.3" stop-color="#BFF3D8"/>' +
+          '<stop offset="0.6" stop-color="#BEE4FB"/>' +
+          '<stop offset="0.82" stop-color="#D2C6FA"/>' +
+          '<stop offset="1" stop-color="#F9C9E6"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-bud':        'url(#sk-prism-bud)',
+        '--c-bud-pale':   'url(#sk-prism-bud-pale)',
+        '--c-bud-shade':  '#553A94',
+        '--c-calyx':      '#5EC3A6',
+        '--c-stem':       '#4FBE8C',
+        '--c-stem-light': '#8FE4BC',
+        '--c-shadow':     'rgba(86,48,124,0.16)',
+      },
+      // Motes, not a halo: a few coloured glints at different sizes
+      // and opacities, none of them centred on the spike, so the
+      // shimmer looks like it is coming off the flowers rather than
+      // sitting behind them in a ring.
+      extras: {
+        1: function (a) {
+          return skinSparkle(a.canopy[0] + 9, a.canopy[1] - 6, 2.1, '#F9D7E8', 0.9) +
+                 skinSparkle(a.canopy[0] - 8, a.canopy[1] + 4, 1.5, '#BEE4FB', 0.75) +
+                 skinDot(a.canopy[0] + 12, a.canopy[1] + 7, 0.7, '#FBF3C6', 0.7);
+        },
+        2: function (a) {
+          return skinSparkle(a.canopy[0] - 12, a.canopy[1] - 8, 2.5, '#F9C9E6', 0.9) +
+                 skinSparkle(a.canopy[0] + 12, a.canopy[1] - 2, 1.9, '#BFF3D8', 0.8) +
+                 skinSparkle(a.canopy[0] + 8, a.canopy[1] + 12, 1.4, '#BEE4FB', 0.65) +
+                 skinDot(a.canopy[0] - 9, a.canopy[1] + 9, 0.8, '#FBF3C6', 0.7) +
+                 skinDot(a.top[0] + 5, a.top[1] - 4, 0.6, '#D2C6FA', 0.65);
+        },
+        3: function (a) {
+          return skinSparkle(a.canopy[0] - 14, a.canopy[1] - 12, 2.9, '#F9C9E6', 0.92) +
+                 skinSparkle(a.canopy[0] + 14, a.canopy[1] - 4, 2.2, '#BEE4FB', 0.82) +
+                 skinSparkle(a.canopy[0] + 10, a.canopy[1] + 16, 1.6, '#BFF3D8', 0.7) +
+                 skinSparkle(a.top[0] - 6, a.top[1] - 5, 2.0, '#FBF3C6', 0.85) +
+                 skinDot(a.canopy[0] - 10, a.canopy[1] + 13, 0.9, '#D2C6FA', 0.7) +
+                 skinDot(a.top[0] + 8, a.top[1] + 2, 0.7, '#F9D7E8', 0.65);
+        },
+      },
+    },
+    {
+      id: 'hexbloom',
+      name: 'Hexbloom',
+      note: 'Steeped in something. Best not to ask what.',
+      swatch: ['#C69BEA', '#6B34A0', '#2C1440'],
+      defs:
+        '<linearGradient id="sk-hexbloom-bud" x1="0" y1="1" x2="0.3" y2="0">' +
+          '<stop offset="0" stop-color="#4A1F74"/>' +
+          '<stop offset="1" stop-color="#8E52C6"/>' +
+        '</linearGradient>',
+      // The stems go swamp-green rather than sage, which is what
+      // pushes the purple from "lavender" toward "nightshade"
+      // without touching a single petal.
+      vars: {
+        '--c-bud':        'url(#sk-hexbloom-bud)',
+        '--c-bud-pale':   '#C69BEA',
+        '--c-bud-shade':  '#331353',
+        '--c-calyx':      '#4C7A52',
+        '--c-stem':       '#3F6B57',
+        '--c-stem-light': '#6FA37E',
+        '--c-shadow':     'rgba(24,6,40,0.22)',
+      },
+      // The hat lands on the `top` anchor, so it perches on the tip
+      // whorl and grows with the spike instead of being pinned to a
+      // fixed height. The acid-green glints are the only warm-free
+      // accent in the skin — they read as fumes off the flask.
+      extras: {
+        1: function (a) {
+          return skinPotion(a.base[0] - 10, a.base[1], 0.5, '#CDBEE8', '#79E86A', '#A8763F', '#F0E6FF') +
+                 skinSparkle(a.canopy[0] + 8, a.canopy[1] - 5, 1.8, '#8CFF6B', 0.8);
+        },
+        2: function (a) {
+          return skinPotion(a.base[0] - 12, a.base[1] + 0.5, 0.64, '#CDBEE8', '#79E86A', '#A8763F', '#F0E6FF') +
+                 skinWitchHat(a.top[0] + 2, a.top[1] + 1.5, 13, -15, '#31164A', '#1E0C30', '#160823', '#CDA84E') +
+                 skinSparkle(a.canopy[0] - 11, a.canopy[1] + 2, 2.1, '#8CFF6B', 0.8) +
+                 skinDot(a.base[0] - 8, a.base[1] - 7, 0.8, '#8CFF6B', 0.6);
+        },
+        3: function (a) {
+          return skinPotion(a.base[0] - 14, a.base[1] + 0.5, 0.82, '#CDBEE8', '#79E86A', '#A8763F', '#F0E6FF') +
+                 skinPotion(a.base[0] + 12, a.base[1] + 1, 0.54, '#C4B2E4', '#C87BF0', '#8E6234', '#F0E6FF') +
+                 skinWitchHat(a.top[0] + 2.5, a.top[1] + 1, 18, -14, '#31164A', '#1E0C30', '#160823', '#CDA84E') +
+                 skinSparkle(a.canopy[0] - 13, a.canopy[1] - 6, 2.6, '#8CFF6B', 0.85) +
+                 skinSparkle(a.canopy[0] + 13, a.canopy[1] + 8, 1.8, '#8CFF6B', 0.7) +
+                 skinDot(a.base[0] - 10, a.base[1] - 12, 1.0, '#8CFF6B', 0.55) +
+                 skinDot(a.base[0] - 7, a.base[1] - 17, 0.7, '#8CFF6B', 0.4);
+        },
+      },
+    },
+    {
+      id: 'glitterball',
+      name: 'Glitterball',
+      note: 'Mirror-tiled whorls under a very small ball.',
+      swatch: ['#FF6BC0', '#3FD8E8', '#3A1160'],
+      // Patterns rather than gradients, because the brief here is
+      // texture: a checker of two tones on a 3.2-unit tile, turned
+      // off-axis so the tiles read as diamond facets catching light.
+      // patternUnits is userSpaceOnUse so the facet size stays
+      // constant across every bract instead of stretching to fit
+      // each one. Two hues only — hot magenta against cyan — which
+      // is what keeps this from drifting toward the prism skin.
+      defs:
+        '<pattern id="sk-glitterball-mag" width="3.2" height="3.2"' +
+          ' patternUnits="userSpaceOnUse" patternTransform="rotate(18)">' +
+          '<rect width="3.2" height="3.2" fill="#E0348F"/>' +
+          '<rect width="1.6" height="1.6" fill="#FF6BC0"/>' +
+          '<rect x="1.6" y="1.6" width="1.6" height="1.6" fill="#A82678"/>' +
+        '</pattern>' +
+        '<pattern id="sk-glitterball-cyan" width="3.2" height="3.2"' +
+          ' patternUnits="userSpaceOnUse" patternTransform="rotate(-24)">' +
+          '<rect width="3.2" height="3.2" fill="#43D3E6"/>' +
+          '<rect width="1.6" height="1.6" fill="#9BF4FA"/>' +
+          '<rect x="1.6" y="1.6" width="1.6" height="1.6" fill="#2A96BE"/>' +
+        '</pattern>',
+      vars: {
+        '--c-bud':        'url(#sk-glitterball-mag)',
+        '--c-bud-pale':   'url(#sk-glitterball-cyan)',
+        '--c-bud-shade':  '#3A1160',
+        '--c-calyx':      '#7A4BD8',
+        '--c-stem':       '#7C7AAE',
+        '--c-stem-light': '#BDBBDE',
+        '--c-shadow':     'rgba(30,0,50,0.22)',
+      },
+      // Stage by stage: one note, then the stack arrives, then the
+      // ball drops in on a cord from the top of the frame. The ball
+      // hangs off to the right so it never sits on the spike tip.
+      extras: {
+        1: function (a) {
+          return skinNote(a.canopy[0] + 11, a.canopy[1] - 3, 0.38, 12, '#43D3E6') +
+                 skinSparkle(a.canopy[0] - 9, a.canopy[1] - 6, 1.7, '#FFD9F0', 0.8);
+        },
+        2: function (a) {
+          return skinSpeaker(a.base[0] - 15, a.base[1] + 0.5, 0.6, -4, '#2A1140', '#180726', '#FF6BC0', '#43D3E6') +
+                 skinNote(a.canopy[0] + 12, a.canopy[1] - 5, 0.44, 14, '#FF6BC0', true) +
+                 skinNote(a.canopy[0] - 12, a.canopy[1] + 8, 0.34, -12, '#43D3E6') +
+                 skinSparkle(a.canopy[0] + 8, a.canopy[1] + 12, 1.6, '#FFD9F0', 0.7);
+        },
+        3: function (a) {
+          return skinSpeaker(a.base[0] - 16, a.base[1] + 0.5, 0.72, -5, '#2A1140', '#180726', '#FF6BC0', '#43D3E6') +
+                 skinSpeaker(a.base[0] + 15, a.base[1] + 1, 0.5, 6, '#241038', '#150620', '#43D3E6', '#FF6BC0') +
+                 skinNote(a.canopy[0] - 14, a.canopy[1] - 8, 0.5, -14, '#FF6BC0', true) +
+                 skinNote(a.canopy[0] + 13, a.canopy[1] + 6, 0.4, 16, '#43D3E6') +
+                 skinNote(a.canopy[0] + 9, a.canopy[1] - 22, 0.32, 8, '#FFD9F0') +
+                 skinSparkle(a.canopy[0] - 11, a.canopy[1] + 14, 1.8, '#FFD9F0', 0.7);
         },
       },
     },
@@ -1137,6 +2598,191 @@ var PLANT_SKINS = {
         },
       },
     },
+    {
+      // Gilded, not yellow. The culm gradient runs dark-bronze →
+      // pale-gold → dark-bronze across each internode, so the
+      // existing lit/shaded strips read as a turned metal rim
+      // instead of flat paint, and the nodes drop to antique bronze
+      // so the collars still separate the segments. Leaf gradients
+      // run base-to-tip, which is the direction leaf() already draws
+      // in, so every blade catches light at the stem and cools off
+      // toward the point.
+      id: 'kintake',
+      name: 'Kintake',
+      note: 'Gilded culms, sunlit blades.',
+      swatch: ['#FBE9A6', '#C9902A', '#7C5410'],
+      defs:
+        '<linearGradient id="sk-kintake-culm" x1="0" y1="0" x2="1" y2="0">' +
+          '<stop offset="0" stop-color="#8A5F16"/>' +
+          '<stop offset="0.28" stop-color="#D9A93C"/>' +
+          '<stop offset="0.5" stop-color="#FBE9A6"/>' +
+          '<stop offset="0.72" stop-color="#C9902A"/>' +
+          '<stop offset="1" stop-color="#7A5312"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-kintake-leaf" x1="0" y1="0" x2="1" y2="0">' +
+          '<stop offset="0" stop-color="#F6E1A0"/>' +
+          '<stop offset="0.55" stop-color="#DCB247"/>' +
+          '<stop offset="1" stop-color="#A97C1E"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-culm-light': '#FFE9A8',
+        '--c-culm':       'url(#sk-kintake-culm)',
+        '--c-culm-mid':   '#B0801F',
+        '--c-node':       '#7C5410',
+        '--c-node-dark':  '#4E340A',
+        '--c-leaf-light': '#FBEBB4',
+        '--c-leaf':       'url(#sk-kintake-leaf)',
+        '--c-leaf-dark':  '#AE801F',
+        '--c-shadow':     'rgba(96,66,8,0.20)',
+      },
+      extras: {
+        1: function (a) {
+          return skinSparkle(a.canopy[0] + 9, a.canopy[1] - 4, 2.0, '#FFF6D2', 0.75);
+        },
+        2: function (a) {
+          return skinSparkle(a.canopy[0] - 11, a.canopy[1] - 6,  2.4, '#FFF6D2', 0.8) +
+                 skinSparkle(a.canopy[0] + 12, a.canopy[1] + 12, 1.7, '#FFE9A6', 0.6) +
+                 skinDot(a.canopy[0] + 4, a.canopy[1] - 14, 0.7, '#FFF6D2', 0.5);
+        },
+        3: function (a) {
+          return skinSparkle(a.top[0] - 8,     a.top[1] + 6,     2.8, '#FFF6D2', 0.85) +
+                 skinSparkle(a.canopy[0] + 13, a.canopy[1] - 2,  2.1, '#FFE9A6', 0.7) +
+                 skinSparkle(a.canopy[0] - 12, a.canopy[1] + 18, 1.6, '#FFF6D2', 0.55) +
+                 skinDot(a.canopy[0] + 6, a.canopy[1] + 26, 0.75, '#FFE9A6', 0.45);
+        },
+      },
+    },
+    {
+      // Grow-a-Garden flavour: candy-saturated rather than pastel.
+      // The culm gradient is vertical and left on object bounding
+      // box units on purpose — culm() draws each internode as its
+      // own path, so every segment runs the full spectrum and the
+      // stalk bands up its whole height instead of smearing one long
+      // fade that short stages would never show. Nodes go warm cream
+      // with a pink seam so the bands stay separated, and the twigs
+      // (which share --c-culm-mid) turn violet.
+      id: 'prism',
+      name: 'Prism Grove',
+      note: 'Every internode a different band of light.',
+      swatch: ['#FF6FB1', '#7BE38A', '#6E8BFF'],
+      defs:
+        '<linearGradient id="sk-prism-culm" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0" stop-color="#FF6FB1"/>' +
+          '<stop offset="0.2" stop-color="#FFC24D"/>' +
+          '<stop offset="0.4" stop-color="#7BE38A"/>' +
+          '<stop offset="0.6" stop-color="#4FD6E8"/>' +
+          '<stop offset="0.8" stop-color="#6E8BFF"/>' +
+          '<stop offset="1" stop-color="#C46BFF"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-prism-leaf" x1="0" y1="0" x2="1" y2="0">' +
+          '<stop offset="0" stop-color="#7BE8FF"/>' +
+          '<stop offset="0.5" stop-color="#8BE87A"/>' +
+          '<stop offset="1" stop-color="#FFD84F"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-prism-leaf-lo" x1="0" y1="0" x2="1" y2="0">' +
+          '<stop offset="0" stop-color="#3FA8D8"/>' +
+          '<stop offset="0.5" stop-color="#4FA85F"/>' +
+          '<stop offset="1" stop-color="#C98A2E"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-culm-light': '#FFF0FA',
+        '--c-culm':       'url(#sk-prism-culm)',
+        '--c-culm-mid':   '#8A5CE0',
+        '--c-node':       '#FFF3C4',
+        '--c-node-dark':  '#E0679F',
+        // left flat on purpose: this token also strokes the leaf
+        // midrib, and a horizontal line has a zero-height bounding
+        // box, which would drop a bbox gradient entirely
+        '--c-leaf-light': '#FFE7F4',
+        '--c-leaf':       'url(#sk-prism-leaf)',
+        '--c-leaf-dark':  'url(#sk-prism-leaf-lo)',
+        '--c-shadow':     'rgba(120,60,180,0.16)',
+      },
+      extras: {
+        1: function (a) {
+          return skinSparkle(a.canopy[0] + 9, a.canopy[1] - 5, 2.2, '#FFF2A8', 0.8) +
+                 skinDot(a.canopy[0] - 8, a.canopy[1] + 6, 0.9, '#7BE8FF', 0.65);
+        },
+        2: function (a) {
+          return skinSparkle(a.canopy[0] - 12, a.canopy[1] - 8,  2.6, '#FF9AD8', 0.8) +
+                 skinSparkle(a.canopy[0] + 12, a.canopy[1] + 10, 2.0, '#7BE8FF', 0.7) +
+                 skinDot(a.canopy[0] + 4, a.canopy[1] - 16, 1.0, '#FFF2A8', 0.7);
+        },
+        3: function (a) {
+          return skinSparkle(a.top[0] - 9,     a.top[1] + 10,    2.9, '#FFF2A8', 0.85) +
+                 skinSparkle(a.canopy[0] + 13, a.canopy[1] - 4,  2.3, '#FF9AD8', 0.75) +
+                 skinSparkle(a.canopy[0] - 13, a.canopy[1] + 16, 1.9, '#7BE8FF', 0.65) +
+                 skinDot(a.canopy[0] + 7, a.canopy[1] + 28, 1.0,  '#B98BFF', 0.6) +
+                 skinDot(a.canopy[0] - 6, a.canopy[1] - 14, 0.85, '#8BE87A', 0.5);
+        },
+      },
+    },
+    {
+      // Machined bamboo. The culm gradient is a tight specular band
+      // — dark edge, hard bright core at 0.5, dark edge — which is
+      // what turns a flat segment into a brushed metal plate, and
+      // the node collars go gunmetal while --c-node-dark (the thin
+      // stroke under each collar) goes cyan, so every joint reads as
+      // a lit seam between plates. Leaves take a cyan → blue →
+      // violet gradient along the blade for the holographic sheen.
+      // The floating numbers are deliberately meaningless telemetry;
+      // swap the strings for real stats if you ever want them live.
+      id: 'nanotake',
+      name: 'Nanotake',
+      note: 'Plated culms, holographic blades, live telemetry.',
+      swatch: ['#C7D6DF', '#2A3740', '#3BE8D8'],
+      defs:
+        '<linearGradient id="sk-nanotake-culm" x1="0" y1="0" x2="1" y2="0">' +
+          '<stop offset="0" stop-color="#1B242B"/>' +
+          '<stop offset="0.22" stop-color="#41525E"/>' +
+          '<stop offset="0.42" stop-color="#8FA6B4"/>' +
+          '<stop offset="0.5" stop-color="#C7D6DF"/>' +
+          '<stop offset="0.58" stop-color="#8FA6B4"/>' +
+          '<stop offset="0.8" stop-color="#33424C"/>' +
+          '<stop offset="1" stop-color="#161D22"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-nanotake-leaf" x1="0" y1="0" x2="1" y2="0">' +
+          '<stop offset="0" stop-color="#5CF2E0"/>' +
+          '<stop offset="0.45" stop-color="#4FA8FF"/>' +
+          '<stop offset="1" stop-color="#C46BFF"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-nanotake-leaf-lo" x1="0" y1="0" x2="1" y2="0">' +
+          '<stop offset="0" stop-color="#1E7F8C"/>' +
+          '<stop offset="0.5" stop-color="#2A5AB8"/>' +
+          '<stop offset="1" stop-color="#6A3AA8"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-culm-light': '#A9BEC9',
+        '--c-culm':       'url(#sk-nanotake-culm)',
+        '--c-culm-mid':   '#2A3740',
+        '--c-node':       '#141C22',
+        '--c-node-dark':  '#3BE8D8',
+        '--c-leaf-light': '#BFF6FF',
+        '--c-leaf':       'url(#sk-nanotake-leaf)',
+        '--c-leaf-dark':  'url(#sk-nanotake-leaf-lo)',
+        '--c-shadow':     'rgba(40,200,210,0.18)',
+      },
+      extras: {
+        1: function (a) {
+          return skinTrace(a.canopy[0] + 4, a.canopy[1] - 2, 7, -6, '#3BE8D8', 0.6) +
+                 skinReadout(a.canopy[0] + 17, a.canopy[1] - 8, 3.4, '018', '#7FF3E6', 0.85);
+        },
+        2: function (a) {
+          return skinTrace(a.canopy[0] + 5, a.canopy[1] + 6, 8, -8, '#3BE8D8', 0.6) +
+                 skinReadout(a.canopy[0] + 19, a.canopy[1] - 2, 3.6, '2.48', '#7FF3E6', 0.85) +
+                 skinTrace(a.canopy[0] - 5, a.canopy[1] - 10, -7, 6, '#3BE8D8', 0.5) +
+                 skinReadout(a.canopy[0] - 18, a.canopy[1] - 4, 3.2, '061', '#9FD8FF', 0.75);
+        },
+        3: function (a) {
+          return skinTrace(a.canopy[0] + 5, a.canopy[1] + 10, 9, -9, '#3BE8D8', 0.6) +
+                 skinReadout(a.canopy[0] + 20, a.canopy[1] + 1, 3.8, '100%', '#7FF3E6', 0.9) +
+                 skinTrace(a.canopy[0] - 5, a.canopy[1] - 8, -8, 7, '#3BE8D8', 0.55) +
+                 skinReadout(a.canopy[0] - 19, a.canopy[1] - 1, 3.4, '07.4', '#9FD8FF', 0.8) +
+                 skinReadout(a.top[0] + 13, a.top[1] + 8, 3.2, '+2.1', '#C9A8FF', 0.65) +
+                 skinDot(a.canopy[0] - 14, a.canopy[1] + 22, 0.8, '#3BE8D8', 0.5);
+        },
+      },
+    },
   ],
 
   finance: [
@@ -1181,15 +2827,422 @@ var PLANT_SKINS = {
         },
       },
     },
+    {
+      // Gilding, not gold plate: the leaflets keep their two-tone
+      // split, but the lit half runs from struck amber up to pale
+      // gold so each lobe catches the light at a different angle.
+      // The drifting motes are flakes of gold leaf coming loose.
+      id: 'goldleaf',
+      name: 'Gold Leaf',
+      note: 'Beaten thin and gilded, hammer marks and all.',
+      swatch: ['#F0C558', '#9C6B1E', '#4A2F0B'],
+      defs:
+        '<linearGradient id="sk-goldleaf-leaf" x1="0" y1="1" x2="0.35" y2="0">' +
+          '<stop offset="0" stop-color="#B7791F"/>' +
+          '<stop offset="0.55" stop-color="#E8B948"/>' +
+          '<stop offset="1" stop-color="#F8DE8B"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-goldleaf-mid" x1="0" y1="1" x2="0.5" y2="0">' +
+          '<stop offset="0" stop-color="#8F5D16"/>' +
+          '<stop offset="1" stop-color="#DDAA3C"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-leaf':      'url(#sk-goldleaf-leaf)',
+        '--c-leaf-mid':  'url(#sk-goldleaf-mid)',
+        '--c-leaf-dark': '#9C6B1E',
+        '--c-outline':   '#4A2F0B',
+        '--c-sheen':     '#FFF3CD',
+        '--c-bloom':     '#FFEBA8',
+        '--c-shadow':    'rgba(74,47,11,0.20)',
+      },
+      extras: {
+        1: function (a) {
+          return skinSparkle(a.canopy[0] + 12, a.canopy[1] - 13, 1.6, '#FFF3CD', 0.75);
+        },
+        2: function (a) {
+          return skinSparkle(a.canopy[0] - 16, a.canopy[1] - 15, 2.1, '#FFF3CD', 0.8) +
+                 skinSparkle(a.canopy[0] + 15, a.canopy[1] - 3, 1.5, '#FFEBA8', 0.6) +
+                 skinLeafMote(a.canopy[0] + 19, a.canopy[1] + 14, 28, 0.5, '#E8B948', 0.5);
+        },
+        3: function (a) {
+          return skinSparkle(a.canopy[0] - 23, a.canopy[1] - 20, 2.6, '#FFF3CD', 0.85) +
+                 skinSparkle(a.canopy[0] + 22, a.canopy[1] - 7, 1.9, '#FFEBA8', 0.65) +
+                 skinSparkle(a.canopy[0] + 4,  a.canopy[1] - 34, 1.6, '#FFFFFF', 0.5) +
+                 skinLeafMote(a.canopy[0] - 21, a.canopy[1] + 26, 34, 0.62, '#E8B948', 0.55) +
+                 skinLeafMote(a.canopy[0] + 24, a.canopy[1] + 18, -27, 0.52, '#F8DE8B', 0.45);
+        },
+      },
+    },
+    {
+      // Every leaflet is cut from the same spectrum, but the two
+      // halves pull from gradients offset against each other, so the
+      // fan of lobes never lands on the same hue twice. The dark
+      // half stays a deepened spectrum rather than grey, which keeps
+      // the shading colourful instead of muddy.
+      id: 'prismsprig',
+      name: 'Prism Sprig',
+      note: 'Splits the light, keeps the leaf.',
+      swatch: ['#FFE45C', '#63D97A', '#B266E8'],
+      defs:
+        '<linearGradient id="sk-prismsprig-leaf" x1="0" y1="1" x2="1" y2="0">' +
+          '<stop offset="0" stop-color="#FF5D5D"/>' +
+          '<stop offset="0.2" stop-color="#FFA24B"/>' +
+          '<stop offset="0.4" stop-color="#FFE45C"/>' +
+          '<stop offset="0.6" stop-color="#63D97A"/>' +
+          '<stop offset="0.8" stop-color="#4FA8F5"/>' +
+          '<stop offset="1" stop-color="#B266E8"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-prismsprig-mid" x1="0.1" y1="1" x2="0.9" y2="0">' +
+          '<stop offset="0" stop-color="#FFA24B"/>' +
+          '<stop offset="0.25" stop-color="#FFE45C"/>' +
+          '<stop offset="0.5" stop-color="#63D97A"/>' +
+          '<stop offset="0.75" stop-color="#4FA8F5"/>' +
+          '<stop offset="1" stop-color="#B266E8"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-prismsprig-dark" x1="0" y1="1" x2="0.8" y2="0">' +
+          '<stop offset="0" stop-color="#C93F6A"/>' +
+          '<stop offset="0.35" stop-color="#2FA85C"/>' +
+          '<stop offset="0.7" stop-color="#2E6FD1"/>' +
+          '<stop offset="1" stop-color="#7A3FC0"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-leaf':      'url(#sk-prismsprig-leaf)',
+        '--c-leaf-mid':  'url(#sk-prismsprig-mid)',
+        '--c-leaf-dark': 'url(#sk-prismsprig-dark)',
+        '--c-outline':   '#4A2C6E',
+        '--c-sheen':     '#FFFFFF',
+        '--c-bloom':     '#FFFFFF',
+        '--c-shadow':    'rgba(74,44,110,0.18)',
+      },
+      extras: {
+        1: function (a) {
+          return skinSparkle(a.canopy[0] + 11, a.canopy[1] - 12, 1.6, '#FFE45C', 0.8) +
+                 skinDot(a.canopy[0] - 10, a.canopy[1] - 4, 0.7, '#4FA8F5', 0.65);
+        },
+        2: function (a) {
+          return skinSparkle(a.canopy[0] - 15, a.canopy[1] - 15, 2.1, '#FF5D5D', 0.7) +
+                 skinSparkle(a.canopy[0] + 14, a.canopy[1] - 3, 1.7, '#4FA8F5', 0.7) +
+                 skinDot(a.canopy[0] + 8, a.canopy[1] - 24, 0.8, '#FFE45C', 0.7);
+        },
+        3: function (a) {
+          return skinSparkle(a.canopy[0] - 22, a.canopy[1] - 19, 2.6, '#FF5D5D', 0.75) +
+                 skinSparkle(a.canopy[0] + 21, a.canopy[1] - 6, 2.0, '#63D97A', 0.7) +
+                 skinSparkle(a.canopy[0] + 5,  a.canopy[1] - 35, 1.8, '#B266E8', 0.7) +
+                 skinDot(a.canopy[0] - 12, a.canopy[1] + 30, 0.9, '#FFA24B', 0.6) +
+                 skinDot(a.canopy[0] + 16, a.canopy[1] + 24, 0.8, '#4FA8F5', 0.6);
+        },
+      },
+    },
+    {
+      // The luck skin: leaflets in a bright meadow green, a coin or
+      // two working their way up out of the soil, and by full growth
+      // an arc that comes down to the left of the plant and lands in
+      // the pot rather than floating decoratively behind it.
+      id: 'rainbowsend',
+      name: "Rainbow's End",
+      note: 'Bright green, a full pot, and the arc that pointed here.',
+      swatch: ['#4FCB6E', '#1F7A44', '#F0C558'],
+      defs:
+        '<linearGradient id="sk-rainbowsend-leaf" x1="0" y1="1" x2="0.35" y2="0">' +
+          '<stop offset="0" stop-color="#2E9E52"/>' +
+          '<stop offset="1" stop-color="#8CEB95"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-rainbowsend-mid" x1="0" y1="1" x2="0.5" y2="0">' +
+          '<stop offset="0" stop-color="#237F44"/>' +
+          '<stop offset="1" stop-color="#59C86F"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-leaf':      'url(#sk-rainbowsend-leaf)',
+        '--c-leaf-mid':  'url(#sk-rainbowsend-mid)',
+        '--c-leaf-dark': '#1F7A44',
+        '--c-outline':   '#0C3A22',
+        '--c-sheen':     '#E4FFE9',
+        '--c-bloom':     '#FFE9A0',
+        '--c-shadow':    'rgba(12,58,34,0.20)',
+      },
+      extras: {
+        0: function (a) {
+          return skinCoin(a.base[0] + 12, a.base[1] - 1, 2.2, '#F0C558', '#B7791F', '#FFF3CD', -14);
+        },
+        1: function (a) {
+          return skinCoin(a.base[0] + 14, a.base[1] - 1.5, 2.4, '#F0C558', '#B7791F', '#FFF3CD', 9) +
+                 skinCoin(a.base[0] - 14, a.base[1] - 0.5, 1.8, '#E8B948', '#9C6B1E', null, -22) +
+                 skinSparkle(a.canopy[0] + 11, a.canopy[1] - 13, 1.5, '#FFF3CD', 0.7);
+        },
+        2: function (a) {
+          return skinPot(a.base[0] - 22, a.base[1] + 2.5, 0.62,
+                         '#33302E', '#1C1A19', '#4A4644', '#F0C558', '#FFF3CD') +
+                 skinCoin(a.base[0] + 19, a.base[1] - 1, 2.5, '#F0C558', '#B7791F', '#FFF3CD', 12) +
+                 skinSparkle(a.canopy[0] + 14, a.canopy[1] - 6, 1.7, '#FFF3CD', 0.65) +
+                 skinSparkle(a.canopy[0] - 15, a.canopy[1] - 16, 2.0, '#E4FFE9', 0.55);
+        },
+        3: function (a) {
+          return skinRainbowArc(a.base[0] + 6, a.base[1] + 3, 33, 180, 132, 1.8, 0.5) +
+                 skinPot(a.base[0] - 25, a.base[1] + 3.5, 0.95,
+                         '#33302E', '#1C1A19', '#4A4644', '#F0C558', '#FFF3CD') +
+                 skinCoin(a.base[0] + 22, a.base[1] + 0.5, 2.7, '#F0C558', '#B7791F', '#FFF3CD', -8) +
+                 skinCoin(a.base[0] + 17, a.base[1] + 1.5, 2.0, '#E8B948', '#9C6B1E', null, 18) +
+                 skinSparkle(a.canopy[0] + 21, a.canopy[1] - 7, 2.0, '#FFF3CD', 0.7) +
+                 skinSparkle(a.canopy[0] - 21, a.canopy[1] - 19, 2.5, '#E4FFE9', 0.6) +
+                 skinSparkle(a.canopy[0] + 4,  a.canopy[1] - 34, 1.6, '#FFFFFF', 0.5);
+        },
+      },
+    },
   ],
 
-  misc: [
+ misc: [
     {
       id: 'classic',
       name: 'Coral Cap',
       note: 'The mushroom as first grown.',
       swatch: ['#E4715E', '#C4574A', '#F7E9DE'],
       vars: {},
+    },
+
+    // ---- Sunstruck -------------------------------------------------
+    // Warm gilded cap over a pale honey stalk. The cap gradient runs
+    // low-left to high-right so it agrees with the art's own lighting
+    // instead of fighting it; the shaded face stays flat so the metal
+    // reads as burnished rather than glassy.
+    {
+      id: 'sunstruck',
+      name: 'Sunstruck',
+      note: 'Caught a low sunbeam and never gave it back.',
+      swatch: ['#E4B451', '#A87528', '#FFF8E2'],
+      defs:
+        '<linearGradient id="sk-sunstruck-cap" x1="0.12" y1="1" x2="0.72" y2="0">' +
+          '<stop offset="0" stop-color="#C68E2C"/>' +
+          '<stop offset="0.55" stop-color="#E4B451"/>' +
+          '<stop offset="1" stop-color="#F6D67F"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-sunstruck-stem" x1="0" y1="0" x2="1" y2="0.25">' +
+          '<stop offset="0" stop-color="#E8D5A4"/>' +
+          '<stop offset="1" stop-color="#F7EACB"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-cap-light':  '#FCEBA8',
+        '--c-cap':        'url(#sk-sunstruck-cap)',
+        '--c-cap-dark':   '#A87528',
+        '--c-spot':       '#FFF8E2',
+        '--c-stem-light': 'url(#sk-sunstruck-stem)',
+        '--c-stem':       '#DEC48F',
+        '--c-stem-dark':  '#AE8F52',
+        '--c-shadow':     'rgba(104,74,22,0.16)',
+      },
+      extras: {
+        0: function (a) {
+          return skinSparkle(a.top[0] + 7, a.top[1] - 1, 1.2, '#FFF6D8', 0.7);
+        },
+        1: function (a) {
+          return skinSparkle(a.top[0] + 11, a.top[1] - 3, 1.7, '#FFF6D8', 0.8) +
+                 skinSparkle(a.top[0] - 12, a.top[1] + 7, 1.2, '#FFF6D8', 0.5);
+        },
+        2: function (a) {
+          return skinSparkle(a.top[0] + 16, a.top[1] - 4, 2.2, '#FFF6D8', 0.8) +
+                 skinSparkle(a.top[0] - 18, a.top[1] + 9, 1.6, '#FFF6D8', 0.55) +
+                 skinSparkle(a.top[0] + 2,  a.top[1] - 9, 1.3, '#FFFDF0', 0.45);
+        },
+        3: function (a) {
+          return skinSparkle(a.top[0] + 22, a.top[1] - 4, 2.7, '#FFF6D8', 0.85) +
+                 skinSparkle(a.top[0] - 24, a.top[1] + 12, 2.0, '#FFF6D8', 0.6) +
+                 skinSparkle(a.top[0] + 4,  a.top[1] - 11, 1.6, '#FFFDF0', 0.5) +
+                 skinSparkle(a.top[0] - 9,  a.canopy[1] + 16, 1.3, '#FFF6D8', 0.4);
+        },
+      },
+    },
+
+    // ---- Prismcap --------------------------------------------------
+    // The rainbow is carried by three parallel gradients — base, shade
+    // and highlight — all with the same stop positions, so the spectrum
+    // stays continuous across the cap's three faces instead of breaking
+    // at the shading seam. Object-bounding-box units mean every growth
+    // stage gets the full sweep rather than a slice of it.
+    {
+      id: 'prismcap',
+      name: 'Prismcap',
+      note: 'Every colour it considered, worn all at once.',
+      swatch: ['#F08A8A', '#93D6A2', '#B49BE0'],
+      defs:
+        '<linearGradient id="sk-prismcap-cap" x1="0" y1="0.15" x2="1" y2="0">' +
+          '<stop offset="0"    stop-color="#F08A8A"/>' +
+          '<stop offset="0.2"  stop-color="#F3C079"/>' +
+          '<stop offset="0.4"  stop-color="#EFE18A"/>' +
+          '<stop offset="0.6"  stop-color="#93D6A2"/>' +
+          '<stop offset="0.8"  stop-color="#86C4E8"/>' +
+          '<stop offset="1"    stop-color="#B49BE0"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-prismcap-cap-dark" x1="0" y1="0.15" x2="1" y2="0">' +
+          '<stop offset="0"    stop-color="#C4696E"/>' +
+          '<stop offset="0.2"  stop-color="#C69457"/>' +
+          '<stop offset="0.4"  stop-color="#C0B45F"/>' +
+          '<stop offset="0.6"  stop-color="#69A87B"/>' +
+          '<stop offset="0.8"  stop-color="#6096BC"/>' +
+          '<stop offset="1"    stop-color="#8873B3"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-prismcap-cap-light" x1="0" y1="0.15" x2="1" y2="0">' +
+          '<stop offset="0"    stop-color="#FBB9B4"/>' +
+          '<stop offset="0.2"  stop-color="#F9D9A6"/>' +
+          '<stop offset="0.4"  stop-color="#F7F0B8"/>' +
+          '<stop offset="0.6"  stop-color="#BAE7C6"/>' +
+          '<stop offset="0.8"  stop-color="#B4DDF2"/>' +
+          '<stop offset="1"    stop-color="#D3C3EE"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-prismcap-stem" x1="0" y1="0" x2="1" y2="0.3">' +
+          '<stop offset="0" stop-color="#EFE0EE"/>' +
+          '<stop offset="1" stop-color="#FDF4F9"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-cap-light':  'url(#sk-prismcap-cap-light)',
+        '--c-cap':        'url(#sk-prismcap-cap)',
+        '--c-cap-dark':   'url(#sk-prismcap-cap-dark)',
+        '--c-spot':       '#FEF9FF',
+        '--c-stem-light': 'url(#sk-prismcap-stem)',
+        '--c-stem':       '#E7D5E4',
+        '--c-stem-dark':  '#BDA5BF',
+        '--c-shadow':     'rgba(92,70,110,0.16)',
+      },
+      extras: {
+        1: function (a) {
+          return skinSparkle(a.top[0] + 12, a.top[1] - 2, 1.6, '#FFFFFF', 0.75) +
+                 skinDot(a.top[0] - 12, a.top[1] + 8, 0.9, '#B49BE0', 0.6);
+        },
+        2: function (a) {
+          return skinSparkle(a.top[0] - 17, a.top[1] - 3, 2.1, '#FFFFFF', 0.8) +
+                 skinSparkle(a.top[0] + 17, a.top[1] + 6, 1.5, '#FFFFFF', 0.55) +
+                 skinDot(a.top[0] + 6, a.top[1] - 8, 1.1, '#86C4E8', 0.65) +
+                 skinDot(a.top[0] - 8, a.canopy[1] + 14, 0.9, '#F3C079', 0.55);
+        },
+        3: function (a) {
+          return skinSparkle(a.top[0] - 22, a.top[1] - 3, 2.6, '#FFFFFF', 0.85) +
+                 skinSparkle(a.top[0] + 21, a.top[1] + 8, 1.9, '#FFFFFF', 0.6) +
+                 skinDot(a.top[0] + 8, a.top[1] - 10, 1.4, '#86C4E8', 0.7) +
+                 skinDot(a.top[0] - 13, a.top[1] - 7, 1.1, '#F08A8A', 0.6) +
+                 skinDot(a.top[0] + 15, a.canopy[1] + 20, 1.0, '#93D6A2', 0.5);
+        },
+      },
+    },
+
+    // ---- Sugar Spin ------------------------------------------------
+    // Lollipop cap and candy-cane stalk. The cap rings are a radial
+    // gradient with paired hard stops, so the bands stay concentric at
+    // any stage size without new art. The three stalk patterns share
+    // one geometry in user space, which is what makes the stripes run
+    // unbroken across the lit, mid and shaded faces.
+    {
+      id: 'sugarspin',
+      name: 'Sugar Spin',
+      note: 'Pulled, twisted, and left to set on the sill.',
+      swatch: ['#EE8FA4', '#FBEAEF', '#9FE3C0'],
+      defs:
+        '<radialGradient id="sk-sugarspin-swirl" cx="0.46" cy="0.62" r="0.62">' +
+          '<stop offset="0"    stop-color="#FDF0F4"/>' +
+          '<stop offset="0.17" stop-color="#FDF0F4"/>' +
+          '<stop offset="0.17" stop-color="#F08FA6"/>' +
+          '<stop offset="0.34" stop-color="#F08FA6"/>' +
+          '<stop offset="0.34" stop-color="#FDF0F4"/>' +
+          '<stop offset="0.51" stop-color="#FDF0F4"/>' +
+          '<stop offset="0.51" stop-color="#F08FA6"/>' +
+          '<stop offset="0.68" stop-color="#F08FA6"/>' +
+          '<stop offset="0.68" stop-color="#FDF0F4"/>' +
+          '<stop offset="0.85" stop-color="#FDF0F4"/>' +
+          '<stop offset="0.85" stop-color="#F08FA6"/>' +
+          '<stop offset="1"    stop-color="#F08FA6"/>' +
+        '</radialGradient>' +
+        '<pattern id="sk-sugarspin-cane" width="6.4" height="6.4"' +
+          ' patternUnits="userSpaceOnUse" patternTransform="rotate(34)">' +
+          '<rect width="6.4" height="6.4" fill="#FBEAEF"/>' +
+          '<rect width="3.2" height="6.4" fill="#EE8FA4"/>' +
+        '</pattern>' +
+        '<pattern id="sk-sugarspin-cane-lt" width="6.4" height="6.4"' +
+          ' patternUnits="userSpaceOnUse" patternTransform="rotate(34)">' +
+          '<rect width="6.4" height="6.4" fill="#FFF7FA"/>' +
+          '<rect width="3.2" height="6.4" fill="#F8B6C4"/>' +
+        '</pattern>' +
+        '<pattern id="sk-sugarspin-cane-dk" width="6.4" height="6.4"' +
+          ' patternUnits="userSpaceOnUse" patternTransform="rotate(34)">' +
+          '<rect width="6.4" height="6.4" fill="#E0C7D1"/>' +
+          '<rect width="3.2" height="6.4" fill="#CB6C85"/>' +
+        '</pattern>',
+      vars: {
+        '--c-cap-light':  '#FDE4EB',
+        '--c-cap':        'url(#sk-sugarspin-swirl)',
+        '--c-cap-dark':   '#D0798F',
+        '--c-spot':       '#FFFFFF',
+        '--c-stem-light': 'url(#sk-sugarspin-cane-lt)',
+        '--c-stem':       'url(#sk-sugarspin-cane)',
+        '--c-stem-dark':  'url(#sk-sugarspin-cane-dk)',
+        '--c-shadow':     'rgba(118,58,80,0.15)',
+      },
+      extras: {
+        1:
+          skinGumdrop(55, 121.2, 0.45, '#9FE3C0', '#E6FBF1'),
+        2:
+          skinGumdrop(59, 121.2, 0.62, '#9FE3C0', '#E6FBF1') +
+          skinGumdrop(22, 121.2, 0.46, '#F8DC7E', '#FFF4C8'),
+        3:
+          skinGumdrop(64, 121.2, 0.80, '#9FE3C0', '#E6FBF1') +
+          skinGumdrop(56.5, 121.2, 0.50, '#E48FB4', '#FBDCE8') +
+          skinGumdrop(17, 121.2, 0.62, '#F8DC7E', '#FFF4C8'),
+      },
+    },
+
+    // ---- Xenobloom -------------------------------------------------
+    // Acid-green cap, pale sea-glass stalk. The feelers start at the
+    // apex anchor and only ever travel upward, so they read as growing
+    // out of the cap rather than being painted across it; the eyes sit
+    // on the stalk in the cap's shadow, which is the one place on the
+    // silhouette with room for them at every stage.
+    {
+      id: 'xenobloom',
+      name: 'Xenobloom',
+      note: 'Came down sometime last night. Seems friendly.',
+      swatch: ['#7BD44F', '#2E7A3F', '#E8FFB0'],
+      defs:
+        '<linearGradient id="sk-xenobloom-cap" x1="0.1" y1="1" x2="0.75" y2="0">' +
+          '<stop offset="0" stop-color="#4FA83A"/>' +
+          '<stop offset="0.6" stop-color="#7BD44F"/>' +
+          '<stop offset="1" stop-color="#A6EC6B"/>' +
+        '</linearGradient>' +
+        '<linearGradient id="sk-xenobloom-stem" x1="0" y1="0" x2="1" y2="0.25">' +
+          '<stop offset="0" stop-color="#B7E2D5"/>' +
+          '<stop offset="1" stop-color="#DCF4EA"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-cap-light':  '#C3F58A',
+        '--c-cap':        'url(#sk-xenobloom-cap)',
+        '--c-cap-dark':   '#2E7A3F',
+        '--c-spot':       '#E8FFB0',
+        '--c-stem-light': 'url(#sk-xenobloom-stem)',
+        '--c-stem':       '#9FD3C6',
+        '--c-stem-dark':  '#6BA398',
+        '--c-shadow':     'rgba(30,88,52,0.18)',
+      },
+      extras: {
+        0: function (a) {
+          return skinDot(a.top[0] + 6, a.top[1] + 1, 1.0, '#E8FFB0', 0.55);
+        },
+        1: function (a) {
+          return skinAntenna(a.top[0] - 3, a.top[1] + 2.5, 8, -0.34, '#5FA83E', '#E8FFB0') +
+                 skinAntenna(a.top[0] + 3, a.top[1] + 2.5, 7, 0.40, '#5FA83E', '#E8FFB0') +
+                 skinAlienEye(37.2, 113, 1.7, '#17402F', '#CFF8D8') +
+                 skinAlienEye(43.0, 113, 1.5, '#17402F', '#CFF8D8');
+        },
+        2: function (a) {
+          return skinAntenna(a.top[0] - 4, a.top[1] + 3, 11, -0.34, '#5FA83E', '#E8FFB0') +
+                 skinAntenna(a.top[0] + 4, a.top[1] + 3, 9.5, 0.42, '#5FA83E', '#E8FFB0') +
+                 skinAlienEye(36.4, 104.0, 2.4, '#17402F', '#CFF8D8') +
+                 skinAlienEye(44.0, 104.5, 2.1, '#17402F', '#CFF8D8') +
+                 skinDot(a.top[0] + 19, a.canopy[1] + 4, 1.1, '#CFF56E', 0.45);
+        },
+        3: function (a) {
+          return skinAntenna(a.top[0] - 5, a.top[1] + 3.5, 15, -0.32, '#5FA83E', '#E8FFB0') +
+                 skinAntenna(a.top[0] + 5, a.top[1] + 3.5, 13, 0.40, '#5FA83E', '#E8FFB0') +
+                 skinAlienEye(35.0, 96.0, 3.3, '#17402F', '#CFF8D8') +
+                 skinAlienEye(45.4, 97.0, 2.9, '#17402F', '#CFF8D8') +
+                 skinDot(a.top[0] + 25, a.canopy[1] - 2, 1.4, '#CFF56E', 0.45) +
+                 skinDot(a.top[0] - 24, a.canopy[1] + 12, 1.1, '#CFF56E', 0.35);
+        },
+      },
     },
   ],
 };
