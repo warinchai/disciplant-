@@ -107,6 +107,7 @@
 
       <button class="cta-btn cta-secondary" id="btn-to-tasks">TO TASKS</button>
       <button class="cta-btn cta-tertiary" id="btn-to-greenhouse">TO GREENHOUSE</button>
+      <button class="cta-btn cta-tertiary" id="btn-to-friends">TO FRIENDS</button>
     </div>
   </div>
 
@@ -124,6 +125,8 @@
       <button class="nav-btn" id="garden-nav-stats">Stats</button>
       <span class="nav-sep">&middot;</span>
       <button class="nav-btn" id="garden-nav-greenhouse">Greenhouse</button>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="garden-nav-friends">Friends</button>
     </nav>
     <p id="loadingState" class="loading-state">🌱 Loading your garden...</p>
 
@@ -148,6 +151,8 @@
       <button class="nav-btn" id="tasks-nav-stats">Stats</button>
       <span class="nav-sep">&middot;</span>
       <button class="nav-btn" id="tasks-nav-greenhouse">Greenhouse</button>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="tasks-nav-friends">Friends</button>
     </nav>
 
     <p id="tasksLoadingState" class="loading-state">🌱 Loading your garden...</p>
@@ -201,6 +206,8 @@
       <span class="nav-current">Stats</span>
       <span class="nav-sep">&middot;</span>
       <button class="nav-btn" id="stats-nav-greenhouse">Greenhouse</button>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="stats-nav-friends">Friends</button>
     </nav>
 
     <p id="statsLoadingState" class="loading-state">🌱 Loading your garden...</p>
@@ -269,6 +276,8 @@
       <button class="nav-btn" id="greenhouse-nav-stats">Stats</button>
       <span class="nav-sep">&middot;</span>
       <span class="nav-current">Greenhouse</span>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="greenhouse-nav-friends">Friends</button>
     </nav>
 
     <p id="greenhouseLoadingState" class="loading-state">🌱 Loading your garden...</p>
@@ -283,6 +292,80 @@
       <div id="greenhouseGrid" class="plant-card-grid"></div>
 
       <p id="greenhouseEmpty" class="greenhouse-empty hidden">🌱 No plants yet — add a task on the Tasks page and it will show up here.</p>
+    </div>
+  </div>
+
+  <!-- ================================================
+       PAGE: FRIENDS
+       ================================================
+       Username claiming, searching for other gardeners
+       by username, incoming/outgoing requests, and the
+       accepted friends list. Garden viewing is not part
+       of this page yet.
+       ================================================ -->
+  <div id="page-friends" class="page page-friends hidden">
+    <nav class="site-nav friends-nav">
+      <button class="nav-btn" id="friends-nav-home">Home</button>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="friends-nav-garden">Garden</button>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="friends-nav-tasks">Tasks</button>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="friends-nav-stats">Stats</button>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="friends-nav-greenhouse">Greenhouse</button>
+      <span class="nav-sep">&middot;</span>
+      <span class="nav-current">Friends</span>
+    </nav>
+
+    <p id="friendsLoadingState" class="loading-state">&#127793; Loading your garden...</p>
+
+    <div id="friendsContent" class="friends-content hidden">
+
+      <!-- Your own username (populated by JS) -->
+      <div class="friends-section">
+        <h3 class="friends-section-title">You</h3>
+        <div id="friendsMe" class="friends-me"></div>
+      </div>
+
+      <!-- Search + send a request -->
+      <div class="friends-section">
+        <h3 class="friends-section-title">Add a friend</h3>
+        <form id="friendsSearchForm" class="friends-search-form">
+          <input
+            type="text"
+            id="friendsSearchInput"
+            placeholder="Search by username"
+            autocomplete="off"
+            spellcheck="false"
+            required
+          />
+          <button type="submit">Search</button>
+        </form>
+        <div id="friendsSearchResult" class="friends-search-result"></div>
+        <p id="friendsStatus" class="friends-status hidden"></p>
+      </div>
+
+      <!-- Pending requests, both directions -->
+      <div class="friends-section">
+        <h3 class="friends-section-title">Requests</h3>
+
+        <p class="friends-sub-label">Incoming</p>
+        <ul id="friendsIncomingList" class="friends-list"></ul>
+        <p id="friendsIncomingEmpty" class="empty-state">No one has asked to be your friend yet.</p>
+
+        <p class="friends-sub-label">Sent</p>
+        <ul id="friendsOutgoingList" class="friends-list"></ul>
+        <p id="friendsOutgoingEmpty" class="empty-state">You haven’t sent any requests.</p>
+      </div>
+
+      <!-- Accepted friends -->
+      <div class="friends-section">
+        <h3 class="friends-section-title">Your friends</h3>
+        <ul id="friendsList" class="friends-list"></ul>
+        <p id="friendsEmpty" class="empty-state">No friends yet — search for a username above.</p>
+      </div>
+
     </div>
   </div>
 
@@ -305,6 +388,15 @@
     <div class="auth-modal-card">
       <button id="authModalClose" class="auth-modal-close" aria-label="Close">✕</button>
       <div class="auth-modal-body" id="authModalBody"></div>
+    </div>
+  </div>
+
+  <!-- Username modal — claim a username (reuses the auth-modal shell) -->
+  <div id="usernameModal" class="auth-modal hidden">
+    <div class="auth-modal-backdrop" id="usernameModalBackdrop"></div>
+    <div class="auth-modal-card">
+      <button id="usernameModalClose" class="auth-modal-close" aria-label="Close">&#10005;</button>
+      <div class="auth-modal-body" id="usernameModalBody"></div>
     </div>
   </div>
 
@@ -348,5 +440,6 @@
   <script src="03-plant-art.js"></script>
   <script src="04-garden-scene.js"></script>
   <script src="05-stats-app.js"></script>
+  <script src="06-friends.js"></script>
 </body>
 </html>

@@ -1,0 +1,84 @@
+// ============================================
+// DISCIPLANT — Firestore security rules
+//
+// Paste into Firebase Console -> Firestore Database -> Rules,
+// then Publish. Nothing in the app works against the old
+// owner-only ruleset once usernames/friends are in play.
+// ============================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function me()         { return request.auth.uid; }
+    function changed()    { return request.resource.data.diff(resource.data).affectedKeys(); }
+
+    // ---- Garden data — unchanged, owner only ----
+    match /gardens/{uid} {
+      allow read, write: if isSignedIn() && me() == uid;
+    }
+
+    // ---- User profiles ----
+    // The email lives here, so nobody else can read this document.
+    // Other users' display names come from /usernames instead.
+    match /users/{uid} {
+      allow read: if isSignedIn() && me() == uid;
+
+      allow create, update: if isSignedIn() && me() == uid;
+
+      // Accepting a friend request: the ONLY write anyone else may make
+      // to this document. It can add exactly one UID (their own) to
+      // `friends`, cannot remove anything, cannot touch another field,
+      // and only works if this document's owner sent them a request.
+      allow update: if isSignedIn()
+        && me() != uid
+        && changed().hasOnly(['friends'])
+        && request.resource.data.friends.hasAll(resource.data.get('friends', []))
+        && request.resource.data.friends
+             .hasOnly(resource.data.get('friends', []).concat([me()]))
+        && exists(/databases/$(database)/documents/friendRequests/$(uid + '_' + me()));
+    }
+
+    // ---- Username reservations / public directory ----
+    // Doc ID is the lowercased name, which is what makes it unique:
+    // create only ever succeeds when the name is free.
+    match /usernames/{name} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && request.resource.data.uid == me()
+        && request.resource.data.keys().hasOnly(['uid', 'username', 'createdAt'])
+        && name == request.resource.data.username.lower()
+        && name.matches('^[a-z0-9_]{3,20}$');
+
+      allow update: if false;                                   // no renames yet
+      allow delete: if isSignedIn() && resource.data.uid == me();
+    }
+
+    // ---- Friend requests ----
+    // Doc ID is always {fromUid}_{toUid}, enforced on create, so one
+    // pair can never have two competing request documents.
+    match /friendRequests/{reqId} {
+      allow read: if isSignedIn()
+        && (resource.data.from == me() || resource.data.to == me());
+
+      allow create: if isSignedIn()
+        && request.resource.data.from == me()
+        && request.resource.data.to != me()
+        && reqId == me() + '_' + request.resource.data.to
+        && request.resource.data.status == 'pending'
+        && !exists(/databases/$(database)/documents/friendRequests/$(request.resource.data.to + '_' + me()));
+
+      // Only the recipient decides the outcome.
+      allow update: if isSignedIn()
+        && resource.data.to == me()
+        && changed().hasOnly(['status', 'updatedAt'])
+        && request.resource.data.status in ['accepted', 'declined'];
+
+      // Either side can clear it away (decline, or cancel a sent request).
+      allow delete: if isSignedIn()
+        && (resource.data.from == me() || resource.data.to == me());
+    }
+  }
+}

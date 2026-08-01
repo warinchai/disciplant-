@@ -280,10 +280,15 @@ const pageGardenEl = document.getElementById('page-garden');
 const pageTasksEl  = document.getElementById('page-tasks');
 const pageStatsEl  = document.getElementById('page-stats');
 const pageGreenhouseEl = document.getElementById('page-greenhouse');
+const pageFriendsEl    = document.getElementById('page-friends');
 
 // Greenhouse page elements
 const greenhouseLoadingState = document.getElementById('greenhouseLoadingState');
 const greenhouseContent      = document.getElementById('greenhouseContent');
+
+// Friends page elements
+const friendsLoadingState = document.getElementById('friendsLoadingState');
+const friendsContent      = document.getElementById('friendsContent');
 
 // Stats page elements
 const statsLoadingState = document.getElementById('statsLoadingState');
@@ -328,6 +333,9 @@ const authModalBody      = document.getElementById('authModalBody');
     pageGreenhouseEl:       pageGreenhouseEl,
     greenhouseLoadingState: greenhouseLoadingState,
     greenhouseContent:      greenhouseContent,
+    pageFriendsEl:          pageFriendsEl,
+    friendsLoadingState:    friendsLoadingState,
+    friendsContent:         friendsContent,
   };
   Object.keys(required).forEach(function (key) {
     if (!required[key]) {
@@ -468,6 +476,7 @@ function navigateTo(page) {
   if (pageTasksEl)  pageTasksEl.classList.toggle('hidden',  page !== 'tasks');
   if (pageStatsEl)  pageStatsEl.classList.toggle('hidden',  page !== 'stats');
   if (pageGreenhouseEl) pageGreenhouseEl.classList.toggle('hidden', page !== 'greenhouse');
+  if (pageFriendsEl)    pageFriendsEl.classList.toggle('hidden',    page !== 'friends');
 
   // Garden scene: only visible on garden page once auth is ready
   if (gardenSceneEl) gardenSceneEl.classList.toggle('hidden', page !== 'garden' || !authReady);
@@ -506,12 +515,22 @@ function navigateTo(page) {
     if (authReady) renderGreenhouse();
   }
 
+  if (page === 'friends') {
+    if (friendsLoadingState) friendsLoadingState.classList.toggle('hidden', authReady);
+    if (friendsContent) friendsContent.classList.toggle('hidden', !authReady);
+    if (authReady) renderFriendsPage();
+    // Nothing on this page works without a username, so this is the one
+    // place it's always worth asking (no-op if they already have one).
+    maybePromptForUsername();
+  }
+
   // Scroll the destination page back to top
   if (page === 'tasks'  && pageTasksEl)  pageTasksEl.scrollTop  = 0;
   if (page === 'garden' && pageGardenEl) pageGardenEl.scrollTop = 0;
   if (page === 'home'   && pageHomeEl)   pageHomeEl.scrollTop   = 0;
   if (page === 'stats'  && pageStatsEl)  pageStatsEl.scrollTop  = 0;
   if (page === 'greenhouse' && pageGreenhouseEl) pageGreenhouseEl.scrollTop = 0;
+  if (page === 'friends' && pageFriendsEl) pageFriendsEl.scrollTop = 0;
 }
 
 function switchTaskTab(tabId) {
@@ -560,6 +579,19 @@ document.getElementById('greenhouse-nav-home').addEventListener('click',      fu
 document.getElementById('greenhouse-nav-garden').addEventListener('click',    function () { navigateTo('garden'); });
 document.getElementById('greenhouse-nav-tasks').addEventListener('click',     function () { navigateTo('tasks');  });
 document.getElementById('greenhouse-nav-stats').addEventListener('click',     function () { navigateTo('stats');  });
+
+// Friends — reachable from the home page and from every nav bar
+document.getElementById('btn-to-friends').addEventListener('click',          function () { navigateTo('friends'); });
+document.getElementById('garden-nav-friends').addEventListener('click',      function () { navigateTo('friends'); });
+document.getElementById('tasks-nav-friends').addEventListener('click',       function () { navigateTo('friends'); });
+document.getElementById('stats-nav-friends').addEventListener('click',       function () { navigateTo('friends'); });
+document.getElementById('greenhouse-nav-friends').addEventListener('click',  function () { navigateTo('friends'); });
+document.getElementById('friends-nav-home').addEventListener('click',        function () { navigateTo('home');   });
+document.getElementById('friends-nav-garden').addEventListener('click',      function () { navigateTo('garden'); });
+document.getElementById('friends-nav-tasks').addEventListener('click',       function () { navigateTo('tasks');  });
+document.getElementById('friends-nav-stats').addEventListener('click',       function () { navigateTo('stats');  });
+document.getElementById('friends-nav-greenhouse').addEventListener('click',  function () { navigateTo('greenhouse'); });
+
 
 // Garden sub-nav
 document.getElementById('garden-tab-daily').addEventListener('click',    function () { switchGardenTab('daily');    });

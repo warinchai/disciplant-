@@ -491,6 +491,7 @@ function render() {
   renderDevPanel();
   if (currentPage === 'stats' && authReady) renderStatsPage();
   if (currentPage === 'greenhouse' && authReady) renderGreenhouse();
+  if (currentPage === 'friends' && authReady) renderFriendsPage();
 }
 
 
@@ -999,7 +1000,7 @@ function renderGreenhouse() {
     card.dataset.category = task.categoryId;
     card.setAttribute('aria-expanded', open ? 'true' : 'false');
     card.setAttribute('aria-controls', 'skin-drawer-' + task.id);
-    card.title = 'Change how this ' + cat.species + ' looks';
+    card.title = task.text + ' — change how this ' + cat.species + ' looks';
 
     card.innerHTML =
       '<span class="plant-card-art">' +

@@ -412,6 +412,11 @@ auth.onIdTokenChanged(function (user) {
   currentUserId = user.uid;
   console.log('Signed in as:', currentUserId, user.isAnonymous ? '(guest)' : '(Google)');
 
+  // Username / friends listeners live in 06-friends.js and key off the
+  // same uid. Guarded because 06 loads after this file — on the very
+  // rare occasion auth resolves first, 06 catches up on its own.
+  if (typeof startFriendsListeners === 'function') startFriendsListeners(currentUserId);
+
   if (unsubscribeSnapshot) {
     unsubscribeSnapshot();
     unsubscribeSnapshot = null;
@@ -486,6 +491,8 @@ auth.onIdTokenChanged(function (user) {
       if (statsContent)      statsContent.classList.remove('hidden');
       if (greenhouseLoadingState) greenhouseLoadingState.classList.add('hidden');
       if (greenhouseContent)      greenhouseContent.classList.remove('hidden');
+      if (friendsLoadingState) friendsLoadingState.classList.add('hidden');
+      if (friendsContent)      friendsContent.classList.remove('hidden');
 
       // Garden scene: only visible on garden page
       if (gardenSceneEl) gardenSceneEl.classList.toggle('hidden', currentPage !== 'garden');
