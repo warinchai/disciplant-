@@ -83,7 +83,7 @@ const CATEGORIES = [
   },
   {
     id:          'chores',
-    name:        'Chores & Finance',
+    name:        'Chores',
     species:     'Bamboo',
     emoji:       '🏠',
     dailyStages: ['🌱', '🌿', '🎋'],
@@ -95,16 +95,29 @@ const CATEGORIES = [
     ],
   },
   {
-    id:          'misc',
-    name:        'Misc',
+    id:          'finance',
+    name:        'Finance',
     species:     'Clover',
-    emoji:       '✨',
+    emoji:       '💰',
     dailyStages: ['🌱', '🌿', '🍀'],
     streakStages: [
       { min: 0,  emoji: '🌱' },
       { min: 3,  emoji: '🌿' },
       { min: 14, emoji: '☘️' },
       { min: 60, emoji: '🍀' },
+    ],
+  },
+  {
+    id:          'misc',
+    name:        'Misc',
+    species:     'Mushroom',
+    emoji:       '🍄',
+    dailyStages: ['🌱', '🌿', '🍄'],
+    streakStages: [
+      { min: 0,  emoji: '🌱' },
+      { min: 3,  emoji: '🌿' },
+      { min: 14, emoji: '🍄' },
+      { min: 60, emoji: '🍄' },
     ],
   },
 ];
@@ -157,14 +170,24 @@ var CATEGORY_CONTENT = {
     lore: 'Bamboo is one of the fastest-growing, most resilient plants on Earth — a symbol of steady discipline in the unglamorous daily upkeep that keeps everything else standing.',
     suggestions: [
       'Tidy your room or desk',
-      'Track today\'s spending',
       'Do a load of laundry',
+      'Wash the dishes tonight',
       'Plan tomorrow\'s schedule',
-      'Check your budget or pay a bill',
+      'Take out the rubbish',
+    ],
+  },
+  finance: {
+    lore: 'The four-leaf clover is the old emblem of good fortune — but the luck it stands for is the kind you make, one small deliberate choice at a time, by knowing exactly what comes in and what goes out.',
+    suggestions: [
+      'Track today\'s spending',
+      'Check your budget',
+      'Pay a bill before it\'s due',
+      'Move something into savings',
+      'Review one subscription',
     ],
   },
   misc: {
-    lore: 'The four-leaf clover stands for luck and adaptability — for everything that matters but doesn\'t fit neatly into a single category.',
+    lore: 'Mushrooms rise overnight in the ground nothing else has claimed, quietly turning leftovers into soil that feeds the whole forest — the odd, uncategorised jobs that hold everything else together.',
     suggestions: [
       'Anything that doesn\'t fit elsewhere — add it here.',
     ],
@@ -1346,16 +1369,16 @@ var PLANT_SVG_DATA = {
     // Stage 0: Acorn on soil
     '<path d="M29,122 C29,120.4 33.9,119 40,119 C46.1,119 51,120.4 51,122 C51,123.6 46.1,125 40,125 C33.9,125 29,123.6 29,122 Z" style="fill:var(--c-shadow,rgba(0,0,0,0.14))"/><path d="M40,107 C36.5,107 34.5,110.2 34.5,114 C34.5,117.9 36.5,121 40,121 C43.5,121 45.5,117.9 45.5,114 C45.5,110.2 43.5,107 40,107 Z" style="fill:var(--c-seed,hsl(35,38%,68%))"/><path d="M40,107 C37,107 34.5,109.8 34.5,113 L40,113.4 Z" style="fill:var(--c-seed-dark,hsl(35,38%,56%))"/><path d="M33,107 C33,104.8 36.1,103.5 40,103.5 C43.9,103.5 47,104.8 47,107 C47,109.2 43.9,110.5 40,110.5 C36.1,110.5 33,109.2 33,107 Z" style="fill:var(--c-stem,hsl(20,30%,45%))"/><path d="M40,103.5 C43.9,103.5 47,104.8 47,107 C47,109.2 43.9,110.5 40,110.5 Z" style="fill:var(--c-stem-dark,hsl(20,30%,35%))"/><path d="M38.7,99 C38.7,97.6 39.2,96.5 40,96.5 C40.8,96.5 41.3,97.6 41.3,99 L41.3,104 L38.7,104 Z" style="fill:var(--c-stem-dark,hsl(20,30%,35%))"/>',
 
-    // Stage 1: Seedling, two round leaves
-    '<path d="M26,122 C26,120.1 32.3,118.5 40,118.5 C47.7,118.5 54,120.1 54,122 C54,123.9 47.7,125.5 40,125.5 C32.3,125.5 26,123.9 26,122 Z" style="fill:var(--c-shadow,rgba(0,0,0,0.14))"/><path d="M39,122 C38.8,113 39,104 39.6,96 C39.7,95 40.3,95 40.4,96 C41,104 41.2,113 41,122 Z" style="fill:var(--c-stem,hsl(20,30%,45%))"/><path d="M40.4,96 C41,104 41.2,113 41,122 L40.2,122 C40.4,113 40.2,104 39.9,96 Z" style="fill:var(--c-stem-dark,hsl(20,30%,35%))"/><g transform="translate(29,95) rotate(-22) scale(1.05)"><path d="M0,-5 C-6.1,-5 -11,-0.1 -11,6 C-11,12.1 -6.1,17 0,17 Z" style="fill:var(--c-leaf,hsl(145,25%,58%))"/><path d="M0,-5 C6.1,-5 11,-0.1 11,6 C11,12.1 6.1,17 0,17 Z" style="fill:var(--c-leaf-dark,hsl(145,25%,46%))"/></g><g transform="translate(51,92) rotate(22) scale(1.05)"><path d="M0,-5 C-6.1,-5 -11,-0.1 -11,6 C-11,12.1 -6.1,17 0,17 Z" style="fill:var(--c-leaf,hsl(145,25%,55%))"/><path d="M0,-5 C6.1,-5 11,-0.1 11,6 C11,12.1 6.1,17 0,17 Z" style="fill:var(--c-leaf-dark,hsl(145,25%,43%))"/></g>',
+    // Stage 1: Seedling, two round leaves -- recolored to the mature bark/canopy palette
+    '<path d="M26,122 C26,120.1 32.3,118.5 40,118.5 C47.7,118.5 54,120.1 54,122 C54,123.9 47.7,125.5 40,125.5 C32.3,125.5 26,123.9 26,122 Z" style="fill:var(--c-shadow,rgba(0,0,0,0.14))"/><path d="M39,122 C38.8,113 39,104 39.6,96 C39.7,95 40.3,95 40.4,96 C41,104 41.2,113 41,122 Z" style="fill:var(--c-bark,hsl(8,30%,40%))"/><path d="M40.4,96 C41,104 41.2,113 41,122 L40.2,122 C40.4,113 40.2,104 39.9,96 Z" style="fill:var(--c-bark-dark,hsl(9,33%,30%))"/><g transform="translate(29,95) rotate(-22) scale(1.05)"><path d="M0,-5 C-6.1,-5 -11,-0.1 -11,6 C-11,12.1 -6.1,17 0,17 Z" style="fill:var(--c-canopy,hsl(61,45%,55%))"/><path d="M0,-5 C6.1,-5 11,-0.1 11,6 C11,12.1 6.1,17 0,17 Z" style="fill:var(--c-canopy-dark,hsl(58,38%,42%))"/></g><g transform="translate(51,92) rotate(22) scale(1.05)"><path d="M0,-5 C-6.1,-5 -11,-0.1 -11,6 C-11,12.1 -6.1,17 0,17 Z" style="fill:var(--c-canopy,hsl(61,45%,55%))"/><path d="M0,-5 C6.1,-5 11,-0.1 11,6 C11,12.1 6.1,17 0,17 Z" style="fill:var(--c-canopy-dark,hsl(58,38%,42%))"/></g>',
 
-    // Stage 2: Young oak — bezier canopy cluster, split-shaded trunk & branches
-    '<path d="M22,122 C22,119.5 30,117.5 40,117.5 C50,117.5 58,119.5 58,122 C58,124.5 50,126.5 40,126.5 C30,126.5 22,124.5 22,122 Z" style="fill:var(--c-shadow,rgba(0,0,0,0.15))"/><path d="M40,50.2 C38.8,61.2 37.0,94.0 35.6,118 L40,118 Z" style="fill:var(--c-bark,hsl(8,30%,42%))"/><path d="M40,50.2 C41.2,61.2 43.0,94.0 44.4,118 L40,118 Z" style="fill:var(--c-bark-dark,hsl(9,33%,32%))"/><path d="M40,38.47 C40.67,40.22 44.67,45.91 44,49 C43.33,52.09 36.17,54.33 36,57 C35.83,59.67 42.33,61.44 43,65 C43.67,68.56 40.5,76.11 40,78.33 C39.58,78.51 39.13,78.65 38.7,78.72 C38.26,78.78 37.81,78.79 37.38,78.72 C36.95,78.66 36.52,78.51 36.12,78.32 C35.72,78.13 35.34,77.86 34.97,77.57 C34.61,77.29 34.28,76.94 33.96,76.6 C33.63,76.27 33.34,75.9 33.04,75.57 C32.75,75.24 32.47,74.91 32.18,74.62 C31.88,74.34 31.59,74.08 31.28,73.87 C30.96,73.65 30.63,73.48 30.27,73.33 C29.91,73.18 29.53,73.08 29.13,72.97 C28.73,72.86 28.29,72.78 27.87,72.67 C27.44,72.55 26.99,72.45 26.58,72.3 C26.16,72.14 25.74,71.97 25.37,71.74 C25,71.51 24.65,71.25 24.37,70.93 C24.08,70.62 23.84,70.26 23.67,69.87 C23.49,69.48 23.38,69.04 23.3,68.6 C23.23,68.15 23.23,67.68 23.24,67.22 C23.25,66.76 23.31,66.28 23.36,65.83 C23.4,65.38 23.48,64.94 23.52,64.53 C23.55,64.11 23.59,63.71 23.58,63.34 C23.56,62.96 23.51,62.61 23.42,62.26 C23.33,61.91 23.19,61.58 23.03,61.24 C22.87,60.9 22.66,60.57 22.45,60.22 C22.25,59.87 22.01,59.51 21.81,59.14 C21.61,58.77 21.4,58.39 21.27,58 C21.13,57.61 21.01,57.2 20.98,56.8 C20.94,56.4 20.96,55.99 21.05,55.61 C21.14,55.22 21.31,54.83 21.52,54.47 C21.73,54.12 22.01,53.77 22.31,53.46 C22.61,53.14 22.97,52.85 23.32,52.58 C23.66,52.3 24.03,52.06 24.36,51.81 C24.7,51.56 25.03,51.33 25.3,51.08 C25.58,50.84 25.83,50.6 26.04,50.32 C26.24,50.05 26.4,49.77 26.53,49.45 C26.67,49.14 26.75,48.8 26.84,48.44 C26.93,48.08 26.98,47.69 27.07,47.3 C27.16,46.92 27.23,46.51 27.35,46.12 C27.47,45.74 27.62,45.36 27.8,45.01 C27.98,44.66 28.2,44.32 28.45,44.04 C28.7,43.75 29,43.5 29.31,43.29 C29.63,43.08 29.99,42.93 30.35,42.8 C30.72,42.68 31.11,42.6 31.5,42.54 C31.88,42.47 32.28,42.45 32.66,42.4 C33.04,42.36 33.41,42.33 33.77,42.26 C34.13,42.2 34.47,42.12 34.8,42 C35.13,41.88 35.45,41.72 35.77,41.52 C36.09,41.33 36.4,41.09 36.72,40.83 C37.05,40.58 37.38,40.27 37.73,39.99 C38.07,39.71 38.43,39.4 38.81,39.15 C39.19,38.89 39.59,38.64 40,38.47 Z" style="fill:var(--c-canopy,hsl(61,45%,55%))"/><path d="M40,38.47 C40.41,38.29 40.83,38.16 41.25,38.11 C41.67,38.07 42.1,38.09 42.5,38.19 C42.91,38.3 43.31,38.49 43.68,38.73 C44.04,38.97 44.39,39.3 44.71,39.64 C45.03,39.99 45.32,40.4 45.59,40.8 C45.86,41.19 46.09,41.63 46.33,42.01 C46.57,42.4 46.77,42.79 47,43.12 C47.23,43.44 47.45,43.74 47.7,43.99 C47.96,44.23 48.22,44.42 48.52,44.58 C48.81,44.74 49.14,44.84 49.49,44.94 C49.84,45.04 50.22,45.09 50.61,45.17 C51.01,45.25 51.43,45.3 51.83,45.4 C52.24,45.5 52.66,45.6 53.04,45.76 C53.41,45.92 53.77,46.12 54.06,46.37 C54.36,46.61 54.61,46.91 54.81,47.24 C55.01,47.57 55.15,47.94 55.25,48.32 C55.35,48.7 55.39,49.12 55.41,49.53 C55.44,49.93 55.41,50.35 55.41,50.75 C55.41,51.15 55.37,51.54 55.39,51.91 C55.4,52.28 55.41,52.63 55.48,52.97 C55.55,53.31 55.66,53.62 55.81,53.94 C55.96,54.26 56.16,54.56 56.38,54.88 C56.6,55.19 56.88,55.5 57.15,55.83 C57.42,56.17 57.73,56.51 57.99,56.87 C58.25,57.23 58.53,57.61 58.73,58 C58.94,58.39 59.12,58.8 59.22,59.21 C59.32,59.62 59.37,60.04 59.35,60.44 C59.32,60.85 59.22,61.26 59.07,61.64 C58.92,62.02 58.7,62.39 58.46,62.74 C58.22,63.09 57.91,63.41 57.62,63.73 C57.34,64.04 57.01,64.33 56.73,64.62 C56.45,64.92 56.16,65.2 55.93,65.5 C55.69,65.79 55.48,66.09 55.31,66.42 C55.15,66.75 55.02,67.09 54.92,67.47 C54.81,67.84 54.75,68.24 54.68,68.67 C54.61,69.09 54.57,69.55 54.5,70 C54.43,70.45 54.36,70.93 54.24,71.38 C54.12,71.82 53.99,72.28 53.79,72.68 C53.59,73.09 53.35,73.48 53.07,73.8 C52.78,74.12 52.44,74.4 52.07,74.62 C51.71,74.84 51.29,75 50.86,75.11 C50.43,75.23 49.97,75.28 49.52,75.32 C49.07,75.35 48.6,75.34 48.16,75.34 C47.71,75.34 47.27,75.31 46.86,75.32 C46.44,75.33 46.04,75.34 45.65,75.4 C45.27,75.46 44.91,75.56 44.54,75.69 C44.18,75.83 43.83,76.01 43.48,76.22 C43.12,76.42 42.76,76.68 42.39,76.92 C42.02,77.17 41.64,77.45 41.24,77.68 C40.84,77.92 40.42,78.16 40,78.33 C40.5,76.11 43.67,68.56 43,65 C42.33,61.44 35.83,59.67 36,57 C36.17,54.33 43.33,52.09 44,49 C44.67,45.91 40.67,40.22 40,38.47 Z" style="fill:var(--c-canopy-dark,hsl(58,38%,42%))"/><path d="M40,68 C39,67.17 35.75,64.54 34,63 C32.25,61.46 30.24,59.45 29.49,58.73" fill="none" style="stroke:var(--c-bark-dark,hsl(9,33%,32%))" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M40,68 C41,67 44.13,63.4 46,62 C47.87,60.6 50.34,59.98 51.2,59.57" fill="none" style="stroke:var(--c-bark-dark,hsl(9,33%,32%))" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    // Stage 2: Young oak -- rounded three-tier crown as one merged mass,
+    '<ellipse cx="40" cy="122" rx="19" ry="5.5" style="fill:var(--c-shadow,rgba(0,0,0,0.15))"/><g fill="none" style="stroke:var(--c-bark-dark,hsl(9,33%,30%))" stroke-linecap="round"><path d="M40,83 C37.4,78 35,71 32,52" stroke-width="2.2"/><path d="M40,86 C42.6,81 45,73.5 48,52" stroke-width="2.2"/></g><path d="M34.5,118 C36.2,110 37.2,96 37.9,80 C38.2,74 38.3,67 38.3,59 L40,59 L40,118 Z" style="fill:var(--c-bark,hsl(8,30%,42%))"/><path d="M45.5,118 C43.8,110 42.8,96 42.1,80 C41.8,74 41.7,67 41.7,59 L40,59 L40,118 Z" style="fill:var(--c-bark-dark,hsl(9,33%,30%))"/><path d="M32.6,37 A9,9 0 1,0 50.6,37 A9,9 0 1,0 32.6,37 Z M21.6,43 A8,8 0 1,0 37.6,43 A8,8 0 1,0 21.6,43 Z M45.6,43 A8,8 0 1,0 61.6,43 A8,8 0 1,0 45.6,43 Z M31.1,47 A10.5,10.5 0 1,0 52.1,47 A10.5,10.5 0 1,0 31.1,47 Z M23.6,53 A8,8 0 1,0 39.6,53 A8,8 0 1,0 23.6,53 Z M43.6,53 A8,8 0 1,0 59.6,53 A8,8 0 1,0 43.6,53 Z M33.6,57 A8,8 0 1,0 49.6,57 A8,8 0 1,0 33.6,57 Z" style="fill:var(--c-canopy-dark,hsl(58,38%,42%))"/><path d="M31,35 A9,9 0 1,0 49,35 A9,9 0 1,0 31,35 Z M20,41 A8,8 0 1,0 36,41 A8,8 0 1,0 20,41 Z M44,41 A8,8 0 1,0 60,41 A8,8 0 1,0 44,41 Z M29.5,45 A10.5,10.5 0 1,0 50.5,45 A10.5,10.5 0 1,0 29.5,45 Z M22,51 A8,8 0 1,0 38,51 A8,8 0 1,0 22,51 Z M42,51 A8,8 0 1,0 58,51 A8,8 0 1,0 42,51 Z M32,55 A8,8 0 1,0 48,55 A8,8 0 1,0 32,55 Z" style="fill:var(--c-canopy,hsl(61,45%,55%))"/><g fill="none" style="stroke:var(--c-canopy-dark,hsl(58,38%,42%))" stroke-linecap="round" stroke-width="1.3" opacity="0.42"><path d="M31,38 C34.5,43 45.5,43 49,38"/><path d="M22,44 C25,49 31,50.5 35,48"/></g>',
 
-    // Stage 3: Full spreading oak — layered bezier canopy cloud-cluster with
-    // split-shaded (light/shadow sage) lobes, and a tapering split-shaded
-    // trunk that forks into a visible branch skeleton reaching into the crown
-    '<path d="M17,122 C17,119 27,117 40,117 C53,117 63,119 63,122 C63,125 53,127 40,127 C27,127 17,125 17,122 Z" style="fill:var(--c-shadow,rgba(0,0,0,0.16))"/><path d="M40,31.9 C38.4,47.9 35.5,88.0 33.4,118 L40,118 Z" style="fill:var(--c-bark,hsl(8,30%,40%))"/><path d="M40,31.9 C41.6,47.9 44.5,88.0 46.6,118 L40,118 Z" style="fill:var(--c-bark-dark,hsl(9,33%,30%))"/><path d="M40,15.16 C40.83,17.63 45.83,25.53 45,30 C44.17,34.47 35.17,38 35,42 C34.83,46 43.67,50.67 44,54 C44.33,57.33 37.67,58.89 37,62 C36.33,65.11 39.5,70.88 40,72.66 C39.5,72.4 39.02,72.12 38.54,71.9 C38.06,71.69 37.6,71.5 37.12,71.39 C36.65,71.27 36.18,71.2 35.69,71.19 C35.21,71.17 34.71,71.23 34.2,71.3 C33.68,71.38 33.15,71.51 32.6,71.63 C32.05,71.75 31.47,71.9 30.9,72 C30.33,72.11 29.73,72.21 29.16,72.24 C28.59,72.26 28.01,72.25 27.46,72.16 C26.92,72.06 26.39,71.89 25.91,71.65 C25.43,71.41 24.98,71.08 24.59,70.7 C24.19,70.32 23.84,69.85 23.53,69.36 C23.22,68.87 22.97,68.31 22.74,67.76 C22.5,67.22 22.32,66.63 22.12,66.08 C21.93,65.53 21.77,64.97 21.57,64.47 C21.38,63.96 21.19,63.48 20.95,63.05 C20.72,62.62 20.46,62.23 20.15,61.87 C19.84,61.52 19.49,61.22 19.1,60.93 C18.71,60.64 18.26,60.39 17.81,60.12 C17.35,59.86 16.85,59.62 16.37,59.34 C15.89,59.07 15.39,58.79 14.94,58.47 C14.49,58.15 14.04,57.8 13.68,57.41 C13.31,57.02 12.99,56.59 12.75,56.13 C12.52,55.67 12.35,55.16 12.27,54.65 C12.19,54.13 12.19,53.57 12.25,53.02 C12.31,52.46 12.46,51.89 12.63,51.33 C12.8,50.78 13.04,50.22 13.26,49.68 C13.48,49.15 13.74,48.63 13.95,48.13 C14.16,47.62 14.37,47.15 14.52,46.68 C14.66,46.21 14.77,45.77 14.8,45.32 C14.84,44.87 14.82,44.44 14.75,44 C14.68,43.56 14.54,43.12 14.38,42.66 C14.23,42.2 14.01,41.73 13.83,41.25 C13.64,40.77 13.41,40.27 13.25,39.76 C13.09,39.26 12.93,38.74 12.86,38.23 C12.79,37.72 12.76,37.21 12.82,36.72 C12.88,36.23 13.01,35.74 13.23,35.3 C13.44,34.86 13.74,34.44 14.09,34.05 C14.44,33.67 14.88,33.33 15.33,33.02 C15.78,32.7 16.3,32.43 16.79,32.18 C17.29,31.92 17.82,31.7 18.3,31.47 C18.78,31.24 19.26,31.04 19.67,30.8 C20.09,30.56 20.47,30.33 20.8,30.05 C21.12,29.77 21.39,29.47 21.62,29.12 C21.86,28.77 22.03,28.39 22.2,27.97 C22.36,27.55 22.48,27.09 22.61,26.61 C22.75,26.14 22.85,25.62 22.99,25.11 C23.13,24.6 23.27,24.06 23.45,23.57 C23.64,23.07 23.85,22.57 24.12,22.14 C24.38,21.71 24.69,21.3 25.04,20.97 C25.39,20.64 25.8,20.36 26.23,20.14 C26.65,19.93 27.13,19.79 27.61,19.68 C28.09,19.58 28.6,19.54 29.1,19.51 C29.6,19.48 30.11,19.51 30.6,19.51 C31.09,19.5 31.57,19.53 32.04,19.5 C32.5,19.47 32.95,19.43 33.39,19.32 C33.83,19.22 34.24,19.08 34.66,18.88 C35.08,18.68 35.48,18.43 35.9,18.14 C36.32,17.85 36.74,17.51 37.18,17.17 C37.62,16.83 38.07,16.44 38.54,16.11 C39.01,15.77 39.5,15.42 40,15.16 Z" style="fill:var(--c-canopy,hsl(61,45%,53%))"/><path d="M40,15.16 C40.5,14.9 41.03,14.66 41.54,14.52 C42.06,14.39 42.6,14.32 43.12,14.35 C43.63,14.38 44.15,14.51 44.64,14.73 C45.12,14.94 45.6,15.26 46.03,15.62 C46.47,15.99 46.87,16.46 47.25,16.93 C47.63,17.41 47.97,17.95 48.3,18.47 C48.62,18.98 48.91,19.53 49.21,20.02 C49.5,20.51 49.77,20.99 50.07,21.39 C50.36,21.8 50.65,22.16 50.98,22.46 C51.3,22.76 51.64,22.99 52.02,23.18 C52.4,23.36 52.82,23.48 53.26,23.58 C53.7,23.69 54.18,23.74 54.67,23.8 C55.16,23.87 55.69,23.91 56.2,23.99 C56.71,24.08 57.24,24.16 57.73,24.31 C58.22,24.45 58.71,24.62 59.14,24.86 C59.56,25.1 59.96,25.39 60.28,25.74 C60.6,26.09 60.86,26.5 61.06,26.94 C61.27,27.38 61.4,27.88 61.5,28.38 C61.6,28.88 61.63,29.42 61.66,29.93 C61.7,30.45 61.68,30.98 61.7,31.47 C61.72,31.96 61.73,32.45 61.79,32.9 C61.85,33.35 61.93,33.77 62.08,34.17 C62.23,34.57 62.43,34.93 62.68,35.29 C62.94,35.65 63.26,35.99 63.61,36.33 C63.96,36.67 64.38,37 64.79,37.36 C65.2,37.71 65.66,38.07 66.08,38.46 C66.5,38.84 66.93,39.25 67.29,39.68 C67.65,40.11 67.98,40.56 68.22,41.03 C68.46,41.5 68.64,42 68.73,42.49 C68.82,42.99 68.82,43.5 68.75,44 C68.68,44.5 68.51,45 68.31,45.48 C68.11,45.97 67.82,46.44 67.53,46.89 C67.24,47.35 66.9,47.78 66.59,48.21 C66.28,48.64 65.95,49.04 65.68,49.46 C65.41,49.87 65.16,50.27 64.98,50.69 C64.8,51.11 64.66,51.54 64.58,51.99 C64.5,52.44 64.49,52.91 64.5,53.41 C64.52,53.9 64.59,54.43 64.66,54.98 C64.73,55.53 64.84,56.11 64.91,56.69 C64.97,57.27 65.05,57.88 65.06,58.47 C65.07,59.06 65.06,59.66 64.96,60.21 C64.86,60.76 64.71,61.3 64.48,61.79 C64.25,62.27 63.95,62.72 63.59,63.1 C63.23,63.49 62.79,63.82 62.33,64.1 C61.86,64.38 61.33,64.6 60.8,64.8 C60.27,64.99 59.69,65.13 59.15,65.27 C58.61,65.41 58.05,65.51 57.53,65.65 C57.02,65.79 56.52,65.92 56.06,66.1 C55.59,66.28 55.17,66.48 54.77,66.74 C54.37,67 54.01,67.31 53.66,67.67 C53.31,68.02 53,68.44 52.67,68.87 C52.35,69.31 52.04,69.8 51.7,70.28 C51.36,70.75 51.02,71.27 50.64,71.73 C50.27,72.18 49.87,72.65 49.43,73.03 C49,73.42 48.53,73.77 48.04,74.02 C47.55,74.27 47.03,74.46 46.5,74.56 C45.96,74.65 45.4,74.66 44.85,74.6 C44.29,74.54 43.72,74.39 43.17,74.2 C42.62,74.02 42.07,73.75 41.55,73.49 C41.02,73.23 40.5,72.92 40,72.66 C39.5,70.88 36.33,65.11 37,62 C37.67,58.89 44.33,57.33 44,54 C43.67,50.67 34.83,46 35,42 C35.17,38 44.17,34.47 45,30 C45.83,25.53 40.83,17.63 40,15.16 Z" style="fill:var(--c-canopy-dark,hsl(58,38%,40%))"/><path d="M40,62 C38.33,61.17 32.52,59.91 30,57 C27.48,54.09 25.75,46.61 24.89,44.53" fill="none" style="stroke:var(--c-bark-dark,hsl(9,33%,30%))" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M40,62 C41.67,61 47.25,58.71 50,56 C52.75,53.29 55.43,47.45 56.52,45.74" fill="none" style="stroke:var(--c-bark-dark,hsl(9,33%,30%))" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>'
+    // Stage 3: Full spreading oak -- ten merged lobes forming a single
+    //          connected crown, split-shaded trunk with flared roots,
+    //          and limbs that terminate inside the canopy
+    '<ellipse cx="40" cy="122" rx="24" ry="6" style="fill:var(--c-shadow,rgba(0,0,0,0.16))"/><g fill="none" style="stroke:var(--c-bark-dark,hsl(9,33%,30%))" stroke-linecap="round"><path d="M40,77 C35.2,72 31.4,65.5 28.5,58" stroke-width="2.9"/><path d="M40,80 C44.6,75 48,67 50.5,57.5" stroke-width="2.9"/><path d="M40,68 C37.6,63 35.4,59 33.6,54.5" stroke-width="2"/><path d="M40,70 C42.6,65 44.8,61 46.6,56" stroke-width="2"/></g><path d="M31,118 C33.2,112 35,103 36.3,88 C37.1,78 37.4,68 37.5,58 L40,58 L40,118 Z" style="fill:var(--c-bark,hsl(8,30%,40%))"/><path d="M49,118 C46.8,112 45,103 43.7,88 C42.9,78 42.6,68 42.5,58 L40,58 L40,118 Z" style="fill:var(--c-bark-dark,hsl(9,33%,30%))"/><g fill="none" style="stroke:var(--c-bark-dark,hsl(9,33%,30%))" stroke-linecap="round" stroke-width="0.8" opacity="0.35"><path d="M37.4,112 C38,100 38.4,86 38.6,72"/><path d="M34.6,116 C35.6,108 36.3,99 36.8,90"/></g><path d="M29,21.6 A13,13 0 1,0 55,21.6 A13,13 0 1,0 29,21.6 Z M17,29.6 A12,12 0 1,0 41,29.6 A12,12 0 1,0 17,29.6 Z M43,29.6 A12,12 0 1,0 67,29.6 A12,12 0 1,0 43,29.6 Z M11,40.6 A10,10 0 1,0 31,40.6 A10,10 0 1,0 11,40.6 Z M53,40.6 A10,10 0 1,0 73,40.6 A10,10 0 1,0 53,40.6 Z M27,36.6 A15,15 0 1,0 57,36.6 A15,15 0 1,0 27,36.6 Z M17,49.6 A12,12 0 1,0 41,49.6 A12,12 0 1,0 17,49.6 Z M43,49.6 A12,12 0 1,0 67,49.6 A12,12 0 1,0 43,49.6 Z M29,52.6 A13,13 0 1,0 55,52.6 A13,13 0 1,0 29,52.6 Z M33,60.6 A9,9 0 1,0 51,60.6 A9,9 0 1,0 33,60.6 Z" style="fill:var(--c-canopy-dark,hsl(58,38%,42%))"/><path d="M27,19 A13,13 0 1,0 53,19 A13,13 0 1,0 27,19 Z M15,27 A12,12 0 1,0 39,27 A12,12 0 1,0 15,27 Z M41,27 A12,12 0 1,0 65,27 A12,12 0 1,0 41,27 Z M9,38 A10,10 0 1,0 29,38 A10,10 0 1,0 9,38 Z M51,38 A10,10 0 1,0 71,38 A10,10 0 1,0 51,38 Z M25,34 A15,15 0 1,0 55,34 A15,15 0 1,0 25,34 Z M15,47 A12,12 0 1,0 39,47 A12,12 0 1,0 15,47 Z M41,47 A12,12 0 1,0 65,47 A12,12 0 1,0 41,47 Z M27,50 A13,13 0 1,0 53,50 A13,13 0 1,0 27,50 Z M31,58 A9,9 0 1,0 49,58 A9,9 0 1,0 31,58 Z" style="fill:var(--c-canopy,hsl(61,45%,55%))"/><g fill="none" style="stroke:var(--c-canopy-dark,hsl(58,38%,42%))" stroke-linecap="round" stroke-width="1.6" opacity="0.45"><path d="M30,17 C34,23 46,23 50,17"/><path d="M18,30 C22,38 32,40 37,36"/><path d="M62,30 C58,38 48,40 43,36"/></g>'
   ],
 
   // ---- SUNFLOWER (Exercise) ----
@@ -1506,117 +1529,342 @@ var PLANT_SVG_DATA = {
     '</g>'
   ],
 
-  // ---- LAVENDER (Sleep) — soft pastel redesign ----
-  // Rebuilt to match the rest of the garden's flat-fill illustration
-  // style: solid pastel shapes only, zero strokes/outlines anywhere.
-  // Each bud is a two-tone ellipse pair (light pastel body + slightly
-  // deeper pastel shadow half) with a small translucent highlight,
-  // built by budShape()/budPair()/budTriplet() below. Buds are
-  // clustered in overlapping pairs/triplets radiating from a single
-  // central stem, densest at the top, so the flower spike itself
-  // reads as one plush, full-bodied head rather than isolated dots
-  // on a line — and by the final stage that head dominates the
-  // plant's overall silhouette.
+ // ---- LAVENDER (Sleep) — flat pastel rebuild ----
+  // Rebuilt against the reference illustration: a spike of clean,
+  // clearly separated whorls instead of a dense pile of buds.
+  //
+  // Rules this entry follows:
+  //   * flat fills only — no strokes, no gradients, no fill-opacity on
+  //     any part of the plant (the ground shadow is the one exception,
+  //     since it sits on the soil, not on the flower);
+  //   * three petals per whorl only — a left and a right bract that fan
+  //     outward, and one upright centre bract laid over their bases —
+  //     so nothing crowds and no shape is hidden behind another;
+  //   * tones alternate like a checkerboard: the centre petal always
+  //     takes the opposite tone from its own row's side petals, and
+  //     each row flips, so touching shapes always read apart without an
+  //     outline;
+  //   * a solid deep-lilac head mass sits behind the whorls, so the
+  //     wedges between petals read as shade, never as background;
+  //   * every shape carries a class hook (petal-dark, petal-light,
+  //     calyx, foliage, shadow) as well as a palette variable, so the
+  //     plant can be recoloured from CSS classes or from the garden's
+  //     --c-* tokens.
+  //
+  // Each whorl is a bezier bract (a broad, rounded teardrop tapering to
+  // its attachment point) sat on an olive calyx cup that stays visible
+  // between rows. Whorls tighten and shrink toward the tip, so the head
+  // is a full, tapering plume that dominates the plant's silhouette by
+  // the final stage. Stem and lance-shaped leaves are tapered bezier
+  // paths in sage.
+  //
+  // Palette hooks (all with pastel fallbacks): --c-bud, --c-bud-shade,
+  // --c-bud-pale, --c-calyx, --c-stem, --c-stem-light, --c-shadow.
   sleep: (function () {
-    var LAV_MAIN    = 'var(--c-bud,#D9CDF5)';
-    var LAV_SHADOW  = 'var(--c-bud-shade,#BCA8E6)';
-    var LAV_HILITE  = 'var(--c-bud-hilite,#F1EBFB)';
-    var SAGE        = 'var(--c-stem-light,#CDEBD9)';
-    var SAGE_SHADOW = 'var(--c-stem,#ACD8BC)';
+    var LAV_MAIN   = 'var(--c-bud,#8A72C8)';
+    var LAV_PALE   = 'var(--c-bud-pale,#C7B6EC)';
+    var LAV_DEEP   = 'var(--c-bud-shade,#6A55A6)';
+    var CALYX_C    = 'var(--c-calyx,#9FA07A)';
+    var SAGE       = 'var(--c-stem,#6EA98B)';
+    var SAGE_LIGHT = 'var(--c-stem-light,#93C6A8)';
+    var SHADOW     = 'var(--c-shadow,rgba(0,0,0,0.12))';
 
-    function budShape(cx, cy, rot, s, mainC, shadowC, hiliteC) {
-      return (
-        '<g transform="translate(' + cx.toFixed(2) + ',' + cy.toFixed(2) + ') rotate(' + rot + ') scale(' + s + ')">' +
-        '<ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:' + mainC + '"/>' +
-        '<ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:' + shadowC + '"/>' +
-        '<ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:' + hiliteC + '" opacity="0.55"/>' +
-        '</g>'
-      );
+    // bract + calyx geometry, drawn from the attachment point (0,0) up
+    var BRACT = 'M0,0C-3.7,-2.0 -5.8,-4.9 -5.8,-8.7C-5.8,-12.5 -3.2,-15.2 0,-15.2C3.2,-15.2 5.8,-12.5 5.8,-8.7C5.8,-4.9 3.7,-2.0 0,0Z';
+    var CALYX = 'M0,0C-3.6,-0.3 -5.5,-2.5 -5.1,-5.1C-2.8,-4.3 -0.9,-4.1 0,-4.1C0.9,-4.1 2.8,-4.3 5.1,-5.1C5.5,-2.5 3.6,-0.3 0,0Z';
+
+    function place(cx, cy, rot, s) {
+      return '<g transform="translate(' + cx.toFixed(2) + ',' + cy.toFixed(2) + ') rotate(' + rot + ') scale(' + s.toFixed(3) + ')">';
     }
-    function budPair(cx, cy, spread, s, mainC, shadowC, hiliteC) {
-      return budShape(cx - spread, cy, -25, s, mainC, shadowC, hiliteC) +
-             budShape(cx + spread, cy, 25, s, mainC, shadowC, hiliteC);
+    function bud(cx, cy, rot, s, fill, cls) {
+      return place(cx, cy, rot, s) +
+        '<path class="' + cls + '" d="' + BRACT + '" style="fill:' + fill + '"/></g>';
     }
-    function budTriplet(cx, cy, spread, s, mainC, shadowC, hiliteC) {
-      return budShape(cx - spread, cy, -28, s * 0.92, mainC, shadowC, hiliteC) +
-             budShape(cx, cy + 2, 0, s, mainC, shadowC, hiliteC) +
-             budShape(cx + spread, cy, 28, s * 0.92, mainC, shadowC, hiliteC);
+    function budCalyx(cx, cy, s) {
+      return place(cx, cy, 0, s) +
+        '<path class="calyx" d="' + CALYX + '" style="fill:' + CALYX_C + '"/></g>';
+    }
+
+    // catmull-rom -> cubic, for organic closed outlines (no ellipses)
+    function smoothClosed(pts) {
+      var n = pts.length, d = 'M' + pts[0][0].toFixed(2) + ',' + pts[0][1].toFixed(2);
+      for (var i = 0; i < n; i++) {
+        var p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+        var c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+        var c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+        d += 'C' + c1[0].toFixed(2) + ',' + c1[1].toFixed(2) + ' ' + c2[0].toFixed(2) + ',' + c2[1].toFixed(2) +
+             ' ' + p2[0].toFixed(2) + ',' + p2[1].toFixed(2);
+      }
+      return d + 'Z';
+    }
+    // solid backing plate: sits inside the petal envelope, so the small
+    // wedges between bracts read as depth instead of holes
+    function headMass(rows) {
+      var left = [], right = [], i, r, w;
+      for (i = 0; i < rows.length; i++) {
+        r = rows[i];
+        w = r[1] + 3.1 * r[2];
+        left.push([40 - w, r[0] - 5.6 * r[2]]);
+        right.unshift([40 + w, r[0] - 5.6 * r[2]]);
+      }
+      var top = rows[rows.length - 1];
+      var pts = left.concat([[40, top[0] - 12.4 * top[2]]], right, [[40, rows[0][0] + 1.4]]);
+      return '<path class="petal-dark" d="' + smoothClosed(pts) + '" style="fill:' + LAV_DEEP + '"/>';
+    }
+    // phase flips the two tones row to row so neighbours never match
+    function budWhorl(cy, spread, s, phase) {
+      var sideC   = phase ? LAV_PALE : LAV_MAIN;
+      var sideCls = phase ? 'petal-light' : 'petal-dark';
+      var midC    = phase ? LAV_MAIN : LAV_PALE;
+      var midCls  = phase ? 'petal-dark' : 'petal-light';
+      return bud(40 - spread, cy + 2.0, -40, s * 0.90, sideC, sideCls) +
+        bud(40 + spread, cy + 2.0,  40, s * 0.90, sideC, sideCls) +
+        budCalyx(40, cy + 4.6, s) +
+        bud(40, cy - 1.0, 0, s, midC, midCls);
+    }
+    // rows: [cy, spread, scale], bottom row first
+    function spike(rows) {
+      var out = headMass(rows);
+      for (var i = 0; i < rows.length; i++) out += budWhorl(rows[i][0], rows[i][1], rows[i][2], i % 2);
+      return out;
+    }
+    function leafShape(x, y, rot, l, w) {
+      var d = 'M0,0C' + (w * 0.95).toFixed(2) + ',' + (-l * 0.30).toFixed(2) + ' ' + (w * 0.72).toFixed(2) + ',' +
+        (-l * 0.74).toFixed(2) + ' 0,' + (-l).toFixed(2) + 'C' + (-w * 0.66).toFixed(2) + ',' + (-l * 0.72).toFixed(2) +
+        ' ' + (-w * 0.88).toFixed(2) + ',' + (-l * 0.28).toFixed(2) + ' 0,0Z';
+      var rib = 'M0,' + (-l * 0.08).toFixed(2) + 'C' + (w * 0.13).toFixed(2) + ',' + (-l * 0.38).toFixed(2) + ' ' +
+        (w * 0.11).toFixed(2) + ',' + (-l * 0.68).toFixed(2) + ' 0,' + (-l * 0.92).toFixed(2) + 'C' +
+        (-w * 0.02).toFixed(2) + ',' + (-l * 0.66).toFixed(2) + ' ' + (-w * 0.03).toFixed(2) + ',' +
+        (-l * 0.36).toFixed(2) + ' 0,' + (-l * 0.08).toFixed(2) + 'Z';
+      return '<g transform="translate(' + x.toFixed(2) + ',' + y.toFixed(2) + ') rotate(' + rot + ')">' +
+        '<path class="foliage" d="' + d + '" style="fill:' + SAGE + '"/>' +
+        '<path class="foliage" d="' + rib + '" style="fill:' + SAGE_LIGHT + '"/></g>';
+    }
+    function stemShape(top, b, t) {
+      var mid = 122 - (122 - top) * 0.45, up = top + (122 - top) * 0.3;
+      return '<path class="foliage" d="M' + (40 - b).toFixed(2) + ',122C' + (40 - b * 0.9).toFixed(2) + ',' + mid.toFixed(2) + ' ' +
+        (40 - t * 1.3).toFixed(2) + ',' + up.toFixed(2) + ' ' + (40 - t).toFixed(2) + ',' + top.toFixed(2) +
+        'L' + (40 + t).toFixed(2) + ',' + top.toFixed(2) + 'C' + (40 + t * 1.3).toFixed(2) + ',' + up.toFixed(2) + ' ' +
+        (40 + b * 0.9).toFixed(2) + ',' + mid.toFixed(2) + ' ' + (40 + b).toFixed(2) + ',122Z" style="fill:' + SAGE + '"/>' +
+        '<path class="foliage" d="M' + (40 - b * 0.38).toFixed(2) + ',122C' + (40 - b * 0.32).toFixed(2) + ',' + mid.toFixed(2) + ' ' +
+        (40 - t * 0.45).toFixed(2) + ',' + up.toFixed(2) + ' ' + (40 - t * 0.28).toFixed(2) + ',' + top.toFixed(2) +
+        'L' + (40 + t * 0.08).toFixed(2) + ',' + top.toFixed(2) + 'C' + (40 + t * 0.18).toFixed(2) + ',' + up.toFixed(2) + ' ' +
+        (40 + b * 0.04).toFixed(2) + ',' + mid.toFixed(2) + ' ' + (40 + b * 0.08).toFixed(2) + ',122Z" style="fill:' + SAGE_LIGHT + '"/>';
+    }
+    function ground(rx, ry) {
+      return '<path class="shadow" d="' + smoothClosed([[40 - rx, 122], [40, 122 - ry], [40 + rx, 122], [40, 122 + ry]]) +
+        '" style="fill:' + SHADOW + '"/>';
     }
 
     return [
-      // Stage 0: seed with a single small emerging bud pair
-      '<ellipse cx="40" cy="122" rx="9" ry="2.4" style="fill:var(--c-shadow,rgba(0,0,0,0.08))"/><rect x="39" y="109" width="2.2" height="13" rx="1.1" style="fill:var(--c-stem,#ACD8BC)"/><ellipse cx="40" cy="109" rx="3.2" ry="2.2" style="fill:var(--c-stem-light,#CDEBD9)"/><g transform="translate(37.60,104.00) rotate(-25) scale(0.55)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(42.40,104.00) rotate(25) scale(0.55)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g>',
+      // Stage 0: sprout — two seed leaves and a pair of small whorls
+      ground(9, 2.4) + stemShape(103, 1.5, 0.9) +
+        leafShape(38.40, 113.00, -36, 12.0, 4.2) + leafShape(41.60, 111.00, 34, 11.0, 4.0) +
+        spike([[104.0, 2.94, 0.450], [99.6, 2.30, 0.360]]),
 
-      // Stage 1: young spike, two layered pairs plus a tip bud
-      '<ellipse cx="40" cy="122" rx="12" ry="3" style="fill:var(--c-shadow,rgba(0,0,0,0.10))"/><rect x="39" y="92" width="2.3" height="30" rx="1.15" style="fill:var(--c-stem,#ACD8BC)"/><ellipse cx="33.5" cy="110" rx="6.5" ry="2.4" style="fill:var(--c-stem-light,#CDEBD9)" transform="rotate(-20,33.5,110)"/><ellipse cx="46.5" cy="108" rx="6.5" ry="2.4" style="fill:var(--c-stem-light,#CDEBD9)" transform="rotate(20,46.5,108)"/><g transform="translate(37.40,96.00) rotate(-25) scale(0.62)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(42.60,96.00) rotate(25) scale(0.62)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(37.30,90.00) rotate(-25) scale(0.68)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(42.70,90.00) rotate(25) scale(0.68)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(40.00,84.00) rotate(0) scale(0.55)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g>',
+      // Stage 1: young spike — four whorls, the head still slim
+      ground(12, 3.0) + stemShape(86, 1.8, 1.0) +
+        leafShape(38.20, 115.00, -34, 20.0, 5.4) + leafShape(41.80, 112.00, 32, 18.0, 5.0) +
+        spike([[100.0, 3.84, 0.580], [94.2, 3.71, 0.550], [88.8, 3.33, 0.490], [84.0, 2.69, 0.400]]),
 
-      // Stage 2: fuller spike, alternating pairs/triplets
-      '<ellipse cx="40" cy="122" rx="16" ry="3.6" style="fill:var(--c-shadow,rgba(0,0,0,0.12))"/><rect x="38.8" y="70" width="2.6" height="52" rx="1.3" style="fill:var(--c-stem,#ACD8BC)"/><ellipse cx="30" cy="104" rx="8.5" ry="3" style="fill:var(--c-stem-light,#CDEBD9)" transform="rotate(-24,30,104)"/><ellipse cx="50" cy="100" rx="8.5" ry="3" style="fill:var(--c-stem-light,#CDEBD9)" transform="rotate(24,50,100)"/><ellipse cx="34" cy="92" rx="7" ry="2.6" style="fill:var(--c-stem,#ACD8BC)" transform="rotate(-16,34,92)"/><ellipse cx="46" cy="90" rx="7" ry="2.6" style="fill:var(--c-stem,#ACD8BC)" transform="rotate(16,46,90)"/><g transform="translate(37.20,92.00) rotate(-25) scale(0.7)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(42.80,92.00) rotate(25) scale(0.7)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(36.60,85.00) rotate(-28) scale(0.6900000000000001)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(40.00,87.00) rotate(0) scale(0.75)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(43.40,85.00) rotate(28) scale(0.6900000000000001)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(37.20,78.00) rotate(-25) scale(0.78)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(42.80,78.00) rotate(25) scale(0.78)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(36.80,71.00) rotate(-28) scale(0.6624)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(40.00,73.00) rotate(0) scale(0.72)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(43.20,71.00) rotate(28) scale(0.6624)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(40.00,65.00) rotate(0) scale(0.55)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g>',
+      // Stage 2: filling out — the spike broadens at the shoulder, then tapers
+      ground(16, 3.6) + stemShape(67, 2.1, 1.1) +
+        leafShape(37.90, 116.00, -33, 30.0, 6.8) + leafShape(42.10, 113.00, 31, 27.0, 6.3) +
+        spike([[101.0, 5.12, 0.780], [93.7, 4.99, 0.750], [86.7, 4.67, 0.700], [80.1, 4.22, 0.620],
+               [74.3, 3.71, 0.530], [69.3, 3.07, 0.430], [65.3, 2.43, 0.340]]),
 
-      // Stage 3: full plant — dense tapering spike, flower head
-      // dominates the plant's overall height
-      '<ellipse cx="40" cy="122" rx="21" ry="4.6" style="fill:var(--c-shadow,rgba(0,0,0,0.14))"/><rect x="38.6" y="40" width="2.9" height="82" rx="1.45" style="fill:var(--c-stem,#ACD8BC)"/><ellipse cx="26" cy="98" rx="10.5" ry="3.6" style="fill:var(--c-stem-light,#CDEBD9)" transform="rotate(-26,26,98)"/><ellipse cx="54" cy="93" rx="10.5" ry="3.6" style="fill:var(--c-stem-light,#CDEBD9)" transform="rotate(26,54,93)"/><ellipse cx="30" cy="82" rx="8.5" ry="3" style="fill:var(--c-stem,#ACD8BC)" transform="rotate(-18,30,82)"/><ellipse cx="50" cy="79" rx="8.5" ry="3" style="fill:var(--c-stem,#ACD8BC)" transform="rotate(18,50,79)"/><g transform="translate(36.60,96.00) rotate(-25) scale(0.85)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(43.40,96.00) rotate(25) scale(0.85)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(36.00,89.00) rotate(-28) scale(0.8096)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(40.00,91.00) rotate(0) scale(0.88)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(44.00,89.00) rotate(28) scale(0.8096)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(36.40,82.00) rotate(-25) scale(0.9)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(43.60,82.00) rotate(25) scale(0.9)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(36.20,75.00) rotate(-28) scale(0.782)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(40.00,77.00) rotate(0) scale(0.85)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(43.80,75.00) rotate(28) scale(0.782)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(36.80,68.00) rotate(-25) scale(0.8)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(43.20,68.00) rotate(25) scale(0.8)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(36.60,61.00) rotate(-28) scale(0.6900000000000001)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(40.00,63.00) rotate(0) scale(0.75)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(43.40,61.00) rotate(28) scale(0.6900000000000001)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(37.20,54.00) rotate(-25) scale(0.68)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(42.80,54.00) rotate(25) scale(0.68)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(37.00,47.00) rotate(-28) scale(0.5704)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(40.00,49.00) rotate(0) scale(0.62)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(43.00,47.00) rotate(28) scale(0.5704)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(37.60,40.00) rotate(-25) scale(0.55)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(42.40,40.00) rotate(25) scale(0.55)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(40.00,33.00) rotate(0) scale(0.5)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g><g transform="translate(40.00,27.00) rotate(0) scale(0.4)"><ellipse cx="-1.1" cy="0" rx="3.6" ry="6.6" style="fill:var(--c-bud,#D9CDF5)"/><ellipse cx="1.4" cy="0.5" rx="3.0" ry="6.0" style="fill:var(--c-bud-shade,#BCA8E6)"/><ellipse cx="-2.2" cy="-2.6" rx="1.3" ry="2.4" style="fill:var(--c-bud-hilite,#F1EBFB)" opacity="0.55"/></g>'
+      // Stage 3: full plant — eight whorls; the flower head dominates
+      // the plant's overall height
+      ground(21, 4.6) + stemShape(48, 2.5, 1.1) +
+        leafShape(37.40, 117.00, -33, 40.0, 7.6) + leafShape(42.60, 114.00, 31, 37.0, 7.2) +
+        spike([[103.0, 6.27, 0.950], [94.1, 6.14, 0.930], [85.4, 5.89, 0.890], [77.0, 5.57, 0.840],
+               [69.1, 5.12, 0.780], [61.8, 4.61, 0.700], [55.2, 4.03, 0.610], [49.5, 3.33, 0.500]])
     ];
   }()),
 
   // ---- BAMBOO (Chores) ----
-  chores: [
-    // Stage 0: Young node emerging
-    '<ellipse cx="40" cy="121" rx="10" ry="2.5" style="fill:var(--c-shadow,rgba(0,0,0,0.12))"/>' +
-    '<rect x="36" y="108" width="8" height="13" rx="4" style="fill:var(--c-culm-light,#8FAF50)"/>' +
-    '<rect x="35.5" y="105" width="9" height="4" rx="0" style="fill:var(--c-culm-mid,#6A8830)"/>' +
-    '<rect x="36" y="112" width="8" height="2.5" rx="0" style="fill:var(--c-culm-mid,#6A8830)"/>',
+  // Rebuilt from the reference illustration: ONE culm at every stage,
+  // grown from real tapering internode segments (not stacked rects),
+  // banded by slightly-overhanging tan node collars, and every leaf
+  // is grown off a drawn twig so nothing floats detached. Palette is
+  // medium pastel green — soft, never neon.
+  chores: (function () {
 
-    // Stage 1: Single bamboo shoot with leaves
-    '<ellipse cx="40" cy="122" rx="12" ry="3" style="fill:var(--c-shadow,rgba(0,0,0,0.12))"/>' +
-    '<rect x="36.5" y="82" width="7" height="40" rx="3.5" style="fill:var(--c-culm,#7A9840)"/>' +
-    '<rect x="36.5" y="106" width="7" height="3.5" rx="0" style="fill:var(--c-node,#5A7828)"/>' +
-    '<rect x="36.5" y="93" width="7" height="3.5" rx="0" style="fill:var(--c-node,#5A7828)"/>' +
-    '<ellipse cx="28" cy="80" rx="11" ry="4" style="fill:var(--c-leaf,#8FBF50)" transform="rotate(-30,28,80)"/>' +
-    '<ellipse cx="52" cy="76" rx="11" ry="4" style="fill:var(--c-leaf-dark,#7AAF40)" transform="rotate(30,52,76)"/>',
+    var LEAF_L = 'var(--c-leaf-light,#C6E4A2)';
+    var LEAF_M = 'var(--c-leaf,#96CC72)';
+    var LEAF_D = 'var(--c-leaf-dark,#6BA854)';
 
-    // Stage 2: Two stalks with leaves
-    '<ellipse cx="40" cy="122" rx="18" ry="4" style="fill:var(--c-shadow,rgba(0,0,0,0.14))"/>' +
-    '<rect x="28" y="72" width="7" height="50" rx="3.5" style="fill:var(--c-culm-mid,#6A8830)"/>' +
-    '<rect x="28" y="106" width="7" height="3.5" rx="0" style="fill:var(--c-node-dark,#4A6820)"/>' +
-    '<rect x="28" y="90" width="7" height="3.5" rx="0" style="fill:var(--c-node-dark,#4A6820)"/>' +
-    '<rect x="28" y="78" width="7" height="3" rx="0" style="fill:var(--c-node-dark,#4A6820)"/>' +
-    '<rect x="45" y="78" width="7" height="44" rx="3.5" style="fill:var(--c-culm,#7A9840)"/>' +
-    '<rect x="45" y="110" width="7" height="3.5" rx="0" style="fill:var(--c-node,#5A7828)"/>' +
-    '<rect x="45" y="94" width="7" height="3.5" rx="0" style="fill:var(--c-node,#5A7828)"/>' +
-    '<rect x="45" y="82" width="7" height="3" rx="0" style="fill:var(--c-node,#5A7828)"/>' +
-    '<ellipse cx="17" cy="69" rx="14" ry="4.5" style="fill:var(--c-leaf,#8FBF50)" transform="rotate(-30,17,69)"/>' +
-    '<ellipse cx="38" cy="65" rx="13" ry="4" style="fill:var(--c-leaf-dark,#7AAF40)" transform="rotate(25,38,65)"/>' +
-    '<ellipse cx="40" cy="74" rx="13" ry="4" style="fill:var(--c-leaf,#8FBF50)" transform="rotate(-22,40,74)"/>' +
-    '<ellipse cx="60" cy="70" rx="14" ry="4.5" style="fill:var(--c-leaf-dark,#7AAF40)" transform="rotate(22,60,70)"/>',
+    function n(v) { return Math.round(v * 100) / 100; }
 
-    // Stage 3: Three tall stalks
-    '<ellipse cx="40" cy="122" rx="24" ry="5.5" style="fill:var(--c-shadow,rgba(0,0,0,0.17))"/>' +
-    '<rect x="20" y="55" width="7.5" height="67" rx="3.75" style="fill:var(--c-culm-mid,#6A8830)"/>' +
-    '<rect x="20" y="105" width="7.5" height="3.5" rx="0" style="fill:var(--c-node-dark,#4A6820)"/>' +
-    '<rect x="20" y="86" width="7.5" height="3.5" rx="0" style="fill:var(--c-node-dark,#4A6820)"/>' +
-    '<rect x="20" y="68" width="7.5" height="3.5" rx="0" style="fill:var(--c-node-dark,#4A6820)"/>' +
-    '<rect x="36.5" y="40" width="7.5" height="82" rx="3.75" style="fill:var(--c-culm,#7A9840)"/>' +
-    '<rect x="36.5" y="106" width="7.5" height="3.5" rx="0" style="fill:var(--c-node,#5A7828)"/>' +
-    '<rect x="36.5" y="86" width="7.5" height="3.5" rx="0" style="fill:var(--c-node,#5A7828)"/>' +
-    '<rect x="36.5" y="66" width="7.5" height="3.5" rx="0" style="fill:var(--c-node,#5A7828)"/>' +
-    '<rect x="36.5" y="47" width="7.5" height="3.5" rx="0" style="fill:var(--c-node,#5A7828)"/>' +
-    '<rect x="53" y="50" width="7.5" height="72" rx="3.75" style="fill:var(--c-culm-mid,#6A8830)"/>' +
-    '<rect x="53" y="105" width="7.5" height="3.5" rx="0" style="fill:var(--c-node-dark,#4A6820)"/>' +
-    '<rect x="53" y="86" width="7.5" height="3.5" rx="0" style="fill:var(--c-node-dark,#4A6820)"/>' +
-    '<rect x="53" y="66" width="7.5" height="3.5" rx="0" style="fill:var(--c-node-dark,#4A6820)"/>' +
-    '<rect x="53" y="54" width="7.5" height="3.5" rx="0" style="fill:var(--c-node-dark,#4A6820)"/>' +
-    '<ellipse cx="8" cy="52" rx="16" ry="5" style="fill:var(--c-leaf,#8FBF50)" transform="rotate(-32,8,52)"/>' +
-    '<ellipse cx="30" cy="48" rx="15" ry="4.5" style="fill:var(--c-leaf-dark,#7AAF40)" transform="rotate(24,30,48)"/>' +
-    '<ellipse cx="24" cy="38" rx="15" ry="4.5" style="fill:var(--c-leaf-light,#9AC860)" transform="rotate(-18,24,38)"/>' +
-    '<ellipse cx="44" cy="36" rx="16" ry="5" style="fill:var(--c-leaf,#8FBF50)" transform="rotate(-22,44,36)"/>' +
-    '<ellipse cx="62" cy="42" rx="16" ry="5" style="fill:var(--c-leaf-dark,#7AAF40)" transform="rotate(18,62,42)"/>' +
-    '<ellipse cx="34" cy="65" rx="13" ry="4" style="fill:var(--c-leaf-dark,#7AAF40)" transform="rotate(32,34,65)"/>' +
-    '<ellipse cx="58" cy="62" rx="13" ry="4" style="fill:var(--c-leaf,#8FBF50)" transform="rotate(-28,58,62)"/>' +
-    '<ellipse cx="44" cy="52" rx="14" ry="4.5" style="fill:var(--c-leaf-light,#9AC860)" transform="rotate(26,44,52)"/>'
-  ],
+    // ---- one lance-shaped leaf -------------------------------------
+    // The base sits exactly at (x,y) — always a point on a twig — and
+    // the blade tapers to a real point. Two-tone: the lower half is
+    // repainted one step darker so the midrib reads as a crease,
+    // like the reference art, instead of a flat ellipse.
+    function leaf(x, y, ang, L, W, top, under) {
+      return (
+        '<g transform="translate(' + n(x) + ',' + n(y) + ') rotate(' + n(ang) + ')">' +
+          '<path d="M0,0C' + n(L * 0.20) + ',' + n(-W) + ' ' + n(L * 0.66) + ',' + n(-W * 0.74) + ' ' + n(L) + ',0' +
+            'C' + n(L * 0.66) + ',' + n(W * 0.74) + ' ' + n(L * 0.20) + ',' + n(W) + ' 0,0Z"' +
+            ' style="fill:' + top + '"/>' +
+          '<path d="M0,0C' + n(L * 0.20) + ',' + n(W) + ' ' + n(L * 0.66) + ',' + n(W * 0.74) + ' ' + n(L) + ',0Z"' +
+            ' style="fill:' + under + '"/>' +
+          '<path d="M' + n(L * 0.06) + ',0L' + n(L * 0.88) + ',0" fill="none"' +
+            ' style="stroke:' + LEAF_L + '" stroke-width="0.35" opacity="0.45"/>' +
+        '</g>'
+      );
+    }
 
-  // ---- CLOVER (Misc) — pointed-heart leaflets, no circle "blobbiness" ----
+    // ---- a twig with its leaves attached ---------------------------
+    // Drawn right-facing in local space, then mirrored with
+    // scale(-1,1) for the left side so both sides are built the same
+    // way. Every leaf base is pinned to a point ON the twig curve.
+    // `pale` swaps the cluster to the lighter pair, which is how the
+    // canopy gets depth without extra outlines.
+    function spray(x, y, dir, s, pale) {
+      var top   = pale ? LEAF_L : LEAF_M;
+      var under = pale ? LEAF_M : LEAF_D;
+
+      return (
+        '<g transform="translate(' + n(x) + ',' + n(y) + ') scale(' + n(dir * s) + ',' + n(s) + ')">' +
+          '<path d="M0,0Q7,-2.5 13.5,-8" fill="none"' +
+            ' style="stroke:var(--c-culm-mid,#74AC55)" stroke-width="1.2" stroke-linecap="round"/>' +
+          '<path d="M6.5,-2.6Q9,-5.5 10.2,-9.6" fill="none"' +
+            ' style="stroke:var(--c-culm-mid,#74AC55)" stroke-width="0.9" stroke-linecap="round"/>' +
+          leaf(6.5, -2.6, 26, 14, 3.8, LEAF_M, LEAF_D) +
+          leaf(10.2, -9.6, -72, 15.5, 4.1, top, under) +
+          leaf(13.5, -8, -38, 18, 4.7, under, LEAF_D) +
+          leaf(13.5, -8, -4, 19.5, 5, top, under) +
+        '</g>'
+      );
+    }
+
+    // ---- the crown tuft at the very tip ----------------------------
+    function crown(x, y, s) {
+      return (
+        '<g transform="translate(' + n(x) + ',' + n(y) + ') scale(' + n(s) + ')">' +
+          '<path d="M0,0L-1.5,-5" fill="none" style="stroke:var(--c-culm-mid,#74AC55)"' +
+            ' stroke-width="1" stroke-linecap="round"/>' +
+          leaf(0, -0.5, -62, 15, 4, LEAF_M, LEAF_D) +
+          leaf(-1.5, -5, -96, 16.5, 4.2, LEAF_L, LEAF_M) +
+          leaf(0, -1, -126, 14, 3.8, LEAF_M, LEAF_D) +
+        '</g>'
+      );
+    }
+
+    // ---- the culm --------------------------------------------------
+    // Internodes are individual segments that narrow as they rise, so
+    // the stalk actually tapers and carries a lit/shaded side rather
+    // than reading as one flat bar. `ys` lists node heights from the
+    // ground up; the last entry is the top of the stalk, which gets a
+    // rounded cap.
+    function culm(cx, baseY, ys, wB, wT) {
+      var span = baseY - ys[ys.length - 1];
+      function hw(y) { return wB + (wT - wB) * ((baseY - y) / span); }
+
+      var out = '';
+
+      for (var i = 0; i < ys.length; i++) {
+        var y0 = (i === 0) ? baseY : ys[i - 1];
+        var y1 = ys[i];
+        var w0 = hw(y0);
+        var w1 = hw(y1);
+        var capped = (i === ys.length - 1);
+        var lift = capped ? 1.4 : 0;
+        var top = capped
+          ? 'L' + n(cx - w1) + ',' + n(y1 + 1.6) + 'Q' + n(cx - w1) + ',' + n(y1 - 0.5) + ' ' + n(cx) + ',' + n(y1 - 0.7) +
+            'Q' + n(cx + w1) + ',' + n(y1 - 0.5) + ' ' + n(cx + w1) + ',' + n(y1 + 1.6)
+          : 'L' + n(cx - w1) + ',' + n(y1) + 'L' + n(cx + w1) + ',' + n(y1);
+
+        out +=
+          '<path d="M' + n(cx - w0) + ',' + n(y0) + top + 'L' + n(cx + w0) + ',' + n(y0) + 'Z"' +
+            ' style="fill:var(--c-culm,#93C86E)"/>' +
+          '<path d="M' + n(cx - w0) + ',' + n(y0) + 'L' + n(cx - w1) + ',' + n(y1 + lift) +
+            'L' + n(cx - w1 * 0.42) + ',' + n(y1 + lift) + 'L' + n(cx - w0 * 0.46) + ',' + n(y0) + 'Z"' +
+            ' style="fill:var(--c-culm-light,#B7DC92)"/>' +
+          '<path d="M' + n(cx + w0 * 0.5) + ',' + n(y0) + 'L' + n(cx + w1 * 0.48) + ',' + n(y1 + lift) +
+            'L' + n(cx + w1) + ',' + n(y1 + lift) + 'L' + n(cx + w0) + ',' + n(y0) + 'Z"' +
+            ' style="fill:var(--c-culm-mid,#74AC55)"/>';
+      }
+
+      for (var j = 0; j < ys.length - 1; j++) {
+        var ny = ys[j];
+        var w  = hw(ny);
+        out +=
+          // each internode darkens slightly toward its base, the way
+          // the reference art shades its segments
+          '<path d="M' + n(cx - w) + ',' + n(ny) + 'L' + n(cx + w) + ',' + n(ny) +
+            'L' + n(cx + w) + ',' + n(ny - 4.5) + 'Q' + n(cx) + ',' + n(ny - 2.6) + ' ' + n(cx - w) + ',' + n(ny - 4.5) + 'Z"' +
+            ' style="fill:var(--c-culm-mid,#74AC55)" opacity="0.35"/>' +
+          '<path d="M' + n(cx - w - 0.9) + ',' + n(ny + 2.3) +
+            'Q' + n(cx) + ',' + n(ny + 3.1) + ' ' + n(cx + w + 0.9) + ',' + n(ny + 2.3) +
+            'L' + n(cx + w + 0.5) + ',' + n(ny - 0.7) +
+            'Q' + n(cx) + ',' + n(ny - 1.4) + ' ' + n(cx - w - 0.5) + ',' + n(ny - 0.7) + 'Z"' +
+            ' style="fill:var(--c-node,#B79A6A)"/>' +
+          '<path d="M' + n(cx - w - 0.85) + ',' + n(ny + 2.3) +
+            'Q' + n(cx) + ',' + n(ny + 3.1) + ' ' + n(cx + w + 0.85) + ',' + n(ny + 2.3) + '" fill="none"' +
+            ' style="stroke:var(--c-node-dark,#94764A)" stroke-width="0.85" stroke-linecap="round"/>';
+      }
+
+      return out;
+    }
+
+    function ground(rx, ry, alpha) {
+      return '<ellipse cx="40" cy="121.5" rx="' + rx + '" ry="' + ry + '"' +
+             ' style="fill:var(--c-shadow,rgba(0,0,0,' + alpha + '))"/>';
+    }
+
+    return [
+      // Stage 0: a sprouting shoot — overlapping pointed sheaths still
+      // wrapped shut, first tan node ring showing at the soil line.
+      ground(9, 2.4, 0.1) +
+      '<path d="M35.2,121C34.4,113 35.7,105.8 40,99.6C44.3,105.8 45.6,113 44.8,121Z"' +
+        ' style="fill:var(--c-culm,#93C86E)"/>' +
+      '<path d="M35.2,121C34.4,113 35.7,105.8 40,99.6L40,121Z"' +
+        ' style="fill:var(--c-culm-light,#B7DC92)"/>' +
+      '<path d="M36,121C32.8,116.2 31.9,110.6 33.5,106C36.2,110 37.5,115.7 37.8,121Z"' +
+        ' style="fill:var(--c-culm-mid,#74AC55)"/>' +
+      '<path d="M44,121C46.9,116.6 47.7,111.8 46.4,107.8C43.9,111.4 42.6,116.2 42.3,121Z"' +
+        ' style="fill:var(--c-culm-mid,#74AC55)"/>' +
+      '<path d="M40,104.2C41.6,108 42.2,113.4 41.8,121L38.2,121C37.8,113.4 38.4,108 40,104.2Z"' +
+        ' style="fill:var(--c-leaf,#96CC72)" opacity="0.55"/>' +
+      '<path d="M34.8,117.6Q40,116.5 45.2,117.6L44.9,114.6Q40,113.6 35.1,114.6Z"' +
+        ' style="fill:var(--c-node,#B79A6A)"/>' +
+      '<path d="M34.8,117.6Q40,116.5 45.2,117.6" fill="none"' +
+        ' style="stroke:var(--c-node-dark,#94764A)" stroke-width="0.85" stroke-linecap="round"/>',
+
+      // Stage 1: first real culm — three internodes, a twig each side
+      // and a small crown tuft.
+      ground(11, 2.9, 0.11) +
+      culm(40, 121, [109, 98, 88], 4.4, 3.6) +
+      spray(43.9, 106.5,  1, 0.6,  false) +
+      spray(36.1,  96,   -1, 0.72, true) +
+      crown(40, 88, 0.7),
+
+      // Stage 2: taller single culm, five internodes, alternating twigs.
+      ground(14, 3.4, 0.13) +
+      culm(40, 121, [110, 98, 86, 74, 62], 5, 3.8) +
+      spray(44.5, 107,  1, 0.62, false) +
+      spray(35.5,  95, -1, 0.76, true) +
+      spray(44.2,  83,  1, 0.86, false) +
+      spray(35.8,  71, -1, 0.8,  true) +
+      crown(40, 62, 0.88),
+
+      // Stage 3: mature culm — seven internodes, bare at the base like
+      // the reference, full alternating canopy up top.
+      ground(17, 4, 0.15) +
+      culm(40, 121, [110, 98, 86, 74, 62, 50, 38], 5.6, 4) +
+      spray(45.1,  95,  1, 0.68, false) +
+      spray(34.9,  83, -1, 0.8,  true) +
+      spray(44.8,  71,  1, 0.92, false) +
+      spray(35.2,  59, -1, 0.98, true) +
+      spray(44.5,  47,  1, 0.9,  false) +
+      spray(35.5,  40, -1, 0.72, true) +
+      crown(40, 38, 1)
+    ];
+  }()),
+
+  // ---- CLOVER (Finance) — pointed-heart leaflets, no circle "blobbiness" ----
   // Each leaflet is a single closed heart path (tip toward the hub, notch at
   // the outer tip) instead of overlapping circles, so the clover actually
   // comes to a point at each lobe. Two half-heart fills (split down the
@@ -1624,7 +1872,7 @@ var PLANT_SVG_DATA = {
   // copy underneath adds a soft cast shadow instead of a flat outline.
   // Palette: #0F291E (deep shade) · #274F3C / #3E6B54 / #5C8267 (mid greens)
   // #8A9A86 (soft highlight) · #E5A93C (ochre accent) · #F5F0EB (cream vein line)
-  misc: [
+  finance: [
     // Stage 0: seed — two-tone capsule, no vein/accent clutter
     '<ellipse cx="40" cy="121" rx="8" ry="2.5" style="fill:var(--c-shadow,rgba(0,0,0,0.11))"/>' +
     '<ellipse cx="40" cy="115" rx="4.6" ry="6.2" style="fill:var(--c-outline,#0F291E)"/>' +
@@ -1699,7 +1947,174 @@ var PLANT_SVG_DATA = {
     '<circle cx="22" cy="80" r="0.8" style="fill:var(--c-bloom,#F5F0EB)" opacity="0.07"/>' +
     '<circle cx="58" cy="78" r="0.9" style="fill:var(--c-bloom,#F5F0EB)" opacity="0.07"/>' +
     '<circle cx="40" cy="45" r="0.8" style="fill:var(--c-bloom,#F5F0EB)" opacity="0.08"/>'
-  ]
+  ],
+
+  // ---- MUSHROOM (Misc) ----
+  // Modelled on the flat-illustration reference: a broad, slightly
+  // off-centre cap over a swollen tapering stalk, with soft apricot
+  // gill tabs tucked under the rim. No outlines anywhere — the cap's
+  // shading is cut along its own silhouette (the outline curves are
+  // split with de Casteljau) so the dark side can never spill past
+  // the edge, and the speckles are hand-wobbled paths rather than
+  // circles. Palette is one step softer than the reference: coral
+  // instead of pillarbox red, cream instead of white.
+  misc: (function () {
+
+    var CAP_L  = 'var(--c-cap-light,#F0967F)';
+    var CAP_M  = 'var(--c-cap,#E4715E)';
+    var CAP_D  = 'var(--c-cap-dark,#C4574A)';
+    var SPOT   = 'var(--c-spot,#F7E9DE)';
+    var STEM_L = 'var(--c-stem-light,#F2DECE)';
+    var STEM_M = 'var(--c-stem,#E0C0AB)';
+    var STEM_D = 'var(--c-stem-dark,#C39C86)';
+
+    function n(v) { return Math.round(v * 100) / 100; }
+
+    // ---- cubic helpers ---------------------------------------------
+    function lerpPt(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
+
+    // de Casteljau split: returns { a: [4 pts before t], b: [4 pts after t] }
+    function splitCubic(p, t) {
+      var q0 = lerpPt(p[0], p[1], t), q1 = lerpPt(p[1], p[2], t), q2 = lerpPt(p[2], p[3], t);
+      var r0 = lerpPt(q0, q1, t), r1 = lerpPt(q1, q2, t);
+      var s  = lerpPt(r0, r1, t);
+      return { a: [p[0], q0, r0, s], b: [s, r1, q2, p[3]] };
+    }
+
+    function C(c) { // "C x1,y1 x2,y2 x3,y3" from a 4-point cubic
+      return 'C' + n(c[1][0]) + ',' + n(c[1][1]) + ' ' + n(c[2][0]) + ',' + n(c[2][1]) +
+             ' ' + n(c[3][0]) + ',' + n(c[3][1]);
+    }
+    function M(p) { return 'M' + n(p[0]) + ',' + n(p[1]); }
+    function L(p) { return 'L' + n(p[0]) + ',' + n(p[1]); }
+
+    // ---- an off-round cream speckle --------------------------------
+    // Deliberately not a circle: each quadrant gets its own radius so
+    // the spot reads as hand-painted rather than stamped.
+    function spot(cx, cy, r, wob) {
+      var k = 0.5523 * r;
+      var a = 1 + (wob || 0) * 0.12, b = 1 - (wob || 0) * 0.09;
+      return '<path d="M' + n(cx - r * a) + ',' + n(cy + r * 0.06) +
+        'C' + n(cx - r * a) + ',' + n(cy + r * 0.06 - k * 1.02) + ' ' + n(cx - k * 0.9) + ',' + n(cy - r * b) + ' ' + n(cx + r * 0.05) + ',' + n(cy - r * b) +
+        'C' + n(cx + k * 0.96) + ',' + n(cy - r * b) + ' ' + n(cx + r) + ',' + n(cy - k * 0.86) + ' ' + n(cx + r) + ',' + n(cy + r * 0.04) +
+        'C' + n(cx + r) + ',' + n(cy + k * 1.0) + ' ' + n(cx + k * 0.88) + ',' + n(cy + r * 1.02) + ' ' + n(cx - r * 0.04) + ',' + n(cy + r * 1.02) +
+        'C' + n(cx - k * 1.02) + ',' + n(cy + r * 1.02) + ' ' + n(cx - r * a) + ',' + n(cy + k * 0.94) + ' ' + n(cx - r * a) + ',' + n(cy + r * 0.06) + 'Z"' +
+        ' style="fill:' + SPOT + '"/>';
+    }
+
+    // ---- the cap ----------------------------------------------------
+    // Built from two mirrored cubics meeting at the apex with a gently
+    // sagging underside. The shading is cut along the real outline
+    // (split with de Casteljau) so the dark side can never bleed past
+    // the silhouette — no stroke needed anywhere.
+    function cap(cx, rimY, hw, h) {
+      var Lp = [cx - hw, rimY];
+      var Rp = [cx + hw, rimY];
+      var ax = cx - hw * 0.06;              // apex sits a little left of centre
+      var Ap = [ax, rimY - h];
+
+      var left  = [Lp, [cx - hw + hw * 0.031, rimY - h * 0.55], [ax - hw * 0.52, rimY - h], Ap];
+      var right = [Ap, [ax + hw * 0.60, rimY - h], [cx + hw * 0.97, rimY - h * 0.58], Rp];
+      var bottomQ = 'Q' + n(cx) + ',' + n(rimY + hw * 0.203) + ' ' + n(cx - hw) + ',' + n(rimY);
+
+      var body =
+        '<path d="' + M(Lp) + C(left) + C(right) + bottomQ + 'Z" style="fill:' + CAP_M + '"/>';
+
+      // shaded lower-left, cut on a diagonal across the cap face
+      var lHalf = splitCubic(left, 0.5).a;
+      var rTail = splitCubic(right, 0.85).b;
+      var shade =
+        '<path d="' + M(Lp) + C(lHalf) + L(rTail[0]) + C(rTail) + bottomQ + 'Z"' +
+        ' style="fill:' + CAP_D + '"/>';
+
+      // lit sliver riding the top-right rim
+      var rHead = splitCubic(right, 0.5).a;
+      var Hp = rHead[3];
+      var lit =
+        '<path d="' + M(Ap) + C(rHead) +
+        'C' + n(Hp[0] - hw * 0.30) + ',' + n(Hp[1] - h * 0.10) + ' ' +
+              n(Ap[0] + hw * 0.18) + ',' + n(Ap[1] + h * 0.16) + ' ' + n(Ap[0]) + ',' + n(Ap[1]) + 'Z"' +
+        ' style="fill:' + CAP_L + '"/>';
+
+      return body + shade + lit;
+    }
+
+    // ---- the stalk --------------------------------------------------
+    // One closed silhouette that swells toward the soil, then a lit
+    // right face and a shaded left crescent laid inside it.
+    function stalk(cx, topY, groundY, tw, bw) {
+      var H  = groundY - topY;
+      var y1 = topY + H * 0.295, y2 = topY + H * 0.526,
+          y3 = topY + H * 0.737, y4 = topY + H * 0.916;
+
+      var outline =
+        'M' + n(cx - tw) + ',' + n(topY) +
+        'C' + n(cx - tw - bw * 0.08) + ',' + n(y1) + ' ' + n(cx - bw * 0.92) + ',' + n(y2) + ' ' + n(cx - bw) + ',' + n(y3) +
+        'C' + n(cx - bw * 1.08) + ',' + n(y4) + ' ' + n(cx - bw * 0.65) + ',' + n(groundY) + ' ' + n(cx) + ',' + n(groundY) +
+        'C' + n(cx + bw * 0.65) + ',' + n(groundY) + ' ' + n(cx + bw * 1.08) + ',' + n(y4) + ' ' + n(cx + bw) + ',' + n(y3) +
+        'C' + n(cx + bw * 0.92) + ',' + n(y2) + ' ' + n(cx + tw + bw * 0.08) + ',' + n(y1) + ' ' + n(cx + tw) + ',' + n(topY) + 'Z';
+
+      var litFace =
+        'M' + n(cx) + ',' + n(topY) + 'L' + n(cx + tw) + ',' + n(topY) +
+        'C' + n(cx + tw + bw * 0.08) + ',' + n(y1) + ' ' + n(cx + bw * 0.92) + ',' + n(y2) + ' ' + n(cx + bw) + ',' + n(y3) +
+        'C' + n(cx + bw * 1.08) + ',' + n(y4) + ' ' + n(cx + bw * 0.65) + ',' + n(groundY) + ' ' + n(cx) + ',' + n(groundY) + 'Z';
+
+      var shadeFace =
+        'M' + n(cx - tw) + ',' + n(topY) +
+        'C' + n(cx - tw - bw * 0.08) + ',' + n(y1) + ' ' + n(cx - bw * 0.92) + ',' + n(y2) + ' ' + n(cx - bw) + ',' + n(y3) +
+        'C' + n(cx - bw * 1.08) + ',' + n(y4) + ' ' + n(cx - bw * 0.65) + ',' + n(groundY) + ' ' + n(cx) + ',' + n(groundY) +
+        'C' + n(cx - bw * 0.42) + ',' + n(groundY - H * 0.02) + ' ' + n(cx - bw * 0.62) + ',' + n(y3) + ' ' + n(cx - tw * 0.45) + ',' + n(topY) + 'Z';
+
+      return '<path d="' + outline + '" style="fill:' + STEM_M + '"/>' +
+             '<path d="' + litFace + '" style="fill:' + STEM_L + '"/>' +
+             '<path d="' + shadeFace + '" style="fill:' + STEM_D + '"/>';
+    }
+
+    function ground(rx, ry, alpha) {
+      return '<ellipse cx="40" cy="121.5" rx="' + rx + '" ry="' + ry + '"' +
+             ' style="fill:var(--c-shadow,rgba(0,0,0,' + alpha + '))"/>';
+    }
+
+    // spots placed in cap space: u across (-1..1 of half-width),
+    // v up from the rim (0..1 of cap height), r as a share of half-width
+    function speckles(cx, rimY, hw, h, list) {
+      var out = '';
+      for (var i = 0; i < list.length; i++) {
+        var s = list[i];
+        out += spot(cx + s[0] * hw, rimY - s[1] * h, s[2] * hw, s[3] || 0);
+      }
+      return out;
+    }
+
+    function shroom(cfg) {
+      return ground(cfg.gr[0], cfg.gr[1], cfg.gr[2]) +
+             stalk(40, cfg.rimY - cfg.h * 0.12, 121.5, cfg.tw, cfg.bw) +
+             cap(40, cfg.rimY, cfg.hw, cfg.h) +
+             speckles(40, cfg.rimY, cfg.hw, cfg.h, cfg.spots) +
+             (cfg.stemSpot ? spot(cfg.stemSpot[0], cfg.stemSpot[1], cfg.stemSpot[2], 1) : '');
+    }
+
+    return [
+      shroom({
+        gr: [9, 2.4, 0.10], rimY: 118, hw: 9.4, h: 9.6, tw: 3.4, bw: 4.6,
+        spots: [[-0.2, 0.5, 0.26, 1], [0.42, 0.24, 0.17, 0]],
+      }),
+      shroom({
+        gr: [12, 3.0, 0.12], rimY: 106, hw: 15.5, h: 15.4, tw: 4, bw: 6.6,
+        spots: [[-0.24, 0.46, 0.26, 1], [0.46, 0.62, 0.16, 0], [0.62, 0.2, 0.13, 1]],
+      }),
+      shroom({
+        gr: [15, 3.6, 0.14], rimY: 92, hw: 23.5, h: 22.8, tw: 5, bw: 9.6,
+        spots: [[-0.24, 0.47, 0.27, 1], [0.48, 0.6, 0.17, 0], [0.14, 0.84, 0.1, 1], [-0.76, 0.21, 0.13, 0]],
+      }),
+      shroom({
+        gr: [19, 4.4, 0.16], rimY: 78, hw: 32, h: 30, tw: 6, bw: 13,
+        spots: [[-0.22, 0.48, 0.28, 1], [0.5, 0.62, 0.17, 0], [0.13, 0.85, 0.1, 1],
+                [-0.78, 0.22, 0.14, 0], [0.8, 0.2, 0.11, 1]],
+        stemSpot: [45.5, 107, 3.4],
+      }),
+    ];
+  }()),
 };
 
 
@@ -1741,7 +2156,9 @@ var PLANT_SVG_DATA = {
 //   sleep        bud bud-shade bud-hilite stem stem-light
 //   chores       culm-light culm culm-mid node node-dark leaf-light
 //                leaf leaf-dark
-//   misc         leaf leaf-mid leaf-dark outline sheen bloom
+//   finance      leaf leaf-mid leaf-dark outline sheen bloom
+//   misc         cap-light cap cap-dark spot gill stem-light
+//                stem stem-dark
 // Every species also has --c-shadow for the ground shadow.
 // ============================================
 
@@ -1778,16 +2195,22 @@ var PLANT_ANCHORS = {
     { canopy: [40,  50], top: [40,  25], base: [40, 121] },
   ],
   chores: [
-    { canopy: [40, 112], top: [40, 105], base: [40, 121] },
-    { canopy: [40,  88], top: [40,  76], base: [40, 121] },
-    { canopy: [40,  78], top: [40,  63], base: [40, 121] },
-    { canopy: [40,  58], top: [40,  38], base: [40, 121] },
+    { canopy: [40, 110], top: [40, 100], base: [40, 121] },
+    { canopy: [40,  96], top: [40,  76], base: [40, 121] },
+    { canopy: [40,  80], top: [40,  48], base: [40, 121] },
+    { canopy: [40,  62], top: [40,  22], base: [40, 121] },
   ],
-  misc: [
+  finance: [
     { canopy: [40, 113], top: [40, 108], base: [40, 121] },
     { canopy: [40,  94], top: [40,  72], base: [40, 121] },
     { canopy: [40,  88], top: [40,  62], base: [40, 121] },
     { canopy: [40,  66], top: [40,  30], base: [40, 121] },
+  ],
+  misc: [
+    { canopy: [40, 113], top: [40, 108], base: [40, 121] },
+    { canopy: [40,  98], top: [40,  91], base: [40, 121] },
+    { canopy: [40,  81], top: [40,  69], base: [40, 121] },
+    { canopy: [40,  63], top: [40,  48], base: [40, 121] },
   ],
 };
 
@@ -2025,7 +2448,7 @@ var PLANT_SKINS = {
       id: 'classic',
       name: 'Green Culm',
       note: 'The bamboo as first grown.',
-      swatch: ['#9AC860', '#7A9840', '#4A6820'],
+      swatch: ['#C6E4A2', '#93C86E', '#B79A6A'],
       vars: {},
     },
     {
@@ -2064,7 +2487,7 @@ var PLANT_SKINS = {
     },
   ],
 
-  misc: [
+  finance: [
     {
       id: 'classic',
       name: 'Field Clover',
@@ -2105,6 +2528,16 @@ var PLANT_SKINS = {
                  skinSparkle(a.canopy[0] + 3,  a.canopy[1] - 30, 1.5, '#FFFFFF', 0.45);
         },
       },
+    },
+  ],
+
+  misc: [
+    {
+      id: 'classic',
+      name: 'Coral Cap',
+      note: 'The mushroom as first grown.',
+      swatch: ['#E4715E', '#C4574A', '#F7E9DE'],
+      vars: {},
     },
   ],
 };
@@ -2729,12 +3162,13 @@ function renderGarden() {
     var growthOnlyScale = scale;
     scale = scale * layout.depthScale;
 
-    // Height reflects the plant's actual on-screen size right now —
-    // `scale` at this point already includes the growth-stage size,
-    // any Daily/Long-Term flourish, AND the depth (foreground/
-    // background) multiplier, i.e. exactly what's driving how tall
-    // the plant's sprite currently renders.
-    var heightMeters = computeHeightMeters(scale);
+    // Height reflects the plant's actual GROWTH only — the growth-
+    // stage size plus any Daily/Long-Term flourish — and deliberately
+    // excludes the depth (foreground/background) multiplier. Depth is
+    // just a perspective illusion from where the plant happens to be
+    // placed in the garden; dragging it front-to-back doesn't change
+    // the plant itself, so it must not change its reported height.
+    var heightMeters = computeHeightMeters(growthOnlyScale);
 
     // Ground-anchored wrapper — position only, never scales.
     var wrap = document.createElement('div');

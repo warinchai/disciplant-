@@ -555,12 +555,20 @@ body {
    while it's hovered, showing its current height in meters. Sits
    outside .plant-visual so it stays a fixed, readable size no matter
    how big/small the plant itself has scaled. */
+/* Positioned at ~40% of the plant's actual rendered height rather than
+   a fixed offset above the layout box. transform: scale() on
+   .plant-visual doesn't affect layout size, so bottom:100% never
+   tracked growth/depth — this reads the same --plant-scale custom
+   property the plant's own scale transform uses (see .plant-visual),
+   so the tag rises and falls together with however big the plant is
+   actually drawn on screen right now, live during drag too. 195px is
+   the default rendered pixel height of the plant art (getPlantSVG's
+   default width=120 → height=195); 0.4 = 40% up that height. */
 .plant-height-tag {
   position: absolute;
   left: 50%;
-  bottom: 100%;
+  bottom: calc(var(--plant-scale, 1) * 78px);
   transform: translateX(-50%) translateY(4px);
-  margin-bottom: 6px;
   padding: 3px 9px;
   border-radius: 20px;
   background: rgba(20, 16, 10, 0.86);
@@ -586,6 +594,11 @@ body {
   .plant-height-tag {
     font-size: 0.66rem;
     padding: 2px 7px;
+    /* Mobile scales .plant-visual by an extra 0.60x on top of
+       --plant-scale (see .plant-visual below) — match it here so the
+       tag still lands at ~40% of the plant's actual on-screen height
+       instead of floating too high above a smaller mobile plant. */
+    bottom: calc(var(--plant-scale, 1) * 46.8px);
   }
 }
 
@@ -1626,6 +1639,7 @@ body {
 .cat-badge[data-category="mindfulness"] { background: #eeeaf8; color: #6858a8; }
 .cat-badge[data-category="sleep"]       { background: #e6eef8; color: #3464a0; }
 .cat-badge[data-category="chores"]      { background: #f4ecde; color: #8a6040; }
+.cat-badge[data-category="finance"]     { background: #e3efe9; color: #2f7d63; }
 .cat-badge[data-category="misc"]        { background: #f6e8e8; color: #9c4c48; }
 
 .task-item button.remove {
@@ -2708,6 +2722,7 @@ body {
 .plant-card[data-category="mindfulness"] { border-top-color: #6858a8; }
 .plant-card[data-category="sleep"]       { border-top-color: #3464a0; }
 .plant-card[data-category="chores"]      { border-top-color: #8a6040; }
+.plant-card[data-category="finance"]     { border-top-color: #2f7d63; }
 .plant-card[data-category="misc"]        { border-top-color: #9c4c48; }
 
 /* Fixed-height stage so every card lines up whatever the plant. */
