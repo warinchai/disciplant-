@@ -1215,6 +1215,82 @@ body {
     0 4px 14px rgba(0, 0, 0, 0.30);
 }
 
+/* ========================================
+   Community counters on the home page
+   Sits between the tagline and the first
+   CTA. Deliberately quiet — it's context,
+   not the point of the page.
+   ======================================== */
+
+.home-stats {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 4px;
+  margin: 26px 0 0;
+  padding: 12px 8px;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 16px;
+  background: rgba(12, 9, 5, 0.42);
+  border: 1px solid rgba(242, 184, 75, 0.20);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* The strip is absent, not blank, until its data arrives — see
+   renderHomeStats() in 08-home-stats.js. `display: none` rather than
+   visibility so it takes up no vertical space and the CTA doesn't
+   jump down when the numbers land. */
+.home-stats.hidden {
+  display: none;
+}
+
+.home-stat {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.home-stat-value {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.34rem;
+  font-weight: 600;
+  line-height: 1;
+  color: #F2B84B;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-stat-label {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: rgba(233, 224, 200, 0.72);
+  text-align: center;
+  line-height: 1.25;
+}
+
+.home-stat-divider {
+  width: 1px;
+  align-self: center;
+  height: 26px;
+  background: rgba(242, 184, 75, 0.22);
+  flex: 0 0 auto;
+}
+
+@media (max-width: 420px) {
+  .home-stats     { gap: 2px; padding: 11px 5px; }
+  .home-stat-value { font-size: 1.16rem; }
+  .home-stat-label { font-size: 0.60rem; letter-spacing: 0.05em; }
+}
+
+
 /* Copy card */
 .home-copy {
   margin: 34px 0 0;
@@ -3224,8 +3300,102 @@ body {
 }
 
 
+/* ========================================
+   Friend garden page — read-only view of
+   one friend's plot. The scene, plants,
+   grass and fence all reuse the Garden
+   page's own classes, so only this page's
+   chrome is new.
+   ======================================== */
+
+/* Transparent overlay above the fixed scene, exactly like .page-garden
+   — clicks must fall through to the garden underneath, so only the
+   real controls opt back in below. */
+.page-friend-garden {
+  background: transparent;
+  pointer-events: none;
+}
+
+.page-friend-garden .site-nav,
+.page-friend-garden .friend-garden-bar {
+  pointer-events: auto;
+}
+
+.page-friend-garden .garden-subnav {
+  pointer-events: auto;
+  justify-content: center;
+  padding: 0 18px 8px;
+}
+
+.friend-garden-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 10px 18px 0;
+}
+
+.friend-garden-title {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 1.16rem;
+  font-weight: 400;
+  color: #FBF7EE;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+  margin: 0;
+}
+
+/* Says plainly that nothing here can be changed — this garden belongs
+   to someone else, and none of it is editable or draggable. */
+.friend-garden-readonly {
+  margin-left: auto;
+  padding: 3px 10px;
+  border: 1px solid rgba(242, 184, 75, 0.45);
+  border-radius: 20px;
+  background: rgba(20, 16, 10, 0.55);
+  color: #F2B84B;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* Staleness note — shown when the summary's date isn't today, i.e.
+   its owner hasn't opened the app yet today. */
+.friend-garden-note {
+  max-width: 640px;
+  margin: 6px auto 0;
+  padding: 0 18px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.80rem;
+  color: rgba(251, 247, 238, 0.82);
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.55);
+}
+
+.friend-garden-note.hidden {
+  display: none;
+}
+
+/* Text only — must not intercept clicks meant for the scene below. */
+.friend-garden-note,
+.page-friend-garden .garden-empty-msg {
+  pointer-events: none;
+}
+
+/* Look, don't touch: setupPlantDrag() is never called on these, so
+   the grab cursor inherited from .garden-plant would be a lie. */
+.friend-plant {
+  cursor: default;
+}
+
+
 @media (max-width: 600px) {
   .friends-content { padding: 12px 14px 72px; }
   .friends-section { padding: 14px 13px 16px; }
   .friend-actions { margin-left: 0; }
+  .friend-garden-bar { padding: 10px 14px 0; }
+  .friend-garden-note { padding: 0 14px; }
+  .friend-garden-title { font-size: 1.02rem; }
 }

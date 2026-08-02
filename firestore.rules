@@ -4,6 +4,13 @@
 // Paste into Firebase Console -> Firestore Database -> Rules,
 // then Publish. Nothing in the app works against the old
 // owner-only ruleset once usernames/friends are in play.
+//
+// Editing this file alone changes NOTHING in production — the
+// deployed rules are whatever was last pasted into the Console.
+// Re-publish after every change here, or viewing a friend's
+// garden fails with permission-denied while everything else
+// keeps working (which is exactly the kind of failure that looks
+// like a code bug).
 // ============================================
 
 rules_version = '2';
@@ -14,9 +21,64 @@ service cloud.firestore {
     function me()         { return request.auth.uid; }
     function changed()    { return request.resource.data.diff(resource.data).affectedKeys(); }
 
+    // Am I on this person's friends list?
+    //
+    // The friends array on THEIR user doc is the authority, not mine —
+    // a rule can only be trusted if it reads state the requester can't
+    // forge, and I can't write to their document except through the
+    // narrow accept-a-request rule below. Note this costs one extra
+    // document read per evaluation (billed, and counted against the
+    // 10-document limit for rule lookups), so it's only called from
+    // the gardenSummaries rules and never from a rule that runs on
+    // every ordinary write.
+    function isFriend(ownerUid) {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/users/$(ownerUid))
+             .data.get('friends', []).hasAny([me()]);
+    }
+
     // ---- Garden data — unchanged, owner only ----
+    // Deliberately NOT opened up to friends. Rules are document-level,
+    // so there is no way to expose growth/streaks from this document
+    // without also exposing every task's raw text and full history.
+    // The friend-visible subset lives in gardenSummaries below.
     match /gardens/{uid} {
       allow read, write: if isSignedIn() && me() == uid;
+    }
+
+    // ---- Public community counters ----
+    // A single document, /stats/global, holding aggregate numbers for
+    // the home page: how many gardeners, how many habits growing, how
+    // many days completed. Nothing in it identifies anybody.
+    //
+    // NO CLIENT MAY EVER WRITE HERE. It is produced entirely by
+    // recompute-stats.js, run by hand through the Admin SDK, which
+    // bypasses these rules altogether — so `allow write: if false`
+    // costs the script nothing and removes the whole attack surface.
+    // A client-writable counter would need a rule letting users edit a
+    // document they don't own, and no rule can verify the events being
+    // counted actually happened.
+    //
+    // Read is open rather than isSignedIn() so the home page can paint
+    // the numbers immediately, without waiting on anonymous sign-in.
+    match /stats/{statsDoc} {
+      allow read:  if true;
+      allow write: if false;
+    }
+
+    // ---- Friend-visible garden summary ----
+    // A derived, deliberately lossy projection of gardens/{uid},
+    // rewritten by the owner every time they save (see saveData() in
+    // 02-auth-tasks.js). It holds only what a friend is meant to see —
+    // species, skin, growth, streak, position — and never task text or
+    // per-day history.
+    //
+    // Writes stay owner-only: this document is derived data, and
+    // letting anyone else touch it would let them fake a friend's
+    // garden. Reads are owner-or-friend.
+    match /gardenSummaries/{uid} {
+      allow read:  if isSignedIn() && (me() == uid || isFriend(uid));
+      allow write: if isSignedIn() && me() == uid;
     }
 
     // ---- User profiles ----

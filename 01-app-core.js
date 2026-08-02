@@ -281,6 +281,15 @@ const pageTasksEl  = document.getElementById('page-tasks');
 const pageStatsEl  = document.getElementById('page-stats');
 const pageGreenhouseEl = document.getElementById('page-greenhouse');
 const pageFriendsEl    = document.getElementById('page-friends');
+// Read-only view of ONE friend's garden. Its own page + its own
+// fixed scene element, so opening it never touches #gardenScene and
+// the user's own garden keeps its scroll position and render state.
+// Declared here, next to the other page/scene refs, and NOT
+// re-declared in 07 — these files share one global scope, so a
+// second `var` of the same name there would be a redeclaration.
+const pageFriendGardenEl   = document.getElementById('page-friend-garden');
+const friendGardenSceneEl  = document.getElementById('friendGardenScene');
+const friendGardenTrackEl  = document.getElementById('friendGardenTrack');
 
 // Greenhouse page elements
 const greenhouseLoadingState = document.getElementById('greenhouseLoadingState');
@@ -336,6 +345,9 @@ const authModalBody      = document.getElementById('authModalBody');
     pageFriendsEl:          pageFriendsEl,
     friendsLoadingState:    friendsLoadingState,
     friendsContent:         friendsContent,
+    pageFriendGardenEl:     pageFriendGardenEl,
+    friendGardenSceneEl:    friendGardenSceneEl,
+    friendGardenTrackEl:    friendGardenTrackEl,
   };
   Object.keys(required).forEach(function (key) {
     if (!required[key]) {
@@ -469,6 +481,16 @@ buildCategoryTabs();
 // Navigation
 // ============================================
 function navigateTo(page) {
+  // Leaving the friend garden — by the back button OR by any nav
+  // button on that page — forgets whose garden it was. Checked before
+  // currentPage moves, and skipped when we're navigating INTO the
+  // page, since openFriendGarden() sets that state up just before it
+  // calls this.
+  if (currentPage === 'friend-garden' && page !== 'friend-garden' &&
+      typeof clearFriendGardenState === 'function') {
+    clearFriendGardenState();
+  }
+
   currentPage = page;
 
   if (pageHomeEl)   pageHomeEl.classList.toggle('hidden',   page !== 'home');
@@ -477,16 +499,28 @@ function navigateTo(page) {
   if (pageStatsEl)  pageStatsEl.classList.toggle('hidden',  page !== 'stats');
   if (pageGreenhouseEl) pageGreenhouseEl.classList.toggle('hidden', page !== 'greenhouse');
   if (pageFriendsEl)    pageFriendsEl.classList.toggle('hidden',    page !== 'friends');
+  if (pageFriendGardenEl) pageFriendGardenEl.classList.toggle('hidden', page !== 'friend-garden');
 
   // Garden scene: only visible on garden page once auth is ready
   if (gardenSceneEl) gardenSceneEl.classList.toggle('hidden', page !== 'garden' || !authReady);
+
+  // Friend garden scene: same idea, but it doesn't wait on authReady
+  // — that flag tracks the user's OWN garden snapshot, and this page
+  // is only ever reached by clicking a friend, which can't happen
+  // before auth has resolved anyway. It draws its own loading message
+  // while the summary fetch is in flight.
+  if (friendGardenSceneEl) friendGardenSceneEl.classList.toggle('hidden', page !== 'friend-garden');
 
   // The universal time-of-day sky (gradient, stars, hills, fireflies,
   // clouds/birds, sun/moon) stays visible on every page, including
   // Garden, so night/day looks identical everywhere. The garden
   // backdrop now only adds the garden-specific ground (fence + lawn)
   // on top of it while on the Garden page.
-  if (gardenBackdropEl) gardenBackdropEl.classList.toggle('hidden', page !== 'garden');
+  // The friend garden page shows the same ground as the user's own
+  // garden, so the lawn stays on for both.
+  if (gardenBackdropEl) {
+    gardenBackdropEl.classList.toggle('hidden', page !== 'garden' && page !== 'friend-garden');
+  }
 
   if (page === 'garden') {
     if (loadingState) loadingState.classList.toggle('hidden', authReady);
@@ -524,6 +558,12 @@ function navigateTo(page) {
     maybePromptForUsername();
   }
 
+  if (page === 'friend-garden') {
+    // 07 loads after this file, so guard the call the same way the
+    // friends hooks in 02 do.
+    if (typeof renderFriendGarden === 'function') renderFriendGarden();
+  }
+
   // Scroll the destination page back to top
   if (page === 'tasks'  && pageTasksEl)  pageTasksEl.scrollTop  = 0;
   if (page === 'garden' && pageGardenEl) pageGardenEl.scrollTop = 0;
@@ -531,6 +571,7 @@ function navigateTo(page) {
   if (page === 'stats'  && pageStatsEl)  pageStatsEl.scrollTop  = 0;
   if (page === 'greenhouse' && pageGreenhouseEl) pageGreenhouseEl.scrollTop = 0;
   if (page === 'friends' && pageFriendsEl) pageFriendsEl.scrollTop = 0;
+  if (page === 'friend-garden' && pageFriendGardenEl) pageFriendGardenEl.scrollTop = 0;
 }
 
 function switchTaskTab(tabId) {
@@ -591,6 +632,16 @@ document.getElementById('friends-nav-garden').addEventListener('click',      fun
 document.getElementById('friends-nav-tasks').addEventListener('click',       function () { navigateTo('tasks');  });
 document.getElementById('friends-nav-stats').addEventListener('click',       function () { navigateTo('stats');  });
 document.getElementById('friends-nav-greenhouse').addEventListener('click',  function () { navigateTo('greenhouse'); });
+
+// Friend garden — reachable only by picking a friend on the Friends
+// page (see openFriendGarden in 07), so it has no inbound nav button
+// of its own, just the usual way back out.
+document.getElementById('friend-garden-nav-home').addEventListener('click',       function () { navigateTo('home');       });
+document.getElementById('friend-garden-nav-garden').addEventListener('click',     function () { navigateTo('garden');     });
+document.getElementById('friend-garden-nav-tasks').addEventListener('click',      function () { navigateTo('tasks');      });
+document.getElementById('friend-garden-nav-stats').addEventListener('click',      function () { navigateTo('stats');      });
+document.getElementById('friend-garden-nav-greenhouse').addEventListener('click', function () { navigateTo('greenhouse'); });
+document.getElementById('friend-garden-nav-friends').addEventListener('click',    function () { navigateTo('friends');    });
 
 
 // Garden sub-nav

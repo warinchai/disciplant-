@@ -682,7 +682,14 @@ function renderFriendsList() {
   if (friendsListEl) {
     friendsListEl.innerHTML = friendProfiles.map(function (friend) {
       var name = friend.username ? '@' + friend.username : 'A gardener with no username';
-      return friendRowHtml(name, null, '');
+      // Opens the read-only garden view (07). What that page can show
+      // is limited by gardenSummaries/{uid}, not by anything decided
+      // here — their task text is never readable by this client.
+      var actions =
+        '<button class="friend-btn" type="button" data-friend-action="view-garden" ' +
+          'data-friend-uid="' + escapeHtml(friend.uid) + '" ' +
+          'data-friend-username="' + escapeHtml(friend.username || '') + '">View garden</button>';
+      return friendRowHtml(name, null, actions);
     }).join('');
   }
   if (friendsEmptyEl) {
@@ -719,6 +726,18 @@ if (friendsContent) {
 
     if (action === 'choose-username') {
       openUsernameModal();
+      return;
+    }
+
+    if (action === 'view-garden') {
+      // 07 loads after this file; guarded the same way as the other
+      // cross-file calls in the codebase.
+      if (typeof openFriendGarden === 'function') {
+        openFriendGarden(
+          btn.getAttribute('data-friend-uid'),
+          btn.getAttribute('data-friend-username') || null
+        );
+      }
       return;
     }
 

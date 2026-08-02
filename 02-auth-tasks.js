@@ -533,6 +533,113 @@ function saveData() {
   }).catch(function (error) {
     console.error('Error saving data:', error);
   });
+
+  saveGardenSummary(cleanTasks);
+}
+
+
+// ============================================
+// Friend-visible garden summary (gardenSummaries/{uid})
+//
+// WHY THIS EXISTS AT ALL
+// Firestore security rules are document-level: a rule can allow or
+// deny a whole document, but it cannot hide individual fields. So
+// there is no way to let a friend read growth and streaks out of
+// gardens/{uid} without also handing them every task's raw text and
+// full per-day history. Instead, the owner writes a second, derived
+// document containing ONLY the fields meant to be seen, and the
+// rules let friends read that one.
+//
+// Because it's derived, it must be rewritten from the same task data
+// in the same place every time — hence being called straight out of
+// saveData() above rather than on some separate schedule. Anything
+// that drifts here shows a friend a stale garden.
+//
+// WHAT'S DELIBERATELY MISSING
+//   text               — the whole point; free-text habits are private
+//   history            — a day-by-day activity log of someone's life
+//   maxStreak          — not needed to draw anything
+//   lastCleanDate,
+//   prevLastCleanDate  — internal day-rollover bookkeeping
+//   lastResetDate,
+//   updatedAt          — both disclose roughly when this person last
+//                        opened the app, which is a fact about their
+//                        habits rather than about their garden. Left
+//                        out by decision; see the note on `completed`
+//                        below for what that costs.
+//
+// Adding a field here makes it readable by every one of that user's
+// friends, immediately and retroactively (the next save rewrites the
+// whole document). Treat this list as the privacy boundary it is.
+// ============================================
+function buildGardenSummary(cleanTasks) {
+  return {
+    // Stored as data, not just inferred from the document path, so a
+    // stray or mis-keyed summary is obvious when reading it back.
+    ownerUid: currentUserId,
+
+    // No timestamp of any kind by design. That means a reader cannot
+    // tell whether this snapshot is from ten seconds or ten days ago,
+    // so `completed` below can't be pinned to a specific day either —
+    // the friend view says so in plain words instead of guessing.
+
+    plants: cleanTasks.map(function (t) {
+      return {
+        // Kept because the automatic garden layout hashes it for a
+        // stable slot (see getTaskSlotGroup), and it's the only
+        // per-plant key the viewer has now that text is gone.
+        id:              t.id,
+        // Drives which species art is drawn. NOTE: this necessarily
+        // discloses the CATEGORY of each habit (Exercise, Finance,
+        // Sleep...) even though the task's text stays private — see
+        // the note in the handover summary; showing real species is a
+        // product decision, not a technical requirement.
+        categoryId:      t.categoryId,
+        skinId:          t.skinId || SKIN_DEFAULT_ID,
+        // Growth inputs — the two numbers the garden is actually a
+        // picture of.
+        streak:          t.streak || 0,
+        totalGrowthDays: t.totalGrowthDays || 0,
+        // Whether this was ticked off as of the owner's last save.
+        // Without a date on the document there's no way for a reader
+        // to know WHICH day that was — if its owner hasn't opened the
+        // app since yesterday, no day-rollover has run and this still
+        // holds yesterday's answer. The friend view therefore labels
+        // it "last saved" rather than "today". Reveals how many habits
+        // were ticked, never which ones.
+        completed:       !!t.completed,
+        // Where the owner placed this plant, so a friend sees the
+        // garden arranged the way it was actually laid out.
+        posX:            (typeof t.posX === 'number') ? t.posX : null,
+        posY:            (typeof t.posY === 'number') ? t.posY : null,
+      };
+    }),
+  };
+}
+
+// Written as its own request rather than batched with the garden save
+// above, on purpose: a batch fails as a unit, so if the new
+// gardenSummaries rules haven't been published in the Firebase Console
+// yet, batching would take the user's ordinary garden save down with
+// it. Kept separate, a missing rule costs only the friend-visible copy
+// and logs a pointed message, while the app itself keeps working.
+function saveGardenSummary(cleanTasks) {
+  if (!currentUserId) return;
+
+  db.collection('gardenSummaries').doc(currentUserId)
+    .set(buildGardenSummary(cleanTasks))
+    .catch(function (error) {
+      if (error && error.code === 'permission-denied') {
+        console.error(
+          'DISCIPLANT: could not write gardenSummaries/' + currentUserId + '. ' +
+          'The gardenSummaries rules are probably not published yet — ' +
+          'paste firestore.rules into Firebase Console -> Firestore -> Rules -> Publish. ' +
+          'Your own garden saved fine; only the friend-visible copy is missing.'
+        );
+        return;
+      }
+      console.error('DISCIPLANT: error saving garden summary:', error);
+    });
 }
 
 function getNextId(taskArray) {

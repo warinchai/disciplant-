@@ -87,6 +87,18 @@
     <div id="gardenSceneTrack" class="garden-scene-track"></div>
   </div>
 
+  <!-- Friend garden scene — a second, read-only copy of the scene
+       above, used by the "view a friend's garden" page. Kept as its
+       own element rather than reusing #gardenScene so that opening a
+       friend's garden never disturbs the user's own scroll position
+       or leaves their plants half-swapped mid-render. Its plants are
+       drawn from gardenSummaries/{friendUid} (see 07-friend-garden.js),
+       never from that friend's private gardens/{uid} document. -->
+  <div id="friendGardenScene" class="garden-scene hidden">
+    <p id="friendGardenMsg" class="garden-empty-msg hidden"></p>
+    <div id="friendGardenTrack" class="garden-scene-track"></div>
+  </div>
+
   <!-- ================================================
        PAGE: HOME
        ================================================ -->
@@ -95,6 +107,27 @@
       <p class="home-eyebrow">A living habit garden</p>
       <h1 class="hero-title">DISCIPLANT</h1>
       <p class="hero-tagline">Tend your habits. Watch them bloom.</p>
+
+      <!-- Community counters. Populated from the public /stats/global
+           document by 08-home-stats.js, and hidden until that read
+           succeeds — so before the first script run, or if the read
+           fails, the home page looks exactly as it did without it. -->
+      <div id="homeStats" class="home-stats hidden">
+        <div class="home-stat">
+          <span class="home-stat-value" id="statGardeners">&mdash;</span>
+          <span class="home-stat-label">Gardeners</span>
+        </div>
+        <div class="home-stat-divider" aria-hidden="true"></div>
+        <div class="home-stat">
+          <span class="home-stat-value" id="statHabitsGrowing">&mdash;</span>
+          <span class="home-stat-label">Habits growing</span>
+        </div>
+        <div class="home-stat-divider" aria-hidden="true"></div>
+        <div class="home-stat">
+          <span class="home-stat-value" id="statHabitsCompleted">&mdash;</span>
+          <span class="home-stat-label">Days completed</span>
+        </div>
+      </div>
 
       <button class="cta-btn cta-primary" id="btn-to-garden">TO GARDEN</button>
 
@@ -369,6 +402,45 @@
     </div>
   </div>
 
+  <!-- ================================================
+       PAGE: FRIEND GARDEN — read-only view of one
+       friend's garden. Everything on it comes from
+       gardenSummaries/{friendUid}, which holds only
+       species/skin/growth/streak/position — never task
+       text or history. See 07-friend-garden.js.
+       ================================================ -->
+  <div id="page-friend-garden" class="page page-friend-garden hidden">
+    <nav class="site-nav friends-nav">
+      <button class="nav-btn" id="friend-garden-nav-home">Home</button>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="friend-garden-nav-garden">Garden</button>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="friend-garden-nav-tasks">Tasks</button>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="friend-garden-nav-stats">Stats</button>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="friend-garden-nav-greenhouse">Greenhouse</button>
+      <span class="nav-sep">&middot;</span>
+      <button class="nav-btn" id="friend-garden-nav-friends">Friends</button>
+    </nav>
+
+    <div class="friend-garden-bar">
+      <button class="friend-btn" id="friendGardenBack" type="button">&larr; Friends</button>
+      <h2 class="friend-garden-title" id="friendGardenTitle">A friend&rsquo;s garden</h2>
+      <span class="friend-garden-readonly">Read-only</span>
+    </div>
+
+    <p id="friendGardenNote" class="friend-garden-note hidden"></p>
+
+    <!-- Same Daily / Long-Term split as the user's own garden, but on
+         its own state so looking at a friend doesn't change which
+         view their own garden is left on. -->
+    <div class="cat-subnav garden-subnav">
+      <button class="cat-tab active" id="friend-garden-tab-daily"    data-friend-garden-tab="daily">Daily Garden</button>
+      <button class="cat-tab"        id="friend-garden-tab-longterm" data-friend-garden-tab="longterm">Long-Term Garden</button>
+    </div>
+  </div>
+
   <!-- Shared tooltip for heatmap cells, positioned via JS on hover -->
   <div id="heatmapTooltip" class="heatmap-tooltip hidden"></div>
 
@@ -441,5 +513,7 @@
   <script src="04-garden-scene.js"></script>
   <script src="05-stats-app.js"></script>
   <script src="06-friends.js"></script>
+  <script src="07-friend-garden.js"></script>
+  <script src="08-home-stats.js"></script>
 </body>
 </html>

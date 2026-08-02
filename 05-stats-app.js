@@ -550,6 +550,10 @@ function updateSky() {
   // night-dimming in sync with real time.
   if (gardenBackdropEl) gardenBackdropEl.classList.toggle('gb-night', !isDay);
   if (gardenSceneEl)    gardenSceneEl.classList.toggle('scene-night', !isDay);
+  // The friend garden is a second scene element (see 01), so it needs
+  // the same night class or a friend's plot would stay lit at midnight
+  // while the user's own garden dims.
+  if (friendGardenSceneEl) friendGardenSceneEl.classList.toggle('scene-night', !isDay);
 
   var arcProgress;
   if (isDay) {
