@@ -794,8 +794,24 @@ var PLANT_SVG_DATA = {
 //           can be written once and dropped on any species.
 //   swatch  Three colours for the picker's little colour pip.
 //
-// Adding a new look means appending one object to the list for that
+// Adding a new look means adding one object to the list for that
 // species. No new art, no changes to any rendering code.
+//
+// ORDER MATTERS. Every species' list runs in the same five slots,
+// and the Greenhouse picker paints them in exactly this array order:
+//
+//   0  classic   the plant as first grown — always the default, and
+//                always index 0, since getSkin() falls back to
+//                list[0] for an unknown or removed skin id
+//   1  gold      the gilded/struck-metal look
+//   2  rainbow   the full-spectrum look
+//   3  themed    that species' own extra look
+//   4  showcase  the most elaborate look — the one worth chasing
+//
+// The slot is also the achievement: SKIN_UNLOCK_RULES down below gates
+// each one by index, so a species gets the whole ladder purely by
+// having its five skins in this order. Keep new looks in their slot
+// rather than appending to the end.
 //
 // Token reference, per species:
 //   education    seed seed-dark stem stem-dark leaf leaf-dark bark
@@ -1477,42 +1493,6 @@ var PLANT_SKINS = {
       vars: {},
     },
     {
-      id: 'emberfall',
-      name: 'Emberfall',
-      note: 'Late-autumn canopy, always mid-drop.',
-      swatch: ['#F0A93E', '#C2552A', '#5B3A2C'],
-      defs:
-        '<linearGradient id="sk-emberfall-canopy" x1="0" y1="0" x2="0.25" y2="1">' +
-          '<stop offset="0" stop-color="#F5B84A"/>' +
-          '<stop offset="0.55" stop-color="#E08A34"/>' +
-          '<stop offset="1" stop-color="#C4552A"/>' +
-        '</linearGradient>',
-      vars: {
-        '--c-canopy':      'url(#sk-emberfall-canopy)',
-        '--c-canopy-dark': '#A8401F',
-        '--c-bark':        '#6B4536',
-        '--c-bark-dark':   '#46281F',
-        '--c-leaf':        '#E4A455',
-        '--c-leaf-dark':   '#BB6B2E',
-        '--c-stem':        '#7A5235',
-        '--c-stem-dark':   '#4E3221',
-        '--c-seed':        '#DBA25D',
-        '--c-seed-dark':   '#AF7335',
-        '--c-shadow':      'rgba(58,22,6,0.20)',
-      },
-      extras: {
-        2: function (a) {
-          return skinLeafMote(a.canopy[0] - 15, a.canopy[1] + 14, -28, 0.5, '#D2622B', 0.85) +
-                 skinLeafMote(a.canopy[0] + 16, a.canopy[1] + 22, 34, 0.42, '#E0873A', 0.7);
-        },
-        3: function (a) {
-          return skinLeafMote(a.canopy[0] - 22, a.canopy[1] + 26, -24, 0.62, '#D2622B', 0.85) +
-                 skinLeafMote(a.canopy[0] + 20, a.canopy[1] + 38, 40, 0.52, '#E0873A', 0.72) +
-                 skinLeafMote(a.canopy[0] + 8,  a.canopy[1] + 56, -12, 0.44, '#C24C25', 0.6);
-        },
-      },
-    },
-    {
       id: 'aurelian',
       name: 'Aurelian',
       note: 'Struck in gold, down to the last acorn.',
@@ -1635,6 +1615,42 @@ var PLANT_SKINS = {
       },
     },
     {
+      id: 'emberfall',
+      name: 'Emberfall',
+      note: 'Late-autumn canopy, always mid-drop.',
+      swatch: ['#F0A93E', '#C2552A', '#5B3A2C'],
+      defs:
+        '<linearGradient id="sk-emberfall-canopy" x1="0" y1="0" x2="0.25" y2="1">' +
+          '<stop offset="0" stop-color="#F5B84A"/>' +
+          '<stop offset="0.55" stop-color="#E08A34"/>' +
+          '<stop offset="1" stop-color="#C4552A"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-canopy':      'url(#sk-emberfall-canopy)',
+        '--c-canopy-dark': '#A8401F',
+        '--c-bark':        '#6B4536',
+        '--c-bark-dark':   '#46281F',
+        '--c-leaf':        '#E4A455',
+        '--c-leaf-dark':   '#BB6B2E',
+        '--c-stem':        '#7A5235',
+        '--c-stem-dark':   '#4E3221',
+        '--c-seed':        '#DBA25D',
+        '--c-seed-dark':   '#AF7335',
+        '--c-shadow':      'rgba(58,22,6,0.20)',
+      },
+      extras: {
+        2: function (a) {
+          return skinLeafMote(a.canopy[0] - 15, a.canopy[1] + 14, -28, 0.5, '#D2622B', 0.85) +
+                 skinLeafMote(a.canopy[0] + 16, a.canopy[1] + 22, 34, 0.42, '#E0873A', 0.7);
+        },
+        3: function (a) {
+          return skinLeafMote(a.canopy[0] - 22, a.canopy[1] + 26, -24, 0.62, '#D2622B', 0.85) +
+                 skinLeafMote(a.canopy[0] + 20, a.canopy[1] + 38, 40, 0.52, '#E0873A', 0.72) +
+                 skinLeafMote(a.canopy[0] + 8,  a.canopy[1] + 56, -12, 0.44, '#C24C25', 0.6);
+        },
+      },
+    },
+    {
       id: 'nebulark',
       name: 'Nebulark',
       note: 'Deep-space crown, fruiting small worlds and drifting rock.',
@@ -1711,47 +1727,6 @@ var PLANT_SKINS = {
       note: 'The sunflower as first grown.',
       swatch: ['#F2B84B', '#E8A020', '#5C3A1A'],
       vars: {},
-    },
-    {
-      id: 'moonpetal',
-      name: 'Moonpetal',
-      note: 'A night-blooming sunflower, silver instead of gold.',
-      swatch: ['#F4F1FF', '#9FB4DE', '#2E3560'],
-      defs:
-        '<linearGradient id="sk-moonpetal-petal" x1="0" y1="1" x2="0" y2="0">' +
-          '<stop offset="0" stop-color="#B9C6EC"/>' +
-          '<stop offset="1" stop-color="#FBF9FF"/>' +
-        '</linearGradient>',
-      vars: {
-        '--c-petal':      'url(#sk-moonpetal-petal)',
-        '--c-petal-dark': '#9FB4DE',
-        '--c-disc':       '#2E3560',
-        '--c-disc-dark':  '#1B1F3C',
-        '--c-disc-seed':  '#7A87C4',
-        '--c-leaf-light': '#6E9C8E',
-        '--c-leaf':       '#4E8377',
-        '--c-leaf-dark':  '#3B6A62',
-        '--c-stem':       '#3F6A5F',
-        '--c-seed':       '#B9C3E8',
-        '--c-seed-line':  '#6E7BB8',
-        '--c-shadow':     'rgba(18,20,58,0.22)',
-      },
-      extras: {
-        1: function (a) {
-          return skinSparkle(a.canopy[0] + 7, a.canopy[1] - 5, 1.6, '#EDE9FF', 0.75);
-        },
-        2: function (a) {
-          return skinSparkle(a.canopy[0] - 16, a.canopy[1] - 12, 2.2, '#EDE9FF', 0.8) +
-                 skinSparkle(a.canopy[0] + 14, a.canopy[1] - 20, 1.7, '#EDE9FF', 0.6) +
-                 skinDot(a.canopy[0] + 19, a.canopy[1] + 2, 0.9, '#EDE9FF', 0.5);
-        },
-        3: function (a) {
-          return skinSparkle(a.canopy[0] - 22, a.canopy[1] - 16, 2.8, '#EDE9FF', 0.85) +
-                 skinSparkle(a.canopy[0] + 20, a.canopy[1] - 26, 2.1, '#EDE9FF', 0.65) +
-                 skinSparkle(a.canopy[0] + 5,  a.canopy[1] - 38, 1.6, '#EDE9FF', 0.5) +
-                 skinDot(a.canopy[0] - 26, a.canopy[1] + 6, 1.1, '#EDE9FF', 0.45);
-        },
-      },
     },
     {
       // The hard part of a gold sunflower is that the plant is
@@ -1916,6 +1891,47 @@ var PLANT_SKINS = {
                  skinSparkle(a.canopy[0] + 22, a.canopy[1] - 25, 2.2, '#C9EBFF', 0.7) +
                  skinSparkle(a.canopy[0] + 3,  a.canopy[1] - 38, 1.7, '#FFF0B8', 0.6) +
                  skinDot(a.canopy[0] - 28, a.canopy[1] + 4, 1.1, '#D6F5C4', 0.5);
+        },
+      },
+    },
+    {
+      id: 'moonpetal',
+      name: 'Moonpetal',
+      note: 'A night-blooming sunflower, silver instead of gold.',
+      swatch: ['#F4F1FF', '#9FB4DE', '#2E3560'],
+      defs:
+        '<linearGradient id="sk-moonpetal-petal" x1="0" y1="1" x2="0" y2="0">' +
+          '<stop offset="0" stop-color="#B9C6EC"/>' +
+          '<stop offset="1" stop-color="#FBF9FF"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-petal':      'url(#sk-moonpetal-petal)',
+        '--c-petal-dark': '#9FB4DE',
+        '--c-disc':       '#2E3560',
+        '--c-disc-dark':  '#1B1F3C',
+        '--c-disc-seed':  '#7A87C4',
+        '--c-leaf-light': '#6E9C8E',
+        '--c-leaf':       '#4E8377',
+        '--c-leaf-dark':  '#3B6A62',
+        '--c-stem':       '#3F6A5F',
+        '--c-seed':       '#B9C3E8',
+        '--c-seed-line':  '#6E7BB8',
+        '--c-shadow':     'rgba(18,20,58,0.22)',
+      },
+      extras: {
+        1: function (a) {
+          return skinSparkle(a.canopy[0] + 7, a.canopy[1] - 5, 1.6, '#EDE9FF', 0.75);
+        },
+        2: function (a) {
+          return skinSparkle(a.canopy[0] - 16, a.canopy[1] - 12, 2.2, '#EDE9FF', 0.8) +
+                 skinSparkle(a.canopy[0] + 14, a.canopy[1] - 20, 1.7, '#EDE9FF', 0.6) +
+                 skinDot(a.canopy[0] + 19, a.canopy[1] + 2, 0.9, '#EDE9FF', 0.5);
+        },
+        3: function (a) {
+          return skinSparkle(a.canopy[0] - 22, a.canopy[1] - 16, 2.8, '#EDE9FF', 0.85) +
+                 skinSparkle(a.canopy[0] + 20, a.canopy[1] - 26, 2.1, '#EDE9FF', 0.65) +
+                 skinSparkle(a.canopy[0] + 5,  a.canopy[1] - 38, 1.6, '#EDE9FF', 0.5) +
+                 skinDot(a.canopy[0] - 26, a.canopy[1] + 6, 1.1, '#EDE9FF', 0.45);
         },
       },
     },
@@ -2565,40 +2581,6 @@ var PLANT_SKINS = {
       vars: {},
     },
     {
-      id: 'kurotake',
-      name: 'Kurotake',
-      note: 'Black bamboo with jade leaves.',
-      swatch: ['#4A4A46', '#232322', '#5FA37E'],
-      defs:
-        '<linearGradient id="sk-kurotake-culm" x1="0" y1="0" x2="1" y2="0">' +
-          '<stop offset="0" stop-color="#22221F"/>' +
-          '<stop offset="0.55" stop-color="#494945"/>' +
-          '<stop offset="1" stop-color="#2A2A27"/>' +
-        '</linearGradient>',
-      vars: {
-        '--c-culm-light': '#55554F',
-        '--c-culm':       'url(#sk-kurotake-culm)',
-        '--c-culm-mid':   '#33332F',
-        '--c-node':       '#1A1A18',
-        '--c-node-dark':  '#0E0E0D',
-        '--c-leaf-light': '#7FBF9A',
-        '--c-leaf':       '#5FA37E',
-        '--c-leaf-dark':  '#3F7A62',
-        '--c-shadow':     'rgba(0,0,0,0.24)',
-      },
-      extras: {
-        2: function (a) {
-          return skinDot(a.canopy[0] - 9, a.canopy[1] + 10, 0.8, '#C6A25A', 0.55) +
-                 skinDot(a.canopy[0] + 8, a.canopy[1] + 20, 0.7, '#C6A25A', 0.4);
-        },
-        3: function (a) {
-          return skinDot(a.canopy[0] - 13, a.canopy[1] + 12, 1.0, '#C6A25A', 0.6) +
-                 skinDot(a.canopy[0] + 12, a.canopy[1] + 26, 0.85, '#C6A25A', 0.45) +
-                 skinDot(a.canopy[0] + 2,  a.canopy[1] - 10, 0.75, '#C6A25A', 0.35);
-        },
-      },
-    },
-    {
       // Gilded, not yellow. The culm gradient runs dark-bronze →
       // pale-gold → dark-bronze across each internode, so the
       // existing lit/shaded strips read as a turned metal rim
@@ -2718,6 +2700,40 @@ var PLANT_SKINS = {
       },
     },
     {
+      id: 'kurotake',
+      name: 'Kurotake',
+      note: 'Black bamboo with jade leaves.',
+      swatch: ['#4A4A46', '#232322', '#5FA37E'],
+      defs:
+        '<linearGradient id="sk-kurotake-culm" x1="0" y1="0" x2="1" y2="0">' +
+          '<stop offset="0" stop-color="#22221F"/>' +
+          '<stop offset="0.55" stop-color="#494945"/>' +
+          '<stop offset="1" stop-color="#2A2A27"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-culm-light': '#55554F',
+        '--c-culm':       'url(#sk-kurotake-culm)',
+        '--c-culm-mid':   '#33332F',
+        '--c-node':       '#1A1A18',
+        '--c-node-dark':  '#0E0E0D',
+        '--c-leaf-light': '#7FBF9A',
+        '--c-leaf':       '#5FA37E',
+        '--c-leaf-dark':  '#3F7A62',
+        '--c-shadow':     'rgba(0,0,0,0.24)',
+      },
+      extras: {
+        2: function (a) {
+          return skinDot(a.canopy[0] - 9, a.canopy[1] + 10, 0.8, '#C6A25A', 0.55) +
+                 skinDot(a.canopy[0] + 8, a.canopy[1] + 20, 0.7, '#C6A25A', 0.4);
+        },
+        3: function (a) {
+          return skinDot(a.canopy[0] - 13, a.canopy[1] + 12, 1.0, '#C6A25A', 0.6) +
+                 skinDot(a.canopy[0] + 12, a.canopy[1] + 26, 0.85, '#C6A25A', 0.45) +
+                 skinDot(a.canopy[0] + 2,  a.canopy[1] - 10, 0.75, '#C6A25A', 0.35);
+        },
+      },
+    },
+    {
       // Machined bamboo. The culm gradient is a tight specular band
       // — dark edge, hard bright core at 0.5, dark edge — which is
       // what turns a flat segment into a brushed metal plate, and
@@ -2792,40 +2808,6 @@ var PLANT_SKINS = {
       note: 'The clover as first grown.',
       swatch: ['#5C8267', '#274F3C', '#0F291E'],
       vars: {},
-    },
-    {
-      id: 'wildfrost',
-      name: 'Wildfrost',
-      note: 'Frozen mid-morning, edges still rimed.',
-      swatch: ['#DCEEF4', '#8FBCCB', '#39586B'],
-      defs:
-        '<linearGradient id="sk-wildfrost-leaf" x1="0" y1="1" x2="0.4" y2="0">' +
-          '<stop offset="0" stop-color="#7FAABB"/>' +
-          '<stop offset="1" stop-color="#CDE7F0"/>' +
-        '</linearGradient>',
-      vars: {
-        '--c-leaf':      'url(#sk-wildfrost-leaf)',
-        '--c-leaf-mid':  '#7FA9BA',
-        '--c-leaf-dark': '#547E93',
-        '--c-outline':   '#2E4A5C',
-        '--c-sheen':     '#EAF6FA',
-        '--c-bloom':     '#FFFFFF',
-        '--c-shadow':    'rgba(28,58,78,0.18)',
-      },
-      extras: {
-        1: function (a) {
-          return skinSparkle(a.canopy[0] + 9, a.canopy[1] - 12, 1.5, '#FFFFFF', 0.7);
-        },
-        2: function (a) {
-          return skinSparkle(a.canopy[0] - 14, a.canopy[1] - 14, 2.0, '#FFFFFF', 0.75) +
-                 skinSparkle(a.canopy[0] + 13, a.canopy[1] - 4, 1.5, '#FFFFFF', 0.55);
-        },
-        3: function (a) {
-          return skinSparkle(a.canopy[0] - 19, a.canopy[1] - 16, 2.5, '#FFFFFF', 0.8) +
-                 skinSparkle(a.canopy[0] + 18, a.canopy[1] - 6, 1.8, '#FFFFFF', 0.6) +
-                 skinSparkle(a.canopy[0] + 3,  a.canopy[1] - 30, 1.5, '#FFFFFF', 0.45);
-        },
-      },
     },
     {
       // Gilding, not gold plate: the leaflets keep their two-tone
@@ -2930,6 +2912,40 @@ var PLANT_SKINS = {
                  skinSparkle(a.canopy[0] + 5,  a.canopy[1] - 35, 1.8, '#B266E8', 0.7) +
                  skinDot(a.canopy[0] - 12, a.canopy[1] + 30, 0.9, '#FFA24B', 0.6) +
                  skinDot(a.canopy[0] + 16, a.canopy[1] + 24, 0.8, '#4FA8F5', 0.6);
+        },
+      },
+    },
+    {
+      id: 'wildfrost',
+      name: 'Wildfrost',
+      note: 'Frozen mid-morning, edges still rimed.',
+      swatch: ['#DCEEF4', '#8FBCCB', '#39586B'],
+      defs:
+        '<linearGradient id="sk-wildfrost-leaf" x1="0" y1="1" x2="0.4" y2="0">' +
+          '<stop offset="0" stop-color="#7FAABB"/>' +
+          '<stop offset="1" stop-color="#CDE7F0"/>' +
+        '</linearGradient>',
+      vars: {
+        '--c-leaf':      'url(#sk-wildfrost-leaf)',
+        '--c-leaf-mid':  '#7FA9BA',
+        '--c-leaf-dark': '#547E93',
+        '--c-outline':   '#2E4A5C',
+        '--c-sheen':     '#EAF6FA',
+        '--c-bloom':     '#FFFFFF',
+        '--c-shadow':    'rgba(28,58,78,0.18)',
+      },
+      extras: {
+        1: function (a) {
+          return skinSparkle(a.canopy[0] + 9, a.canopy[1] - 12, 1.5, '#FFFFFF', 0.7);
+        },
+        2: function (a) {
+          return skinSparkle(a.canopy[0] - 14, a.canopy[1] - 14, 2.0, '#FFFFFF', 0.75) +
+                 skinSparkle(a.canopy[0] + 13, a.canopy[1] - 4, 1.5, '#FFFFFF', 0.55);
+        },
+        3: function (a) {
+          return skinSparkle(a.canopy[0] - 19, a.canopy[1] - 16, 2.5, '#FFFFFF', 0.8) +
+                 skinSparkle(a.canopy[0] + 18, a.canopy[1] - 6, 1.8, '#FFFFFF', 0.6) +
+                 skinSparkle(a.canopy[0] + 3,  a.canopy[1] - 30, 1.5, '#FFFFFF', 0.45);
         },
       },
     },
@@ -3263,8 +3279,160 @@ function getSkin(catId, skinId) {
   return found || list[0];
 }
 
+// ---- Skin unlocks -------------------------------------------------
+// A skin is earned, not just chosen. Which achievement gates which
+// skin is decided purely by the slot it sits in — the same order the
+// picker paints, documented up by SKIN_DEFAULT_ID — so a new species
+// gets the whole ladder for free the moment its five skins are in
+// the right order. Nothing here is per-species.
+//
+//   0  classic   always available. Every plant starts here and can
+//                always be brought back here, so a garden can never
+//                end up with a plant that has nothing legal to wear.
+//   1  gold      3 friends      — account-wide
+//   2  rainbow   7 friends      — account-wide
+//   3  themed    10-day streak  — THIS plant
+//   4  showcase  30 growth days — THIS plant
+//
+// Friends are account-wide because a friend count is: reaching 3
+// friends lights the gold skin on every plant at once. The streak and
+// growth gates are per-plant, so each plant earns its own top two.
+//
+// Every gate is monotonic — it can be reached but not lost. That's
+// deliberate, and it's why both per-plant gates read a high-water
+// mark (maxStreak, maxGrowthDays) rather than the live counter:
+// breaking a streak, or un-ticking today's box, must not strip a skin
+// off a plant that already earned it.
+var SKIN_UNLOCK_RULES = [
+  { kind: 'always'                },
+  { kind: 'friends', need: 3      },
+  { kind: 'friends', need: 7      },
+  { kind: 'streak',  need: 10     },
+  { kind: 'growth',  need: 30     },
+];
+
+// Reads the live friend list owned by 06-friends.js. Guarded with
+// typeof because this file loads first — if the friends listener
+// hasn't populated it yet, or a signed-out visitor never starts one,
+// the honest answer is zero rather than a crash. Duplicate and empty
+// uids are ignored so a malformed friends array can't inflate the
+// count past what the Friends page actually shows.
+function getMyFriendCount() {
+  if (typeof myFriendUids === 'undefined' || !Array.isArray(myFriendUids)) return 0;
+  var seen = {};
+  var total = 0;
+  myFriendUids.forEach(function (uid) {
+    if (typeof uid !== 'string' || uid === '') return;
+    if (seen[uid]) return;
+    seen[uid] = true;
+    total++;
+  });
+  return total;
+}
+
+// High-water marks, not live values — see the note above. maxStreak
+// is maintained by 02-auth-tasks.js; the Math.max against the live
+// counter covers a task saved before that field existed.
+function getTaskBestStreak(task) {
+  if (!task) return 0;
+  return Math.max(Number(task.maxStreak) || 0, Number(task.streak) || 0);
+}
+
+function getTaskBestGrowth(task) {
+  if (!task) return 0;
+  return Math.max(Number(task.maxGrowthDays) || 0, Number(task.totalGrowthDays) || 0);
+}
+
+// Which slot a skin occupies in its species' list. -1 for an id that
+// isn't in the list at all.
+function getSkinSlot(catId, skinId) {
+  var list = getSkinsFor(catId);
+  var slot = -1;
+  list.forEach(function (s, i) { if (s.id === skinId) slot = i; });
+  return slot;
+}
+
+// Everything the UI needs about one skin's gate, in one object, so
+// the tile and its label can never disagree about whether it's open.
+//
+// A skin in a slot with no rule — a sixth skin appended to a species
+// — comes back unlocked. Better a new skin that's simply available
+// than one nobody can ever reach because its gate was forgotten.
+function getSkinUnlockState(task, catId, skinId) {
+  var skin = getSkin(catId, skinId);
+  var slot = getSkinSlot(catId, skin.id);
+  var rule = (slot >= 0 && SKIN_UNLOCK_RULES[slot]) || SKIN_UNLOCK_RULES[0];
+
+  var have = 0;
+  var need = rule.need || 0;
+
+  if (rule.kind === 'friends')      have = getMyFriendCount();
+  else if (rule.kind === 'streak')  have = getTaskBestStreak(task);
+  else if (rule.kind === 'growth')  have = getTaskBestGrowth(task);
+
+  return {
+    skin:     skin,
+    slot:     slot,
+    kind:     rule.kind,
+    need:     need,
+    have:     have,
+    unlocked: (rule.kind === 'always') || (have >= need),
+  };
+}
+
+function isSkinUnlocked(task, catId, skinId) {
+  return getSkinUnlockState(task, catId, skinId).unlocked;
+}
+
+function countUnlockedSkins(task, catId) {
+  var total = 0;
+  getSkinsFor(catId).forEach(function (skin) {
+    if (isSkinUnlocked(task, catId, skin.id)) total++;
+  });
+  return total;
+}
+
+// What the tile says while it's still locked. Phrased as the thing to
+// go and do, not as a rule being enforced.
+function skinUnlockRequirement(state) {
+  if (!state || state.unlocked) return '';
+  if (state.kind === 'friends') {
+    return 'Add ' + state.need + ' friend' + (state.need === 1 ? '' : 's') + ' to unlock';
+  }
+  if (state.kind === 'streak') {
+    return 'Reach a ' + state.need + '-day streak on this plant';
+  }
+  if (state.kind === 'growth') {
+    return 'Grow this plant for ' + state.need + ' days';
+  }
+  return 'Locked';
+}
+
+// "2 / 3" — capped at the target so an account with 40 friends
+// doesn't read "40 / 3" on a tile that's already open.
+function skinUnlockProgress(state) {
+  if (!state || state.kind === 'always' || !state.need) return '';
+  return Math.min(state.have, state.need) + ' / ' + state.need;
+}
+
+
+// The skin a plant actually WEARS, which is not always the skin its
+// owner picked. Every renderer — the garden, the Greenhouse card, the
+// pip on a task row — goes through here, so a locked skin has exactly
+// one place it could leak from, and it doesn't.
+//
+// The stored task.skinId is left alone on purpose. In practice no
+// gate can un-earn itself, but if one somehow did, the plant falls
+// back to classic for as long as that lasts and returns to the
+// owner's choice the moment it's earned again. Overwriting the saved
+// id would quietly throw that choice away.
 function getTaskSkinId(task) {
-  return (task && task.skinId) || SKIN_DEFAULT_ID;
+  var catId = (task && task.categoryId) || 'misc';
+  // Resolve first, so an id that no longer exists at all comes back as
+  // classic rather than being handed on to be resolved again later.
+  var wanted = getSkin(catId, (task && task.skinId) || SKIN_DEFAULT_ID).id;
+  if (wanted === SKIN_DEFAULT_ID) return SKIN_DEFAULT_ID;
+  return isSkinUnlocked(task, catId, wanted) ? wanted : SKIN_DEFAULT_ID;
 }
 
 // Gradients and patterns live once in a hidden sprite in the page,

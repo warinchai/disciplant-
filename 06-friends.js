@@ -46,10 +46,16 @@ var USERNAME_MIN     = 3;
 var USERNAME_MAX     = 20;
 var USERNAME_PATTERN = /^[a-z0-9_]{3,20}$/;
 
-// Set to false if you'd rather not interrupt a first-time visitor:
-// the modal then only appears when they open the Friends page (or
-// tap "Choose a username" there).
-var PROMPT_USERNAME_ON_LOAD = true;
+// NOTHING opens the username modal on its own. It is reached only by
+// tapping "Choose a username" on the Friends page — see
+// renderFriendsMe() and the choose-username action below.
+//
+// Claiming a name is not something anyone needs to do before they can
+// use the app: a garden works perfectly without one, and a username
+// only matters at the point someone wants to be findable. Interrupting
+// a first visit to demand one asked for a decision at the moment it
+// mattered least. There is deliberately no setting to turn this back
+// on — the Friends page is the place, whenever they want it.
 
 
 // ============================================
@@ -69,7 +75,13 @@ var friendsBusy         = false; // true while a lookup/write is in flight
 var usernameDraft         = '';
 var usernameModalError    = null;
 var usernameModalPending  = false;
-var usernamePromptShown   = false;
+
+// Has the SERVER ever answered for this uid's profile doc? Not the
+// same as "the listener has fired" — see the long note on the profile
+// listener in startFriendsListeners(). Nothing may conclude that a
+// user has no username until this is true.
+var profileSynced         = false;
+
 
 var friendsListenerUid  = null;
 var unsubscribeProfile  = null;
@@ -177,17 +189,20 @@ function closeUsernameModal() {
   if (usernameModalEl) usernameModalEl.classList.add('hidden');
 }
 
-// Only auto-opens once per page load, and never on top of the auth
-// modal (which the user is more likely to be mid-way through).
-function maybePromptForUsername() {
-  if (myUsername) return;
-  if (usernamePromptShown) return;
-  if (!currentUserId) return;
-  if (authModalEl && !authModalEl.classList.contains('hidden')) return;
-  if (!PROMPT_USERNAME_ON_LOAD && currentPage !== 'friends') return;
-
-  usernamePromptShown = true;
-  openUsernameModal();
+// Called when a username arrives while the modal happens to be open —
+// the user opened it themselves before the profile loaded, or a claim
+// went through in another tab. Without this the modal would sit there
+// showing an empty "Choose a username" form to someone who now has
+// one, which is exactly how it looked when the prompt fired too early.
+//
+// Only ever called on a null -> value transition, so it can't repaint
+// (and wipe the caret of) a field someone is mid-way through typing.
+function refreshOpenUsernameModal() {
+  if (!usernameModalEl || usernameModalEl.classList.contains('hidden')) return;
+  if (usernameModalPending) return;   // a claim is in flight; leave it alone
+  usernameModalError = null;
+  usernameDraft      = myUsername || usernameDraft;
+  renderUsernameModal();
 }
 
 // Deliberately NOT re-rendered on every keystroke — that would blow
@@ -294,19 +309,59 @@ function startFriendsListeners(uid) {
   // Reset per-user state so a signed-out user's data never lingers.
   myUsername       = null;
   myFriendUids     = [];
+  profileSynced      = false;  // nothing is known about this uid yet
+  lastFriendSkinTier = null;   // a different user has a different count
   friendProfiles   = [];
   incomingRequests = [];
   outgoingRequests = [];
   friendsSearchResult = null;
   friendsStatusMsg    = null;
 
+  // WHY THIS LISTENER IS FUSSY ABOUT metadata
+  //
+  // Firestore serves a listener from its local cache the moment it's
+  // attached, before it has heard a word from the server. On a fresh
+  // page load that cache is empty — and 02-auth-tasks.js writes this
+  // very document on every load (ensureUserProfileDoc, keeping the
+  // display name and avatar in sync) with a merge set. That write
+  // lands in the empty cache as a document containing ONLY the fields
+  // it wrote: uid, isAnonymous, displayName, email, photoURL. No
+  // username — not because the user hasn't got one, but because there
+  // was nothing local to merge it onto.
+  //
+  // So the first snapshot on every single reload used to say "this
+  // person has no username", and the prompt believed it. That is what
+  // made the modal reappear on every reload for someone who had had a
+  // username for weeks — and why closing it and looking again showed
+  // the name perfectly, because by then the server had answered.
+  //
+  // includeMetadataChanges is what makes this fixable. Without it, a
+  // listener whose server data matches what's already cached never
+  // fires a second time — so for a user who genuinely has no username
+  // there would be no later event to distinguish "still syncing" from
+  // "really hasn't got one", and the prompt would never appear at all.
+  // With it, the flip of fromCache is itself an event.
   unsubscribeProfile = db.collection('users').doc(uid)
-    .onSnapshot(function (docSnapshot) {
-      var data = docSnapshot.exists ? (docSnapshot.data() || {}) : {};
-      myUsername   = data.username || null;
-      myFriendUids = Array.isArray(data.friends) ? data.friends : [];
+    .onSnapshot({ includeMetadataChanges: true }, function (docSnapshot) {
+      var data       = docSnapshot.exists ? (docSnapshot.data() || {}) : {};
+      var fromServer = !(docSnapshot.metadata && docSnapshot.metadata.fromCache);
+      var hadUsername = myUsername;
+
+      if (fromServer) profileSynced = true;
+
+      // A cache-only snapshot is allowed to ADD what it knows, never to
+      // take away what it simply hasn't been told. Only the server gets
+      // to clear a username or empty a friends list.
+      if (fromServer || data.username) {
+        myUsername = data.username || null;
+      }
+      if (fromServer || Array.isArray(data.friends)) {
+        myFriendUids = Array.isArray(data.friends) ? data.friends : [];
+      }
+
+      repaintIfFriendSkinsChanged();
       refreshFriendProfiles();
-      maybePromptForUsername();
+      if (myUsername && !hadUsername) refreshOpenUsernameModal();
       renderFriendsIfVisible();
     }, function (error) {
       console.error('DISCIPLANT: profile listener failed:', error);
@@ -580,6 +635,43 @@ function removeFriendRequest(request, successMessage) {
 
 
 // ============================================
+// Friend-gated skins
+// ============================================
+// Two skins in every species unlock on friend count (see
+// SKIN_UNLOCK_RULES in 03-plant-art.js). That count lives here, and
+// it changes from a snapshot — someone accepting a request across the
+// world repaints this user's Greenhouse. Nothing else was listening
+// for that, so accepting a third friend would have left the gold skin
+// looking locked until the next navigation.
+//
+// Only a change in how many friend gates are OPEN triggers a repaint:
+// going from 11 friends to 12 changes nothing on screen, and render()
+// redraws every plant in the garden.
+var lastFriendSkinTier = null;
+
+function countOpenFriendSkinGates() {
+  if (typeof SKIN_UNLOCK_RULES === 'undefined') return 0;
+  var count = getMyFriendCount();
+  var open  = 0;
+  SKIN_UNLOCK_RULES.forEach(function (rule) {
+    if (rule.kind === 'friends' && count >= rule.need) open++;
+  });
+  return open;
+}
+
+function repaintIfFriendSkinsChanged() {
+  var tier = countOpenFriendSkinGates();
+  if (tier === lastFriendSkinTier) return;
+  lastFriendSkinTier = tier;
+  // Fires on the first snapshot too, on purpose: the profile can
+  // easily arrive after the garden has already been drawn, and a user
+  // who signs in with friends already earned should not have to
+  // navigate before their gold plants look gold.
+  if (typeof render === 'function') render();
+}
+
+
+// ============================================
 // Rendering the Friends page
 // ============================================
 function renderFriendsIfVisible() {
@@ -603,6 +695,16 @@ function renderFriendsMe() {
     friendsMeEl.innerHTML =
       '<span class="friend-name">@' + escapeHtml(myUsername) + '</span>' +
       '<span class="friend-sub">Share this so friends can find you</span>';
+    return;
+  }
+
+  // Until the server has actually answered, "no username" is just the
+  // empty local cache talking (see the profile listener). Saying so
+  // out loud to someone who has had one for months is the same wrong
+  // claim the old startup prompt used to make — so say nothing yet.
+  if (!profileSynced) {
+    friendsMeEl.innerHTML =
+      '<span class="friend-sub">Loading your profile\u2026</span>';
     return;
   }
 

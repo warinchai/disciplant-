@@ -8,30 +8,100 @@
 // ============================================
 
 // ============================================
-// Plant height system (shown on hover, in meters)
+// Plant height system (shown on hover)
 // ============================================
-// Height now tracks exactly what's on screen: it's derived straight
-// from a plant's actual rendered "scale" — the same number driving
-// the --plant-scale CSS var (growth stage size, any Daily/Long-Term
-// flourish, AND the depth-based foreground/background multiplier).
-// Every species' art shares the same 80x130 SVG canvas, so a single
-// shared conversion constant means two plants at the same scale are
-// reported as the same height, and whichever plant visibly reaches
-// higher on screen always reads as the taller one — no more a young,
-// close-up Clover being labeled shorter than a small, distant Bamboo
-// just because of a fixed per-species range.
-var PLANT_BASE_HEIGHT_M = 1.6; // height, in meters, of a plant at scale = 1
+// Height is a function of DAYS GROWN, not of the number that scales
+// the artwork. The two used to be the same thing, which is what made
+// a seed 1.6 m: the on-screen scale starts at 1 and multiplies up, so
+// anything derived from it starts at whatever "scale 1" was declared
+// to be and can never be small.
+//
+// The curve is fantasy, not botany: these are beanstalks. It has
+// three parts, each doing a different job.
+//
+//   1. A seed floor. Day zero is 2 cm and nothing is ever shorter.
+//
+//   2. An S-curve (a Hill function) that carries the plant from
+//      sprout to giant across its first two months, tuned so that
+//      day 60 lands on 50 m exactly. The exponent is what gives the
+//      beanstalk shape: barely anything for the first few days, then
+//      it takes off, then it eases as the canopy fills in.
+//
+//         0 days   2.0 cm      21 days    8.0 m
+//         1 day    3.1 cm      30 days   16.2 m
+//         7 days     77 cm     45 days   33.0 m
+//        14 days    3.4 m      60 days   50.0 m
+//
+//   3. A slow logarithmic tail that only starts once past day 60.
+//      The S-curve alone flattens against its ceiling, and a plant
+//      whose number stops moving is a plant that stops rewarding the
+//      person growing it. The tail keeps it climbing forever without
+//      the growth spurt continuing: 84 m at three months, 149 m at a
+//      year, 194 m at ten. (For scale, the tallest real tree ever
+//      measured was about 116 m — a year-old plant here is beyond
+//      anything that has actually grown on Earth, which is the
+//      intent.)
+//
+// It is strictly increasing at every single day boundary, forever.
+// It does get slow in absolute terms out past a year — around 7 cm a
+// day at 365, 2 cm a day at 1000 — so the displayed figure moves
+// every few days rather than every day for very old plants.
+//
+// TWO THINGS IT DELIBERATELY IGNORES, both for the same reason: they
+// change how big a plant LOOKS without changing how much it has
+// grown.
+//
+//   depth      where a plant sits front-to-back in the scene. Pure
+//              perspective — dragging a plant back does not shrink
+//              the plant, so it must not shrink its height.
+//   flourishes the Daily tab's ×1.35 bloom when today is ticked, and
+//              the Long-Term tab's streak momentum multiplier. Both
+//              are celebration on top of the plant's real size. The
+//              underlying day count still moves the moment you tick
+//              a box (completing a task raises the streak first, and
+//              the streak is what's measured), so the number does
+//              respond — it just isn't inflated by the animation.
+//
+// So the label answers "how much has this grown", consistently, from
+// anywhere in the app; it is not a readout of pixels on screen.
+var PLANT_SEED_HEIGHT_M    = 0.02; // a plant with no days yet
+var PLANT_HEIGHT_CANOPY_M  = 120;  // ceiling the S-curve alone approaches
+var PLANT_HEIGHT_STEEPNESS = 2.2;  // >1 = slow start then a growth spurt
+var PLANT_HEIGHT_MIDPOINT  = 69.937; // days; solved so day 60 lands on 50 m
+var PLANT_HEIGHT_KNEE_DAYS = 60;   // where the S-curve hands over to the tail
+var PLANT_HEIGHT_ANCIENT_M = 18;   // metres per e-fold of age past the knee
 
-function computeHeightMeters(scale) {
-  return Math.max(0, scale || 0) * PLANT_BASE_HEIGHT_M;
+// Precomputed rather than raised on every plant of every frame.
+var PLANT_HEIGHT_MIDPOINT_POW =
+  Math.pow(PLANT_HEIGHT_MIDPOINT, PLANT_HEIGHT_STEEPNESS);
+
+function computeHeightMeters(growthDays) {
+  var days = Math.max(0, growthDays || 0);
+  if (!isFinite(days)) days = 0;
+
+  var grown = Math.pow(days, PLANT_HEIGHT_STEEPNESS);
+  var surge = PLANT_HEIGHT_CANOPY_M * grown / (PLANT_HEIGHT_MIDPOINT_POW + grown);
+
+  // Zero until the knee, so the first two months are the S-curve's
+  // alone and day 60 hits its target untouched.
+  var ancient = PLANT_HEIGHT_ANCIENT_M * Math.log(
+    1 + Math.max(0, days - PLANT_HEIGHT_KNEE_DAYS) / PLANT_HEIGHT_KNEE_DAYS
+  );
+
+  return PLANT_SEED_HEIGHT_M + surge + ancient;
 }
 
-// Formats to a short, readable string — no more than 2 decimal
-// places, and drops to cm-style precision for very short plants so
-// it never just reads "0.0 m".
+// Centimetres below a metre, metres above it — "0.02 m" is not how
+// anyone describes a seed. Sub-10cm keeps one decimal so the first
+// few days are visibly different from each other rather than all
+// rounding to the same whole number.
 function formatHeightMeters(meters) {
-  if (meters < 0.1) return meters.toFixed(2) + ' m';
-  return meters.toFixed(1) + ' m';
+  var m = Math.max(0, meters || 0);
+  if (m < 1) {
+    var cm = m * 100;
+    return (cm < 10 ? cm.toFixed(1) : String(Math.round(cm))) + ' cm';
+  }
+  return m.toFixed(1) + ' m';
 }
 
 
@@ -529,7 +599,10 @@ function renderGarden() {
     var totalGrowthDays = Math.max(0, task.totalGrowthDays || 0);
     var streak          = Math.max(0, task.streak || 0);
 
-    var stageIdx, scale, subLabel;
+    // The day count this plant's height is read from — the same one
+    // its size is built from in each tab, but without the flourish
+    // multipliers layered on afterwards.
+    var stageIdx, scale, subLabel, heightDays;
 
     if (currentGardenTab === 'daily') {
       // Daily Garden: what today's plant looks like right now.
@@ -542,6 +615,10 @@ function renderGarden() {
       stageIdx = task.completed ? maxStageIdx   : streakStage;
       scale    = task.completed ? streakScale * 1.35 : streakScale;
 
+      // Ticking today's box already added a day to the streak, so the
+      // height rises on the tick without borrowing the ×1.35 bloom.
+      heightDays = streak;
+
       subLabel = (task.completed ? 'Done today ✓' : 'Not done yet') +
         (streak > 0 ? ' · 🔥 ' + streak + ' day streak' : '');
     } else {
@@ -551,6 +628,10 @@ function renderGarden() {
       stageIdx = getStageIndexForDays(totalGrowthDays);
       var momentum = 1 + Math.min(streak, 60) * 0.004; // up to +24% at a 60-day streak
       scale = computeScaleForDays(totalGrowthDays) * momentum;
+
+      // Lifetime days only. A broken streak shrinks the plant on
+      // screen but must never shrink what it has grown to.
+      heightDays = totalGrowthDays;
 
       var streakPart = streak > 0 ? ' · 🔥 ' + streak + ' day streak' : '';
       subLabel = totalGrowthDays + ' days grown' + streakPart;
@@ -563,13 +644,10 @@ function renderGarden() {
     var growthOnlyScale = scale;
     scale = scale * layout.depthScale;
 
-    // Height reflects the plant's actual GROWTH only — the growth-
-    // stage size plus any Daily/Long-Term flourish — and deliberately
-    // excludes the depth (foreground/background) multiplier. Depth is
-    // just a perspective illusion from where the plant happens to be
-    // placed in the garden; dragging it front-to-back doesn't change
-    // the plant itself, so it must not change its reported height.
-    var heightMeters = computeHeightMeters(growthOnlyScale);
+    // Read from days grown, so neither depth nor the flourish
+    // multipliers above can move it — see the height system notes at
+    // the top of this file.
+    var heightMeters = computeHeightMeters(heightDays);
 
     // Ground-anchored wrapper — position only, never scales.
     var wrap = document.createElement('div');
@@ -783,5 +861,3 @@ function onPlantDragEnd(e) {
   saveData();
   render();
 }
-
-

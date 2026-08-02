@@ -553,9 +553,10 @@ function navigateTo(page) {
     if (friendsLoadingState) friendsLoadingState.classList.toggle('hidden', authReady);
     if (friendsContent) friendsContent.classList.toggle('hidden', !authReady);
     if (authReady) renderFriendsPage();
-    // Nothing on this page works without a username, so this is the one
-    // place it's always worth asking (no-op if they already have one).
-    maybePromptForUsername();
+    // No modal is opened here. The page renders a "Choose a username"
+    // button when there isn't one yet (renderFriendsMe in 06), and that
+    // button is the only thing that opens it — arriving on this page is
+    // not the same as asking to be prompted.
   }
 
   if (page === 'friend-garden') {
@@ -751,5 +752,3 @@ function applyDayBoundaries() {
 
   return changed;
 }
-
-

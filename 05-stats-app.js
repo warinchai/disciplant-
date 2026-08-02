@@ -918,6 +918,11 @@ function openPlantSkins(taskId) {
 function setTaskSkin(taskId, skinId) {
   var task = tasks.find(function (t) { return t.id === taskId; });
   if (!task) return;
+  // Locked tiles are already disabled buttons, so this only fires if
+  // something bypassed the UI. Checked here anyway — this is the one
+  // function that writes skinId, so it's the only place a locked skin
+  // could ever get saved.
+  if (!isSkinUnlocked(task, task.categoryId, skinId)) return;
   task.skinId = skinId;
   saveData();
   // One render repaints the card here, the pip on the Tasks page and
@@ -935,21 +940,47 @@ function buildSkinDrawer(task, cat) {
 
   var skins   = getSkinsFor(task.categoryId);
   // Compare against the *resolved* skin so the tile for the default is
-  // still shown as selected when a task carries an unknown id.
-  var current = getSkin(task.categoryId, getTaskSkinId(task)).id;
+  // still shown as selected when a task carries an unknown id — or one
+  // that's currently locked, in which case classic is what's worn and
+  // classic is what should read as selected.
+  var current  = getSkin(task.categoryId, getTaskSkinId(task)).id;
+  var unlocked = countUnlockedSkins(task, task.categoryId);
 
+  // A locked tile shows its plant in full colour — same art, same
+  // palette, same swatch pip as an unlocked one. Dimming it would hide
+  // exactly the thing that makes someone want it, and wanting it is
+  // the mechanic. What marks it locked instead: a padlock pinned to
+  // the tile's top-right corner, clear of the plant, and the thing to
+  // go and do written underneath in place of its flavour note.
   var tiles = skins.map(function (skin) {
+    var state    = getSkinUnlockState(task, task.categoryId, skin.id);
     var selected = (skin.id === current);
+    var locked   = !state.unlocked;
+    var progress = skinUnlockProgress(state);
+
+    var footer = locked
+      ? '<span class="skin-tile-req">' + escapeHtml(skinUnlockRequirement(state)) +
+          (progress ? '<span class="skin-tile-progress">' + escapeHtml(progress) + '</span>' : '') +
+        '</span>'
+      : '<span class="skin-tile-note">' + escapeHtml(skin.note || '') + '</span>';
+
     return (
-      '<button type="button" class="skin-tile' + (selected ? ' selected' : '') + '"' +
+      '<button type="button" class="skin-tile' +
+        (selected ? ' selected' : '') + (locked ? ' locked' : '') + '"' +
         ' data-skin-id="' + skin.id + '"' +
-        ' aria-pressed="' + (selected ? 'true' : 'false') + '">' +
+        (locked ? ' disabled aria-disabled="true"' : '') +
+        ' aria-pressed="' + (selected ? 'true' : 'false') + '"' +
+        ' title="' + escapeHtml(locked ? skin.name + ' \u2014 ' + skinUnlockRequirement(state)
+                                       : skin.name) + '">' +
+        // Sibling of the art, not a child of it: the padlock anchors
+        // to the tile's corner, and .skin-tile-art clips overflow.
+        (locked ? '<span class="skin-lock" aria-hidden="true">\uD83D\uDD12</span>' : '') +
         '<span class="skin-tile-art">' +
           getPlantSVG(task.categoryId, SKIN_PREVIEW_STAGE, skin.id, 74) +
         '</span>' +
         '<span class="skin-tile-name">' + skinPipHtml(skin) +
           escapeHtml(skin.name) + '</span>' +
-        '<span class="skin-tile-note">' + escapeHtml(skin.note || '') + '</span>' +
+        footer +
       '</button>'
     );
   }).join('');
@@ -959,13 +990,15 @@ function buildSkinDrawer(task, cat) {
       '<div class="skin-drawer-heading">' +
         '<h3 class="skin-drawer-title">' + escapeHtml(task.text) + '</h3>' +
         '<p class="skin-drawer-subtitle">' + cat.emoji + ' ' + escapeHtml(cat.species) +
-          ' \u00b7 ' + skinCountLabel(skins.length) + ' \u00b7 shown at full growth</p>' +
+          ' \u00b7 ' + unlocked + ' of ' + skinCountLabel(skins.length) + ' unlocked' +
+          ' \u00b7 shown at full growth</p>' +
       '</div>' +
       '<button type="button" class="skin-drawer-close" aria-label="Close skins">\u2715</button>' +
     '</div>' +
     '<div class="skin-grid">' + tiles + '</div>';
 
   drawer.querySelectorAll('.skin-tile').forEach(function (tile) {
+    if (tile.disabled) return;   // locked tiles get no listener at all
     tile.addEventListener('click', function () {
       setTaskSkin(task.id, tile.getAttribute('data-skin-id'));
     });
@@ -994,9 +1027,11 @@ function renderGreenhouse() {
   if (greenhouseEmptyEl) greenhouseEmptyEl.classList.toggle('hidden', tasks.length > 0);
 
   tasks.forEach(function (task) {
-    var cat  = getCategoryById(task.categoryId);
-    var skin = getSkin(task.categoryId, getTaskSkinId(task));
-    var open = (task.id === greenhouseOpenTaskId);
+    var cat    = getCategoryById(task.categoryId);
+    var skin   = getSkin(task.categoryId, getTaskSkinId(task));
+    var open   = (task.id === greenhouseOpenTaskId);
+    var total  = getSkinsFor(task.categoryId).length;
+    var locked = total - countUnlockedSkins(task, task.categoryId);
 
     var card              = document.createElement('button');
     card.type             = 'button';
@@ -1014,7 +1049,12 @@ function renderGreenhouse() {
       '<span class="plant-card-species">' + cat.emoji + ' ' +
         escapeHtml(cat.species) + '</span>' +
       '<span class="plant-card-skin">' + skinPipHtml(skin) +
-        escapeHtml(skin.name) + '</span>';
+        escapeHtml(skin.name) + '</span>' +
+      // Only shown when there's actually something left to earn, so a
+      // fully unlocked plant's card stays clean.
+      (locked > 0
+        ? '<span class="plant-card-locked">\uD83D\uDD12 ' + locked + ' locked</span>'
+        : '');
 
     (function (id) {
       card.addEventListener('click', function () { toggleGreenhousePlant(id); });

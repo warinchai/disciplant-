@@ -446,6 +446,13 @@ auth.onIdTokenChanged(function (user) {
               // Backfilled from the current streak on load in case a
               // task already had a streak before this field existed.
               maxStreak:         Math.max(t.maxStreak || 0, t.streak || 0),
+              // All-time high-water mark for totalGrowthDays, which
+              // is NOT monotonic — un-ticking today's box takes a day
+              // back off it. Without this, a plant sitting exactly on
+              // a 30-day skin unlock would lose that skin the moment
+              // its owner corrected a mis-tap. Backfilled from the
+              // current total for tasks saved before this existed.
+              maxGrowthDays:     Math.max(t.maxGrowthDays || 0, t.totalGrowthDays || 0),
               // Per-day completion log — { "YYYY-MM-DD": true, ... } —
               // one entry per day this task was actually checked off.
               // Powers the Stats page heatmaps; only starts recording
@@ -522,6 +529,7 @@ function saveData() {
       prevLastCleanDate: t.prevLastCleanDate || null,
       totalGrowthDays:    t.totalGrowthDays || 0,
       maxStreak:         Math.max(t.maxStreak || 0, t.streak || 0),
+      maxGrowthDays:     Math.max(t.maxGrowthDays || 0, t.totalGrowthDays || 0),
       history:           t.history || {},
       posX:              (typeof t.posX === 'number') ? t.posX : null,
       posY:              (typeof t.posY === 'number') ? t.posY : null,
@@ -595,7 +603,10 @@ function buildGardenSummary(cleanTasks) {
         // the note in the handover summary; showing real species is a
         // product decision, not a technical requirement.
         categoryId:      t.categoryId,
-        skinId:          t.skinId || SKIN_DEFAULT_ID,
+        // The skin actually WORN, not the one stored — a plant whose
+        // skin is currently locked shows a friend the same classic it
+        // shows its owner, rather than a look it isn't wearing.
+        skinId:          getTaskSkinId(t),
         // Growth inputs — the two numbers the garden is actually a
         // picture of.
         streak:          t.streak || 0,
@@ -668,6 +679,7 @@ taskForm.addEventListener('submit', function (event) {
     prevLastCleanDate: null,
     totalGrowthDays:    0,
     maxStreak:         0,
+    maxGrowthDays:     0,
     history:           {},
     posX:              null,
     posY:              null,
@@ -706,6 +718,8 @@ function toggleTask(taskId, newChecked) {
     task.totalGrowthDays = (task.totalGrowthDays || 0) + 1;
     task.history[getTodayString()] = true;
     task.maxStreak        = Math.max(task.maxStreak || 0, task.streak);
+    // Banked, and never given back — see the field's note on load.
+    task.maxGrowthDays    = Math.max(task.maxGrowthDays || 0, task.totalGrowthDays);
   } else if (!newChecked && wasCompleted) {
     // Undoing a completion — reverse today's credit for both, and
     // remove today's history entry so the heatmap reflects reality.
