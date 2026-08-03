@@ -234,17 +234,36 @@ function signInWithGoogle() {
       var code = error && error.code;
 
       if (code === 'auth/credential-already-in-use') {
-        // That Google account already has its own saved garden — sign
-        // into it directly instead of linking.
-        return auth.signInWithPopup(googleProvider)
-          .then(function (result2) {
-            authActionPending = false;
-            refreshIdentityUI((result2 && result2.user) || auth.currentUser);
-            closeAuthModal();
-          })
-          .catch(function (err2) {
-            fail('Sign-in failed. Please try again.', err2);
-          });
+        // That Google account already has its own saved garden — sign into
+        // it directly instead of linking.
+        //
+        // NOT with a second popup. The click's user-activation token was
+        // spent opening the FIRST popup, and this runs after that popup has
+        // already resolved, so window.open() here has no gesture behind it
+        // and every browser blocks it — auth/popup-blocked, every time, on
+        // localhost as well as in production. (This was a real bug: the
+        // popup-blocked handler further down would have recovered it, but
+        // this inner catch swallowed the error into a generic failure
+        // message before it could get there.)
+        //
+        // Redirect carries no activation requirement, so use it wherever it
+        // can actually complete on this origin. Where it can't, ask for a
+        // fresh click rather than firing a popup that is guaranteed to fail.
+        //
+        // Deliberately auth.signInWithRedirect and NOT startRedirectFlow():
+        // that helper branches on isAnon and would call linkWithRedirect,
+        // landing straight back on credential-already-in-use after the round
+        // trip. The whole point here is to stop linking and switch accounts.
+        if (REDIRECT_IS_USABLE) {
+          try { sessionStorage.setItem('disciplant:redirectPending', '1'); } catch (e) {}
+          return auth.signInWithRedirect(googleProvider);
+          // Page navigates away here — nothing after this runs.
+        }
+        return fail(
+          'That Google account already has its own garden. Tap Sign in with ' +
+          'Google again to switch to it.',
+          error
+        );
       }
 
       if (code === 'auth/popup-blocked' ||
@@ -1027,5 +1046,3 @@ function renderTaskList() {
     }
   });
 }
-
-
