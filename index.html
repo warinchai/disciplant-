@@ -5,6 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DISCIPLANT — daily discipline garden</title>
   <link rel="stylesheet" href="style.css" />
+
+  <!-- Google Analytics (gtag.js) — visitor counts for the deployed site.
+       Nothing to do with Firestore: this talks to Google Analytics, not to
+       the database, so it costs no reads and cannot affect the quota.
+
+       The ID below is the measurementId already sitting in
+       firebase-config.js — Firebase created the Analytics property when the
+       project was set up, so there was no separate signup. Reports live at
+       analytics.google.com under the same Google account.
+
+       This fires on localhost too, so dev sessions land in the numbers.
+       Not worth filtering at this scale, but that's why the first visitors
+       are mostly you. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q64R6MP546"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-Q64R6MP546');
+  </script>
 </head>
 <body>
 
