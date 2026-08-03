@@ -1,0 +1,5 @@
+node_modules
+*serviceAccount*.json
+*firebase-adminsdk*.json
+.env*
+.DS_Store
