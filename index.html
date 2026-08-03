@@ -108,10 +108,12 @@
       <h1 class="hero-title">DISCIPLANT</h1>
       <p class="hero-tagline">Tend your habits. Watch them bloom.</p>
 
-      <!-- Community counters. Populated from the public /stats/global
-           document by 08-home-stats.js, and hidden until that read
-           succeeds — so before the first script run, or if the read
-           fails, the home page looks exactly as it did without it. -->
+      <!-- Community counters — CURRENTLY DORMANT.
+           This markup is left in place, but 08-home-stats.js is
+           commented out at the bottom of this file, so nothing ever
+           fills it in and the `hidden` class below is never removed.
+           It costs one hidden div and no network request. To bring the
+           strip back, uncomment that one script tag. -->
       <div id="homeStats" class="home-stats hidden">
         <div class="home-stat">
           <span class="home-stat-value" id="statGardeners">&mdash;</span>
@@ -167,6 +169,19 @@
     <div class="cat-subnav garden-subnav" id="gardenSubnav">
       <button class="cat-tab active" id="garden-tab-daily"    data-garden-tab="daily">Daily Garden</button>
       <button class="cat-tab"        id="garden-tab-longterm" data-garden-tab="longterm">Long-Term Garden</button>
+    </div>
+
+    <!-- Garden edit bar. Plants are only draggable while this mode is
+         on, and nothing is written to Firestore until "Save & exit" —
+         see the Garden edit mode section in 04-garden-scene.js. The bar
+         hides itself entirely when the garden is empty. -->
+    <div class="garden-edit-bar hidden" id="gardenEditBar">
+      <button class="cat-tab garden-edit-btn" id="gardenEditStart">✎ Edit garden</button>
+      <span class="garden-edit-actions hidden" id="gardenEditActions">
+        <span class="garden-edit-hint">Drag your plants anywhere</span>
+        <button class="cat-tab garden-edit-save" id="gardenEditSave">Save &amp; exit</button>
+        <button class="cat-tab garden-edit-discard" id="gardenEditDiscard">Discard</button>
+      </span>
     </div>
   </div>
 
@@ -514,6 +529,14 @@
   <script src="05-stats-app.js"></script>
   <script src="06-friends.js"></script>
   <script src="07-friend-garden.js"></script>
-  <script src="08-home-stats.js"></script>
+
+  <!-- Community counters are switched OFF while the numbers are still
+       small. This one line is the whole switch: uncomment it and the
+       strip comes back exactly as it was. While it's commented out
+       nothing reads /stats/global, and the #homeStats markup below the
+       hero keeps its `hidden` class forever, so it never paints.
+       The totals are still readable privately with a dry run of
+       recompute-stats.js. -->
+  <!-- <script src="08-home-stats.js"></script> -->
 </body>
 </html>

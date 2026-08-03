@@ -71,6 +71,21 @@ var friendGardenNoteEl   = document.getElementById('friendGardenNote');
 
 // Called from the Friends page (06) when a friend's "View garden"
 // button is clicked.
+// Friend garden summaries, cached for a few minutes.
+//
+// Bouncing between the Friends list and a friend's garden used to cost
+// a read every time you opened the same one. The summary only changes
+// when its owner saves, so re-reading it seconds later is pure waste.
+//
+// Time-limited rather than session-long on purpose: a friend ticking a
+// habit while you're looking around should show up reasonably soon,
+// and a cached MISS ("no summary yet") must not stick around for the
+// whole session if they publish one a minute later. Five minutes is
+// short enough that nothing feels frozen and long enough to kill the
+// repeat-open cost.
+var FRIEND_GARDEN_CACHE_MS = 5 * 60 * 1000;
+var friendGardenCache      = {}; // uid -> { at, summary, error }
+
 function openFriendGarden(uid, username) {
   if (!uid) return;
 
@@ -85,6 +100,15 @@ function openFriendGarden(uid, username) {
   friendGardenTab      = 'daily';
 
   navigateTo('friend-garden');
+
+  var cached = friendGardenCache[uid];
+  if (cached && (Date.now() - cached.at) < FRIEND_GARDEN_CACHE_MS) {
+    friendGardenLoading = false;
+    friendGardenSummary = cached.summary;
+    friendGardenError   = cached.error;
+    renderFriendGardenIfVisible();
+    return;
+  }
 
   db.collection('gardenSummaries').doc(uid).get()
     .then(function (docSnapshot) {
@@ -102,6 +126,15 @@ function openFriendGarden(uid, username) {
         friendGardenSummary = docSnapshot.data() || {};
         friendGardenError   = null;
       }
+
+      // Cached whether it was found or not — see the note above on why
+      // a miss is cached too, and why the window is short.
+      friendGardenCache[uid] = {
+        at:      Date.now(),
+        summary: friendGardenSummary,
+        error:   friendGardenError,
+      };
+
       renderFriendGardenIfVisible();
     })
     .catch(function (error) {

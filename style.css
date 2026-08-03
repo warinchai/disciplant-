@@ -3482,3 +3482,64 @@ body {
   .friend-garden-note { padding: 0 14px; }
   .friend-garden-title { font-size: 1.02rem; }
 }
+
+/* ========================================
+   Garden edit bar
+
+   Sits under the Daily/Long-Term tabs on the Garden page. Needs
+   pointer-events back on, because .page-garden turns them off so
+   clicks fall through to the garden scene underneath.
+   ======================================== */
+
+.garden-edit-bar {
+  pointer-events: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 18px 8px;
+}
+
+.garden-edit-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.garden-edit-hint {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #FBF7EE;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  padding-right: 2px;
+}
+
+.garden-edit-save {
+  border-color: rgba(122, 168, 88, 0.75);
+  background: rgba(122, 168, 88, 0.92);
+  color: #FBF7EE;
+}
+
+.garden-edit-discard {
+  border-color: rgba(217, 207, 184, 0.45);
+  background: rgba(251, 247, 238, 0.72);
+  color: #7A5C4A;
+}
+
+/* While editing, plants get a soft halo so it's obvious which things
+   are currently grabbable — and that the mode is on at all. */
+.garden-scene.garden-editing .garden-plant {
+  cursor: grab;
+}
+
+.garden-scene.garden-editing .garden-plant .plant-visual {
+  filter: drop-shadow(0 0 10px rgba(242, 184, 75, 0.55));
+}
+
+@media (max-width: 600px) {
+  .garden-edit-hint { display: none; }
+}

@@ -368,6 +368,86 @@ function renderAuthModal() {
   if (signOutBtn) signOutBtn.addEventListener('click', signOutUser);
 }
 
+// ============================================
+// Guest sign-in, on demand
+//
+// This used to fire on page load, which meant someone who opened the
+// site, read the tagline and left still got an anonymous account, a
+// garden document, and a full set of listener attachments — several
+// Firestore reads for a visitor who never tended anything. At launch,
+// when most traffic is people glancing at a shared link, that is
+// mostly what the quota would have gone on.
+//
+// Now nothing signs in until the visitor actually enters the app.
+// navigateTo() (01-app-core.js) calls this for any page other than
+// home, so a bounce costs zero reads and creates no account at all.
+//
+// Called on every such navigation, so it has to be idempotent: an
+// existing session short-circuits, and concurrent calls share one
+// in-flight promise rather than racing to create two guests.
+// ============================================
+var pendingAnonSignIn = null;
+
+// THE RACE THIS EXISTS TO PREVENT — do not remove this gate.
+//
+// auth.currentUser is null for the first few hundred milliseconds of
+// EVERY page load, while Firebase restores the saved session out of
+// IndexedDB. It is not "no user"; it is "not known yet". Checking it
+// directly and creating a guest on null meant that clicking into the
+// app quickly enough replaced a real signed-in session with a brand
+// new anonymous one — the user watched themselves turn into a guest.
+//
+// For an anonymous user the same race is worse: the new guest gets a
+// new uid, and the old guest's garden becomes unreachable forever,
+// because nothing but that uid ever pointed at it.
+//
+// The auth observer's FIRST callback is the signal that Firebase has
+// finished making up its mind — it fires after the session has been
+// restored, and after any pending Google redirect has been resolved.
+// So the answer is: never decide before that has happened.
+var authSessionResolved = false;
+var markAuthSessionResolved = null;
+var authSessionResolvedPromise = new Promise(function (resolve) {
+  markAuthSessionResolved = resolve;
+});
+
+function noteAuthSessionResolved() {
+  if (authSessionResolved) return;
+  authSessionResolved = true;
+  markAuthSessionResolved();
+}
+
+function ensureSignedIn() {
+  if (auth.currentUser) return Promise.resolve(auth.currentUser);
+  if (pendingAnonSignIn) return pendingAnonSignIn;
+
+  pendingAnonSignIn = authSessionResolvedPromise
+    .then(function () {
+      // Re-checked on the other side of the wait: the session may well
+      // have restored while we were waiting, which is exactly the case
+      // that used to get clobbered.
+      if (auth.currentUser) return auth.currentUser;
+
+      return auth.signInAnonymously().then(function (credential) {
+        // Nothing else to do here — onIdTokenChanged fires next and
+        // boots the app exactly as it does on reload.
+        return credential.user;
+      });
+    })
+    .then(function (user) {
+      pendingAnonSignIn = null;
+      return user;
+    })
+    .catch(function (error) {
+      pendingAnonSignIn = null;
+      console.error('DISCIPLANT: guest sign-in failed:', error);
+      throw error;
+    });
+
+  return pendingAnonSignIn;
+}
+
+
 if (authWidgetBtn)     authWidgetBtn.addEventListener('click', openAuthModal);
 if (authModalClose)    authModalClose.addEventListener('click', closeAuthModal);
 if (authModalBackdrop) authModalBackdrop.addEventListener('click', closeAuthModal);
@@ -391,17 +471,21 @@ if (authModalBackdrop) authModalBackdrop.addEventListener('click', closeAuthModa
 // ensureUserProfileDoc() skips unchanged data, and the snapshot listener
 // is left alone when the uid hasn't moved.
 auth.onIdTokenChanged(function (user) {
+  // First thing, on every path: this callback firing at all is what
+  // tells ensureSignedIn() that Firebase has finished restoring any
+  // saved session, so it's safe to conclude there isn't one.
+  noteAuthSessionResolved();
+
   if (!user) {
-    // No session at all — sign in as a guest. Doing this here rather
-    // than unconditionally at script load means it can never race
-    // with a Google redirect sign-in/link still being processed on
-    // return from signInWithGoogle()'s redirect fallback: Firebase
-    // holds off firing this callback with `null` until any pending
-    // redirect result has been resolved, so by the time we get here
-    // with no user, there really isn't one yet.
-    auth.signInAnonymously().catch(function (error) {
-      console.error('Sign-in failed:', error);
-    });
+    // No session, and DELIBERATELY no sign-in here — see
+    // ensureSignedIn() below for why. A visitor reading the home page
+    // has no account, no garden document and costs no Firestore reads;
+    // the widget stays on its default "Guest" state until they go in.
+    //
+    // This callback is also where a Google redirect result lands, and
+    // Firebase holds off firing it with `null` until any pending
+    // redirect has resolved — so reaching here really does mean there
+    // is no session, not that one is still in flight.
     return;
   }
 
@@ -485,6 +569,11 @@ auth.onIdTokenChanged(function (user) {
           authReady = true;
         }
 
+        // Covers the case where the friends list arrived before the
+        // garden did — see ensureGardenSummaryPublished(). Whichever of
+        // the two lands second does the write; the flag stops both.
+        ensureGardenSummaryPublished();
+
       } catch (err) {
         console.error('DISCIPLANT: error while processing garden data:', err);
       }
@@ -515,9 +604,28 @@ auth.onIdTokenChanged(function (user) {
 // ============================================
 // Saving to Firestore
 // ============================================
-function saveData() {
-  if (!currentUserId) return;
-  var cleanTasks = tasks.map(function (t) {
+// A save deferred by the throttle above would be lost if the tab were
+// closed inside that half-second. visibilitychange is the reliable
+// hook for that on both desktop and mobile, so flush there: clear the
+// timer and save immediately.
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState !== 'hidden') return;
+  if (!pendingSaveTimer) return;
+  clearTimeout(pendingSaveTimer);
+  pendingSaveTimer = null;
+  lastSaveAt = 0;            // bypass the cooldown for this final write
+  saveData();
+});
+
+function buildCleanTasks() {
+  return tasks.map(function (t) {
+    // Position comes via getPersistedPosition() (04-garden-scene.js)
+    // rather than straight off the task. While the garden is in edit
+    // mode that returns the pre-edit snapshot, so a save triggered by
+    // something else entirely — a midnight rollover, a habit ticked on
+    // another page — writes those changes without also committing
+    // drags the user hasn't saved yet and may still discard.
+    var pos = (typeof getPersistedPosition === 'function') ? getPersistedPosition(t) : t;
     return {
       id:                t.id,
       text:              t.text,
@@ -531,10 +639,47 @@ function saveData() {
       maxStreak:         Math.max(t.maxStreak || 0, t.streak || 0),
       maxGrowthDays:     Math.max(t.maxGrowthDays || 0, t.totalGrowthDays || 0),
       history:           t.history || {},
-      posX:              (typeof t.posX === 'number') ? t.posX : null,
-      posY:              (typeof t.posY === 'number') ? t.posY : null,
+      posX:              (typeof pos.posX === 'number') ? pos.posX : null,
+      posY:              (typeof pos.posY === 'number') ? pos.posY : null,
     };
   });
+}
+
+// Leading-edge throttle with a trailing flush.
+//
+// The FIRST save in a burst goes straight through, so ticking a habit
+// still feels instant. Anything within the cooldown after it is folded
+// into one deferred save at the end — and because that deferred call
+// re-reads the live tasks array, the final state always lands. Nothing
+// is dropped; repeats are merged.
+//
+// This is what stops a stuck Enter key writing hundreds of documents:
+// held down, it now costs two writes a second instead of dozens.
+var SAVE_MIN_INTERVAL_MS = 500;
+var lastSaveAt      = 0;
+var pendingSaveTimer = null;
+
+function saveData() {
+  if (!currentUserId) return;
+
+  var sinceLast = Date.now() - lastSaveAt;
+  if (sinceLast < SAVE_MIN_INTERVAL_MS) {
+    // Already one queued — it will pick up whatever the tasks array
+    // looks like when it fires, including this change.
+    if (!pendingSaveTimer) {
+      pendingSaveTimer = setTimeout(function () {
+        pendingSaveTimer = null;
+        saveData();
+      }, SAVE_MIN_INTERVAL_MS - sinceLast);
+    }
+    return;
+  }
+
+  if (typeof budgetAllowsWrite === 'function' && !budgetAllowsWrite('saveData')) return;
+
+  lastSaveAt = Date.now();
+  var cleanTasks = buildCleanTasks();
+
   db.collection('gardens').doc(currentUserId).set({
     tasks:         cleanTasks,
     lastResetDate: lastResetDate,
@@ -634,12 +779,67 @@ function buildGardenSummary(cleanTasks) {
 // yet, batching would take the user's ordinary garden save down with
 // it. Kept separate, a missing rule costs only the friend-visible copy
 // and logs a pointed message, while the app itself keeps working.
+// Has this session published a summary yet? Only used to keep the
+// backstop below from writing the same document on every snapshot.
+var gardenSummaryWritten = false;
+
+// Does anyone exist who is actually allowed to read the summary?
+//
+// The rules let a FRIEND read gardenSummaries/{uid} and nobody else —
+// so with an empty friends list this document is unreadable by every
+// person alive, including its owner. Writing it anyway doubled the
+// write cost of every single save for solo users and for every guest
+// who never claimed a username, publishing to an audience of zero.
+//
+// getFriendCount() lives in 06-friends.js, which loads after this file
+// — hence the typeof guard. If it isn't there yet we skip the write,
+// which is the safe direction: the backstop below will publish as soon
+// as the friends list is known.
+function summaryHasAudience() {
+  return (typeof getFriendCount === 'function') && getFriendCount() > 0;
+}
+
+// Called when the friends list becomes non-empty, and again once the
+// garden finishes loading.
+//
+// WHY THIS IS NEEDED: with the skip above, someone who gains a friend
+// and then never saves their garden again would never publish a
+// summary at all, and their friend would see "hasn't opened DISCIPLANT
+// since garden sharing was added" — which would be a lie. This writes
+// once, at the first moment the document actually becomes readable.
+//
+// Guarded on authReady so it can't publish an empty summary before the
+// real garden has arrived from Firestore. It's called from both sides
+// (the profile listener in 06 and the garden snapshot above) because
+// either can land first; gardenSummaryWritten makes the second a no-op.
+function ensureGardenSummaryPublished() {
+  if (!currentUserId || !authReady) return;
+  if (gardenSummaryWritten) return;
+  if (!summaryHasAudience()) return;
+
+  writeGardenSummary(buildCleanTasks());
+}
+
 function saveGardenSummary(cleanTasks) {
   if (!currentUserId) return;
+
+  // Nobody can read it yet — don't pay to publish it. The moment a
+  // friend request is accepted, ensureGardenSummaryPublished() writes
+  // the current state, and ordinary saves take over from there.
+  if (!summaryHasAudience()) return;
+
+  writeGardenSummary(cleanTasks);
+}
+
+function writeGardenSummary(cleanTasks) {
+  gardenSummaryWritten = true;
 
   db.collection('gardenSummaries').doc(currentUserId)
     .set(buildGardenSummary(cleanTasks))
     .catch(function (error) {
+      // Left flagged as written even on failure would strand the
+      // backstop, so clear it and let the next save or snapshot retry.
+      gardenSummaryWritten = false;
       if (error && error.code === 'permission-denied') {
         console.error(
           'DISCIPLANT: could not write gardenSummaries/' + currentUserId + '. ' +
@@ -827,5 +1027,3 @@ function renderTaskList() {
     }
   });
 }
-
-

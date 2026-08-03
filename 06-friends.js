@@ -87,6 +87,7 @@ var friendsListenerUid  = null;
 var unsubscribeProfile  = null;
 var unsubscribeIncoming = null;
 var unsubscribeOutgoing = null;
+var requestListenerUid  = null;   // uid the request listeners are attached for
 
 
 // ============================================
@@ -261,6 +262,20 @@ function submitUsername() {
     return;
   }
 
+  if (!rateLimit('claimUsername', USERNAME_CLAIM_COOLDOWN_MS)) {
+    usernameModalError =
+      'Just a second — try again in ' +
+      rateLimitWaitSeconds('claimUsername', USERNAME_CLAIM_COOLDOWN_MS) + 's.';
+    renderUsernameModal();
+    return;
+  }
+
+  if (!budgetAllowsWrite('claimUsername')) {
+    usernameModalError = 'Too many actions at once. Reload the page and try again.';
+    renderUsernameModal();
+    return;
+  }
+
   usernameModalPending = true;
   usernameModalError   = null;
   renderUsernameModal();
@@ -297,6 +312,7 @@ function stopFriendsListeners() {
   if (unsubscribeIncoming) { unsubscribeIncoming(); unsubscribeIncoming = null; }
   if (unsubscribeOutgoing) { unsubscribeOutgoing(); unsubscribeOutgoing = null; }
   friendsListenerUid = null;
+  requestListenerUid = null;
 }
 
 function startFriendsListeners(uid) {
@@ -361,36 +377,117 @@ function startFriendsListeners(uid) {
 
       repaintIfFriendSkinsChanged();
       refreshFriendProfiles();
+
+      // gardenSummaries/{uid} is only written when somebody is allowed
+      // to read it (see summaryHasAudience in 02-auth-tasks.js). This
+      // is the moment that changes: accepting a request rewrites this
+      // document's friends array on both sides, so both people publish
+      // their summary here — including a user whose garden hasn't been
+      // saved since before they had any friends at all.
+      if (typeof ensureGardenSummaryPublished === 'function') {
+        ensureGardenSummaryPublished();
+      }
       if (myUsername && !hadUsername) refreshOpenUsernameModal();
       renderFriendsIfVisible();
     }, function (error) {
       console.error('DISCIPLANT: profile listener failed:', error);
     });
 
-  // Single-field queries on purpose — adding a status filter here would
-  // turn each one into a composite query needing a manual index, so the
-  // status check happens in collectPendingRequests() instead.
-  unsubscribeIncoming = db.collection('friendRequests').where('to', '==', uid)
+  // The two friend-request listeners are NOT attached here — they wait
+  // until the Friends page is actually opened. See
+  // startFriendRequestListeners() below.
+  //
+  // Except in one case: someone can reach the Friends page BEFORE this
+  // runs, because navigating there is what triggers guest sign-in in
+  // the first place. navigateTo() calls the function below while the
+  // sign-in is still in flight, so there is no uid yet and it does
+  // nothing. This is the retry for that ordering.
+  if (currentPage === 'friends') startFriendRequestListeners();
+}
+
+// ============================================
+// Friend-request listeners — attached on demand
+//
+// These two only ever feed the Friends page: nothing else reads
+// incomingRequests or outgoingRequests, and there is no unread badge
+// anywhere in the nav. Attaching them on sign-in therefore spent two
+// Firestore reads on every single page load, for a page most visits
+// never open.
+//
+// They now attach the first time the Friends page is opened, and stay
+// attached for the rest of the session — deliberately NOT detached on
+// leaving the page, because bouncing in and out would then re-read
+// everything on each visit and cost more than it saved. They're torn
+// down only by stopFriendsListeners(), i.e. when the user changes.
+//
+// If you ever add an unread-requests badge to the nav, this has to go
+// back to attaching on sign-in: a badge can't count what nobody is
+// listening to.
+//
+// The status filter is what stops these growing forever. Accepting a
+// request flips its status to 'accepted' rather than deleting it, so
+// without the filter every request you had ever accepted was re-read
+// on every attach, for the life of the account. Filtered, both queries
+// only ever return what is genuinely outstanding.
+//
+// NO INDEX IS NEEDED FOR THIS, despite it being a two-clause query.
+// Both clauses are equality filters, and Firestore answers those by
+// merging the single-field indexes it maintains automatically. A
+// composite index only becomes necessary once an equality filter is
+// combined with a RANGE filter (>, <, !=) or an orderBy on some other
+// field — so if you ever add either to these queries, expect the
+// failed-precondition branch below to fire, and follow the link in it.
+// ============================================
+function startFriendRequestListeners() {
+  var uid = friendsListenerUid;
+  if (!uid) return;                        // not signed in yet
+  if (requestListenerUid === uid) return;  // already listening for this user
+
+  requestListenerUid = uid;
+
+  unsubscribeIncoming = db.collection('friendRequests')
+    .where('to', '==', uid)
+    .where('status', '==', 'pending')
     .onSnapshot(function (querySnapshot) {
       incomingRequests = collectPendingRequests(querySnapshot);
       renderFriendsIfVisible();
     }, function (error) {
-      console.error('DISCIPLANT: incoming request listener failed:', error);
+      reportRequestListenerError('incoming', error);
     });
 
-  unsubscribeOutgoing = db.collection('friendRequests').where('from', '==', uid)
+  unsubscribeOutgoing = db.collection('friendRequests')
+    .where('from', '==', uid)
+    .where('status', '==', 'pending')
     .onSnapshot(function (querySnapshot) {
       outgoingRequests = collectPendingRequests(querySnapshot);
       renderFriendsIfVisible();
     }, function (error) {
-      console.error('DISCIPLANT: outgoing request listener failed:', error);
+      reportRequestListenerError('outgoing', error);
     });
 }
+
+function reportRequestListenerError(which, error) {
+  if (error && error.code === 'failed-precondition') {
+    console.error(
+      'DISCIPLANT: the ' + which + ' friend-request query needs a Firestore ' +
+      'index that does not exist yet. The message below contains a link ' +
+      'that creates it in one click — open it, wait for the index to ' +
+      'finish building, then reload.',
+      error
+    );
+    return;
+  }
+  console.error('DISCIPLANT: ' + which + ' request listener failed:', error);
+}
+
 
 function collectPendingRequests(querySnapshot) {
   var list = [];
   querySnapshot.forEach(function (doc) {
     var data = doc.data() || {};
+    // Redundant now that the queries filter on status, and kept
+    // anyway: it costs nothing and means a malformed document can
+    // never show up as an outstanding request.
     if (data.status !== 'pending') return;
     list.push({
       id:           doc.id,
@@ -403,38 +500,114 @@ function collectPendingRequests(querySnapshot) {
   return list;
 }
 
-// Friends are stored as bare UIDs, so names come from the usernames
-// collection. `in` takes at most 10 values per query, hence the chunking.
+// How many friends this user has. Exposed as a function rather than
+// letting other files read myFriendUids directly, because 02 loads
+// first and needs a typeof-guardable handle (see summaryHasAudience).
+function getFriendCount() {
+  return Array.isArray(myFriendUids) ? myFriendUids.length : 0;
+}
+
+
+// ============================================
+// Username cache (localStorage)
+//
+// Friends are stored as bare UIDs, so every load used to run a
+// `usernames where uid in [...]` query purely to turn those UIDs back
+// into names — a read per friend, every single time, for data that
+// essentially never changes.
+//
+// It never changes because the rules forbid it: /usernames has
+// `allow update: if false`, so a name, once claimed, is permanently
+// bound to that UID. A cached pair can therefore never go stale, which
+// is what makes caching it safe rather than merely convenient.
+//
+// Stored in localStorage, so it survives reloads. Nothing private goes
+// in here — usernames are the public directory every signed-in user
+// can already read, and the cache holds no UIDs the browser's own user
+// wasn't already shown.
+// ============================================
+var USERNAME_CACHE_KEY = 'disciplant:usernames';
+var usernameCache      = readUsernameCache(); // { uid: username }
+
+function readUsernameCache() {
+  try {
+    var raw    = localStorage.getItem(USERNAME_CACHE_KEY);
+    var parsed = raw ? JSON.parse(raw) : null;
+    return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
+  } catch (e) {
+    // Private browsing, storage disabled, or corrupt JSON. An empty
+    // cache just means every lookup falls through to Firestore, which
+    // is exactly the old behaviour.
+    return {};
+  }
+}
+
+function rememberUsername(uid, username) {
+  if (!uid || !username) return;
+  if (usernameCache[uid] === username) return;
+  usernameCache[uid] = username;
+  try {
+    localStorage.setItem(USERNAME_CACHE_KEY, JSON.stringify(usernameCache));
+  } catch (e) {}
+}
+
+// Reverse lookup for the search box. Linear, which is fine — this map
+// holds one entry per person you've ever looked up.
+function findCachedUidByUsername(lower) {
+  for (var uid in usernameCache) {
+    if (!Object.prototype.hasOwnProperty.call(usernameCache, uid)) continue;
+    if (String(usernameCache[uid]).toLowerCase() === lower) return uid;
+  }
+  return null;
+}
+
+function buildFriendProfilesFromCache() {
+  return myFriendUids.map(function (uid) {
+    return { uid: uid, username: usernameCache[uid] || null };
+  });
+}
+
+
+// Resolves friend UIDs to names, hitting Firestore only for the ones
+// the cache has never seen. For a returning user with a settled friend
+// list that means ZERO reads, and the names paint instantly instead of
+// after a round trip. `in` takes at most 10 values per query, hence
+// the chunking of whatever is left over.
 function refreshFriendProfiles() {
   if (!myFriendUids.length) {
     friendProfiles = [];
     return;
   }
 
+  // Paint from cache first — a known friend shows their name with no
+  // network at all, and any unknown one shows as a nameless entry for
+  // the moment it takes to look them up.
+  friendProfiles = buildFriendProfilesFromCache();
+  renderFriendsIfVisible();
+
+  var unknown = myFriendUids.filter(function (uid) { return !usernameCache[uid]; });
+  if (!unknown.length) return;   // everything already known — no query at all
+
   var chunks = [];
-  for (var i = 0; i < myFriendUids.length; i += 10) {
-    chunks.push(myFriendUids.slice(i, i + 10));
+  for (var i = 0; i < unknown.length; i += 10) {
+    chunks.push(unknown.slice(i, i + 10));
   }
 
   Promise.all(chunks.map(function (chunk) {
     return db.collection('usernames').where('uid', 'in', chunk).get();
   })).then(function (snapshots) {
-    var found = [];
     snapshots.forEach(function (querySnapshot) {
       querySnapshot.forEach(function (doc) {
         var data = doc.data() || {};
-        found.push({ uid: data.uid, username: data.username || doc.id });
+        rememberUsername(data.uid, data.username || doc.id);
       });
     });
 
-    // A friend with no username doc (claimed one, deleted it) still
-    // belongs on the list — just without a name.
-    myFriendUids.forEach(function (uid) {
-      var known = found.some(function (f) { return f.uid === uid; });
-      if (!known) found.push({ uid: uid, username: null });
-    });
-
-    friendProfiles = found;
+    // Rebuilt from the cache, so a friend with no username doc at all
+    // (never claimed one) still appears — just without a name, exactly
+    // as before. Those UIDs stay uncached and are retried next load,
+    // which is what you want: they may claim a name later.
+    friendProfiles = buildFriendProfilesFromCache();
     renderFriendsIfVisible();
   }).catch(function (error) {
     console.error('DISCIPLANT: could not resolve friend usernames:', error);
@@ -461,6 +634,22 @@ function searchForUsername(raw) {
     return;
   }
 
+  // Reads, not writes, so this is a cooldown only and never touches the
+  // write budget. Silent: a search fired twice in half a second is a
+  // double-tap, and an error message would be noise.
+  if (!rateLimit('usernameSearch', USERNAME_SEARCH_COOLDOWN_MS)) return;
+
+  // A name we've already resolved this browser can be answered with no
+  // read at all. Only HITS are cached: a miss must always go to the
+  // server, since the whole point of searching a name that wasn't
+  // there a minute ago is that someone may have just claimed it.
+  var cachedUid = findCachedUidByUsername(lower);
+  if (cachedUid) {
+    friendsSearchResult = { uid: cachedUid, username: usernameCache[cachedUid] };
+    renderFriendsPage();
+    return;
+  }
+
   friendsBusy = true;
   renderFriendsPage();
 
@@ -471,7 +660,9 @@ function searchForUsername(raw) {
         friendsSearchResult = { notFound: true, query: lower };
       } else {
         var data = docSnapshot.data() || {};
-        friendsSearchResult = { uid: data.uid, username: data.username || lower };
+        var name = data.username || lower;
+        rememberUsername(data.uid, name);
+        friendsSearchResult = { uid: data.uid, username: name };
       }
       renderFriendsPage();
     })
@@ -515,10 +706,34 @@ function friendRequestBlockedReason(targetUid) {
   return null;
 }
 
+var FRIEND_ACTION_COOLDOWN_MS = 3000;
+var USERNAME_CLAIM_COOLDOWN_MS = 3000;
+var USERNAME_SEARCH_COOLDOWN_MS = 500;
+
 function sendFriendRequest(targetUid, targetUsername) {
   var blocked = friendRequestBlockedReason(targetUid);
   if (blocked) {
     setFriendsStatus(blocked, true);
+    renderFriendsPage();
+    return;
+  }
+
+  // Stops someone holding the button down, and takes the edge off
+  // scripted mass-requesting — though a script that skips this file
+  // entirely is unaffected, which is why the real limit has to be a
+  // rule. See the rate limiting notes in 01-app-core.js.
+  if (!rateLimit('friendRequest', FRIEND_ACTION_COOLDOWN_MS)) {
+    setFriendsStatus(
+      'Slow down a moment — try again in ' +
+      rateLimitWaitSeconds('friendRequest', FRIEND_ACTION_COOLDOWN_MS) + 's.',
+      true
+    );
+    renderFriendsPage();
+    return;
+  }
+
+  if (!budgetAllowsWrite('sendFriendRequest')) {
+    setFriendsStatus('Too many actions at once. Reload the page and try again.', true);
     renderFriendsPage();
     return;
   }
@@ -563,6 +778,16 @@ function sendFriendRequest(targetUid, targetUsername) {
 // batch's point of view, because rules see the pre-batch state.
 function acceptFriendRequest(request) {
   if (!currentUserId || !request) return;
+  if (!rateLimit('friendDecision', FRIEND_ACTION_COOLDOWN_MS)) {
+    setFriendsStatus('One at a time — try again in a moment.', true);
+    renderFriendsPage();
+    return;
+  }
+  if (!budgetAllowsWrite('acceptFriendRequest')) {
+    setFriendsStatus('Too many actions at once. Reload the page and try again.', true);
+    renderFriendsPage();
+    return;
+  }
 
   friendsBusy = true;
   setFriendsStatus(null, false);
@@ -614,6 +839,18 @@ function cancelFriendRequest(request) {
 
 function removeFriendRequest(request, successMessage) {
   if (!request) return;
+  // Shares a clock with accept: they're the same pair of buttons, and
+  // a burst of either is the thing worth slowing down.
+  if (!rateLimit('friendDecision', FRIEND_ACTION_COOLDOWN_MS)) {
+    setFriendsStatus('One at a time — try again in a moment.', true);
+    renderFriendsPage();
+    return;
+  }
+  if (!budgetAllowsWrite('removeFriendRequest')) {
+    setFriendsStatus('Too many actions at once. Reload the page and try again.', true);
+    renderFriendsPage();
+    return;
+  }
 
   friendsBusy = true;
   setFriendsStatus(null, false);

@@ -491,6 +491,26 @@ function navigateTo(page) {
     clearFriendGardenState();
   }
 
+  // Every page except home needs an account. Guests are created here,
+  // at the moment someone actually enters the app, rather than on page
+  // load — so a visitor who only reads the home page never gets an
+  // account and never costs a Firestore read. Fire-and-forget: the
+  // auth observer in 02-auth-tasks.js boots everything once the
+  // sign-in lands, the same way it does on a reload.
+  if (page !== 'home' && typeof ensureSignedIn === 'function') {
+    ensureSignedIn().catch(function () {});
+  }
+
+  // Leaving the Garden page abandons an unsaved rearrangement, on
+  // purpose: "Save & exit" is the only thing that commits, so walking
+  // away behaves exactly like Discard. Positions are restored from the
+  // snapshot here so the garden you come back to matches what is
+  // actually stored.
+  if (currentPage === 'garden' && page !== 'garden' &&
+      typeof discardGardenEdits === 'function') {
+    discardGardenEdits();
+  }
+
   currentPage = page;
 
   if (pageHomeEl)   pageHomeEl.classList.toggle('hidden',   page !== 'home');
@@ -550,6 +570,14 @@ function navigateTo(page) {
   }
 
   if (page === 'friends') {
+    // The friend-request listeners live here rather than at sign-in:
+    // nothing outside this page reads them, so opening the page is the
+    // first moment they're worth paying for. Attaches once per session
+    // — see startFriendRequestListeners in 06-friends.js.
+    if (typeof startFriendRequestListeners === 'function') {
+      startFriendRequestListeners();
+    }
+
     if (friendsLoadingState) friendsLoadingState.classList.toggle('hidden', authReady);
     if (friendsContent) friendsContent.classList.toggle('hidden', !authReady);
     if (authReady) renderFriendsPage();
@@ -594,6 +622,91 @@ function switchTaskTab(tabId) {
   if (tabId !== 'all') {
     categorySelect.value = tabId;
   }
+}
+
+
+
+// ============================================
+// Client-side rate limiting
+//
+// WHAT THIS IS AND IS NOT
+// This stops accidents, stuck keys and casual mischief: holding Enter
+// on a checkbox, hammering "Send request", a render loop that calls
+// saveData() forever. It is NOT a security control. Anyone can open
+// DevTools and call the Firestore SDK directly, or hit the REST API
+// with their own ID token, and never execute a line of this file. Real
+// enforcement has to live in firestore.rules or App Check — see the
+// notes in firestore.rules. Treat everything here as a courtesy to the
+// quota, not a defence of it.
+//
+// WHY IT MATTERS AT ALL
+// On the free Spark plan, exceeding the daily write allowance doesn't
+// bill anybody — it stops the app for EVERY user until midnight
+// Pacific. A single person with a stuck key can do that. These limits
+// make that essentially impossible by accident.
+// ============================================
+
+// Simple per-key cooldown. Returns true if the action may proceed, and
+// starts the clock; returns false if it's too soon since the last one.
+var rateLimitClocks = {}; // key -> timestamp of last allowed action
+
+function rateLimit(key, minIntervalMs) {
+  var now  = Date.now();
+  var last = rateLimitClocks[key] || 0;
+  if (now - last < minIntervalMs) return false;
+  rateLimitClocks[key] = now;
+  return true;
+}
+
+// How long until `key` is allowed again, in whole seconds (for
+// messages like "wait 2s"). Zero when it's already allowed.
+function rateLimitWaitSeconds(key, minIntervalMs) {
+  var remaining = minIntervalMs - (Date.now() - (rateLimitClocks[key] || 0));
+  return remaining > 0 ? Math.ceil(remaining / 1000) : 0;
+}
+
+
+// ---- Rolling write budget -------------------------------------
+// The per-action cooldowns above each police one button. This polices
+// the total, and exists to catch the case none of them can: a bug that
+// calls a legitimately-throttled write over and over from somewhere
+// unexpected. A real person tending habits writes a few dozen times an
+// hour; this cap is far above that and only trips on something broken
+// or deliberate.
+//
+// Session-scoped, so a reload resets it. That's fine — it's a runaway
+// stopper, not a quota enforcer, and the thing it's stopping happens
+// within one page's lifetime.
+var WRITE_BUDGET_MAX       = 300;
+var WRITE_BUDGET_WINDOW_MS = 60 * 60 * 1000; // one hour
+var writeBudgetStamps      = [];
+var writeBudgetWarned      = false;
+
+function budgetAllowsWrite(label) {
+  var now    = Date.now();
+  var cutoff = now - WRITE_BUDGET_WINDOW_MS;
+
+  while (writeBudgetStamps.length && writeBudgetStamps[0] < cutoff) {
+    writeBudgetStamps.shift();
+  }
+
+  if (writeBudgetStamps.length >= WRITE_BUDGET_MAX) {
+    // Logged once per session rather than per blocked write, so a
+    // runaway loop doesn't also flood the console.
+    if (!writeBudgetWarned) {
+      writeBudgetWarned = true;
+      console.error(
+        'DISCIPLANT: blocked "' + label + '" — more than ' + WRITE_BUDGET_MAX +
+        ' writes in an hour from this tab. That is far past normal use, so ' +
+        'something is almost certainly looping. Writes are paused until the ' +
+        'hour rolls forward or the page is reloaded.'
+      );
+    }
+    return false;
+  }
+
+  writeBudgetStamps.push(now);
+  return true;
 }
 
 

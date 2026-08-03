@@ -547,6 +547,7 @@ function centerGardenScroll() {
 
 function renderGarden() {
   if (!gardenSceneEl || !gardenTrackEl) return;
+  updateGardenEditUI();
   gardenTrackEl.innerHTML = '';
 
   var shouldCenterScroll = pendingGardenScrollCenter;
@@ -668,7 +669,7 @@ function renderGarden() {
       'title',
       task.text + ' · ' + cat.name + ' (' + cat.species + ') · ' +
       totalGrowthDays + ' days grown' + (streak > 0 ? ' · 🔥 ' + streak + ' day streak' : '') +
-      ' · press and hold to move'
+      (gardenEditMode ? ' · drag to move' : '')
     );
 
     // Scaling visual — grows from a fixed point near the ground.
@@ -695,7 +696,9 @@ function renderGarden() {
       '<span class="plant-label-streak">' + subLabel + '</span>';
     wrap.appendChild(labelEl);
 
-    setupPlantDrag(wrap, task.id);
+    // Bound only in edit mode, so outside it a plant has no drag
+    // listeners on it whatsoever.
+    if (gardenEditMode) setupPlantDrag(wrap, task.id);
 
     gardenTrackEl.appendChild(wrap);
   });
@@ -712,61 +715,159 @@ function escapeHtml(str) {
 
 
 // ============================================
-// Drag-to-place: press and hold a plant to pick it up, drag it
-// anywhere in the garden, and drop it. While held, the far/near
-// depth-band strips light up so you can see where you're placing it
-// (and switch rows by dragging up/down). Letting go without having
-// moved resets that plant back to its automatic position.
+// Garden edit mode
+//
+// Plants used to be draggable at all times, which meant every stray
+// long-press moved something, and every move wrote the whole garden
+// document to Firestore (plus the friend-visible summary) the instant
+// you let go. Rearranging ten plants cost twenty writes.
+//
+// Now moving is a mode you opt into. "Edit garden" takes a snapshot of
+// where everything currently is, then lets you drag freely — all of it
+// purely in memory, no network at all. "Save & exit" writes ONCE for
+// the whole session. "Discard" puts the snapshot back.
+//
+// Leaving the Garden page, or closing the tab, is a discard too: since
+// nothing is written until you press Save, walking away simply never
+// commits. That is also why there is no beforeunload handler here —
+// there is nothing to flush.
 // ============================================
 
-var LONG_PRESS_MS      = 50; // hold this long before a drag begins
-var DRAG_CANCEL_DIST_PX = 8;   // finger/mouse wobble tolerance before the hold is armed
+var gardenEditMode     = false;
+var gardenEditSnapshot = null; // [{ id, posX, posY }] as of entering edit mode
+
+var gardenEditBarEl     = document.getElementById('gardenEditBar');
+var gardenEditStartEl   = document.getElementById('gardenEditStart');
+var gardenEditActionsEl = document.getElementById('gardenEditActions');
+var gardenEditSaveEl    = document.getElementById('gardenEditSave');
+var gardenEditDiscardEl = document.getElementById('gardenEditDiscard');
+
+function snapshotGardenPositions() {
+  return tasks.map(function (t) {
+    return {
+      id:   t.id,
+      posX: (typeof t.posX === 'number') ? t.posX : null,
+      posY: (typeof t.posY === 'number') ? t.posY : null,
+    };
+  });
+}
+
+// The one thing that stops an unrelated save from leaking unsaved
+// drags into Firestore.
+//
+// checkDayRollover() fires every 60 seconds and calls saveData() when
+// the date flips, and saveData() serializes the LIVE tasks array — so
+// a midnight rollover in the middle of an editing session would have
+// quietly committed positions the user hadn't saved and might be about
+// to discard. saveData() asks this function for each task's position
+// instead: while editing, that's the pre-edit snapshot value, so a
+// rollover writes streak and completion changes and leaves the
+// half-finished layout exactly where it is, uncommitted.
+//
+// Outside edit mode (and for any task that didn't exist when edit mode
+// began) it just hands back the task itself.
+function getPersistedPosition(task) {
+  if (gardenEditMode && gardenEditSnapshot) {
+    for (var i = 0; i < gardenEditSnapshot.length; i++) {
+      if (gardenEditSnapshot[i].id === task.id) return gardenEditSnapshot[i];
+    }
+  }
+  return task;
+}
+
+// Called from renderGarden() as well as from the mode changes below,
+// so the bar can never drift out of step with the actual state.
+function updateGardenEditUI() {
+  // Nothing to arrange in an empty garden — hide the whole bar rather
+  // than offer a mode that does nothing.
+  if (gardenEditBarEl) gardenEditBarEl.classList.toggle('hidden', tasks.length === 0);
+
+  if (gardenEditStartEl)   gardenEditStartEl.classList.toggle('hidden', gardenEditMode);
+  if (gardenEditActionsEl) gardenEditActionsEl.classList.toggle('hidden', !gardenEditMode);
+  if (gardenSceneEl)       gardenSceneEl.classList.toggle('garden-editing', gardenEditMode);
+}
+
+function enterGardenEditMode() {
+  if (gardenEditMode || !tasks.length) return;
+  gardenEditSnapshot = snapshotGardenPositions();
+  gardenEditMode     = true;
+  updateGardenEditUI();
+  // Re-render so every plant gets its drag listeners bound — outside
+  // edit mode they simply aren't attached (see renderGarden).
+  renderGarden();
+}
+
+function saveGardenEdits() {
+  if (!gardenEditMode) return;
+  if (activePlantDrag) onPlantDragEnd();  // mid-carry: drop it where it is
+
+  // Cleared BEFORE saving, so saveData() reads the live positions
+  // rather than the snapshot it would otherwise be protecting.
+  gardenEditMode     = false;
+  gardenEditSnapshot = null;
+  updateGardenEditUI();
+
+  saveData();   // the single write this whole feature exists to enable
+  render();
+}
+
+function discardGardenEdits() {
+  if (!gardenEditMode) return;
+  if (activePlantDrag) onPlantDragEnd();  // drop first, then undo it below
+
+  var snapshot = gardenEditSnapshot || [];
+  snapshot.forEach(function (saved) {
+    var task = tasks.find(function (t) { return t.id === saved.id; });
+    if (!task) return;
+    task.posX = saved.posX;
+    task.posY = saved.posY;
+  });
+
+  gardenEditMode     = false;
+  gardenEditSnapshot = null;
+  updateGardenEditUI();
+  render();
+}
+
+if (gardenEditStartEl)   gardenEditStartEl.addEventListener('click', enterGardenEditMode);
+if (gardenEditSaveEl)    gardenEditSaveEl.addEventListener('click', saveGardenEdits);
+if (gardenEditDiscardEl) gardenEditDiscardEl.addEventListener('click', discardGardenEdits);
+
+updateGardenEditUI();
+
+
+// ============================================
+// Drag-to-place: inside edit mode, press a plant and it comes up
+// immediately, follows the pointer anywhere in the garden, and
+// drops where you let go. Nothing is written to Firestore here —
+// the move lives in memory until "Save & exit".
+//
+// Outside edit mode none of this is bound at all (renderGarden only
+// calls setupPlantDrag while editing), so plants can't be nudged by
+// accident and a touch-drag across the lawn scrolls the scene the
+// way it does everywhere else.
+// ============================================
 
 var activePlantDrag = null; // { taskId, wrap, moved, pendingX, pendingY }
 
 function setupPlantDrag(wrap, taskId) {
+  // No hold delay and no movement threshold: in edit mode the only
+  // reason to touch a plant is to move it, so pressing it picks it up
+  // at once. A press with no movement is still a no-op — the plant is
+  // put back down exactly where it was and nothing is marked changed.
+  //
+  // Hovering does nothing: this is pointerdown, so the plant is never
+  // picked up by the cursor merely passing over it.
   wrap.addEventListener('pointerdown', function (e) {
     if (e.button !== undefined && e.button !== 0) return; // left-click / primary touch only
-
-    var startX = e.clientX;
-    var startY = e.clientY;
-    var pointerId = e.pointerId;
-    var armed = false;
-
-    var timer = setTimeout(function () {
-      armed = true;
-      beginPlantDrag(taskId, wrap, pointerId);
-    }, LONG_PRESS_MS);
-
-    function onMove(ev) {
-      if (armed) return; // once dragging has begun, onPlantDragMove takes over
-      var dist = Math.hypot(ev.clientX - startX, ev.clientY - startY);
-      if (dist > DRAG_CANCEL_DIST_PX) cleanup();
-    }
-    function onUp() { cleanup(); }
-    function cleanup() {
-      clearTimeout(timer);
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-    }
-
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-  });
-
-  // Double-click/double-tap picks the plant up immediately — no
-  // holding required. It follows the pointer freely and the next
-  // click anywhere drops it in place.
-  wrap.addEventListener('dblclick', function (e) {
+    if (activePlantDrag) return;                          // one plant at a time
     e.preventDefault();
-    e.stopPropagation();
-    if (activePlantDrag) return; // something's already being carried
-    beginPlantDrag(taskId, wrap, null, true);
+    beginPlantDrag(taskId, wrap, e.pointerId);
   });
 
-  // A plant is meant to be pressed-and-held, not dragged natively —
-  // this stops touch scrolling/selection/callout menus from
-  // hijacking the long-press gesture.
+  // Only applied to plants that are actually draggable, i.e. only in
+  // edit mode — stops touch scrolling and the long-press callout menu
+  // from fighting the drag.
   wrap.style.touchAction = 'none';
   wrap.style.userSelect  = 'none';
   wrap.addEventListener('contextmenu', function (e) { e.preventDefault(); });
@@ -854,10 +955,12 @@ function onPlantDragEnd(e) {
     task.posX = drag.pendingX;
     task.posY = drag.pendingY;
   }
-  // else: released without moving (a tap, or a press-and-hold let go
-  // in place) — leave the plant's position exactly as it was. No
-  // reset to the automatic spot.
+  // else: released without moving (a tap, or a press let go in place)
+  // — leave the plant's position exactly as it was. No reset to the
+  // automatic spot.
 
-  saveData();
+  // Deliberately NO saveData() here. The new position lives in memory
+  // until "Save & exit" commits the whole session in one write; that
+  // is the entire point of edit mode.
   render();
 }
