@@ -25,7 +25,7 @@ const firebaseConfig = {
   // authorized JavaScript origin and a redirect URI ending in
   // /__/auth/handler
   // ---------------------------------------------------------------
-  authDomain: "disciplant-e3bb7.firebaseapp.com",
+  authDomain: "disciplant.vercel.app",
   projectId: "disciplant-e3bb7",
   storageBucket: "disciplant-e3bb7.firebasestorage.app",
   messagingSenderId: "239835244723",
