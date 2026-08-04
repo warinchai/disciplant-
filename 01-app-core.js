@@ -1,6 +1,6 @@
 // ============================================
-// 01: APP CORE — categories, state, DOM refs, navigation, date/growth helpers
-// Part of DISCIPLANT — split from script.js.
+// 01: APP CORE - categories, state, DOM refs, navigation, date/growth helpers
+// Part of DISCIPLANT - split from script.js.
 // Loaded as a plain global script (no modules).
 // Must load in order: 01 -> 02 -> 03 -> 04 -> 05,
 // after firebase-config.js. All functions/vars here
@@ -8,7 +8,7 @@
 // ============================================
 
 // ============================================
-// DISCIPLANT — Task-based habit garden
+// DISCIPLANT - Task-based habit garden
 //
 // How it works:
 // 1. Every task/habit the user adds gets its OWN plant in the
@@ -42,166 +42,85 @@ const CATEGORIES = [
     id:          'education',
     name:        'Education',
     species:     'Oak',
-    emoji:       '📚',
-    dailyStages: ['🌱', '🌿', '🌳'],
     streakStages: [
-      { min: 0,  emoji: '🌱' },
-      { min: 3,  emoji: '🌿' },
-      { min: 14, emoji: '🪴' },
-      { min: 60, emoji: '🌳' },
+      { min: 0, },
+      { min: 3, },
+      { min: 14, },
+      { min: 60, },
     ],
   },
   {
     id:          'exercise',
     name:        'Exercise',
     species:     'Sunflower',
-    emoji:       '🏃',
-    dailyStages: ['🌱', '🌿', '🌻'],
     streakStages: [
-      { min: 0,  emoji: '🌱' },
-      { min: 3,  emoji: '🌿' },
-      { min: 14, emoji: '🌷' },
-      { min: 60, emoji: '🌻' },
+      { min: 0, },
+      { min: 3, },
+      { min: 14, },
+      { min: 60, },
     ],
   },
   {
     id:          'mindfulness',
     name:        'Mindfulness',
     species:     'Lotus',
-    emoji:       '🧘',
-    dailyStages: ['🌱', '🌿', '🪷'],
     streakStages: [
-      { min: 0,  emoji: '🌱' },
-      { min: 3,  emoji: '🌿' },
-      { min: 14, emoji: '🪴' },
-      { min: 60, emoji: '🪷' },
+      { min: 0, },
+      { min: 3, },
+      { min: 14, },
+      { min: 60, },
     ],
   },
   {
     id:          'sleep',
     name:        'Sleep',
     species:     'Lavender',
-    emoji:       '😴',
-    dailyStages: ['🌱', '🌿', '🪻'],
     streakStages: [
-      { min: 0,  emoji: '🌱' },
-      { min: 3,  emoji: '🌿' },
-      { min: 14, emoji: '🪴' },
-      { min: 60, emoji: '🪻' },
+      { min: 0, },
+      { min: 3, },
+      { min: 14, },
+      { min: 60, },
     ],
   },
   {
     id:          'chores',
     name:        'Chores',
     species:     'Bamboo',
-    emoji:       '🏠',
-    dailyStages: ['🌱', '🌿', '🎋'],
     streakStages: [
-      { min: 0,  emoji: '🌱' },
-      { min: 3,  emoji: '🌿' },
-      { min: 14, emoji: '🎍' },
-      { min: 60, emoji: '🎋' },
+      { min: 0, },
+      { min: 3, },
+      { min: 14, },
+      { min: 60, },
     ],
   },
   {
     id:          'finance',
     name:        'Finance',
     species:     'Clover',
-    emoji:       '💰',
-    dailyStages: ['🌱', '🌿', '🍀'],
     streakStages: [
-      { min: 0,  emoji: '🌱' },
-      { min: 3,  emoji: '🌿' },
-      { min: 14, emoji: '☘️' },
-      { min: 60, emoji: '🍀' },
+      { min: 0, },
+      { min: 3, },
+      { min: 14, },
+      { min: 60, },
     ],
   },
   {
     id:          'misc',
     name:        'Misc',
     species:     'Mushroom',
-    emoji:       '🍄',
-    dailyStages: ['🌱', '🌿', '🍄'],
     streakStages: [
-      { min: 0,  emoji: '🌱' },
-      { min: 3,  emoji: '🌿' },
-      { min: 14, emoji: '🍄' },
-      { min: 60, emoji: '🍄' },
+      { min: 0, },
+      { min: 3, },
+      { min: 14, },
+      { min: 60, },
     ],
   },
 ];
 
-
-// ============================================
-// Category lore and suggested tasks
-// ============================================
-var CATEGORY_CONTENT = {
-  education: {
-    lore: 'The Oak grows slowly but becomes one of the strongest, longest-living trees in the forest — a symbol of patience, wisdom, and knowledge that compounds over years, not days.',
-    suggestions: [
-      'Read for 20 minutes',
-      'Review today\'s class notes',
-      'Do one practice problem set',
-      'Watch an educational video',
-      'Learn one new word or concept',
-    ],
-  },
-  exercise: {
-    lore: 'The Sunflower turns to follow the sun all day — a symbol of vitality, energy, and consistently choosing what nourishes you.',
-    suggestions: [
-      '20-minute walk or jog',
-      'Stretch for 10 minutes',
-      'Bodyweight workout',
-      'Take the stairs today',
-      'Drink enough water',
-    ],
-  },
-  mindfulness: {
-    lore: 'The Lotus rises clean and unstained out of muddy water — a symbol of clarity and calm rising above daily noise and stress.',
-    suggestions: [
-      'Meditate for 5–10 minutes',
-      'Write in a journal',
-      'Practice slow, deep breathing',
-      'One hour phone-free',
-      'Sit outside without distractions',
-    ],
-  },
-  sleep: {
-    lore: 'Lavender has been used for centuries to calm the mind and ease rest — this plant represents recovery, the quiet foundation everything else is built on.',
-    suggestions: [
-      'Go to bed at a consistent time',
-      'No screens 30 minutes before bed',
-      'Wake up at the same time daily',
-      'Avoid caffeine after 2pm',
-    ],
-  },
-  chores: {
-    lore: 'Bamboo is one of the fastest-growing, most resilient plants on Earth — a symbol of steady discipline in the unglamorous daily upkeep that keeps everything else standing.',
-    suggestions: [
-      'Tidy your room or desk',
-      'Do a load of laundry',
-      'Wash the dishes tonight',
-      'Plan tomorrow\'s schedule',
-      'Take out the rubbish',
-    ],
-  },
-  finance: {
-    lore: 'The four-leaf clover is the old emblem of good fortune — but the luck it stands for is the kind you make, one small deliberate choice at a time, by knowing exactly what comes in and what goes out.',
-    suggestions: [
-      'Track today\'s spending',
-      'Check your budget',
-      'Pay a bill before it\'s due',
-      'Move something into savings',
-      'Review one subscription',
-    ],
-  },
-  misc: {
-    lore: 'Mushrooms rise overnight in the ground nothing else has claimed, quietly turning leftovers into soil that feeds the whole forest — the odd, uncategorised jobs that hold everything else together.',
-    suggestions: [
-      'Anything that doesn\'t fit elsewhere — add it here.',
-    ],
-  },
-};
+// Emoji were taken out of the interface in favour of the plant artwork
+// and drawn icons. The key is kept, empty, so any older render path
+// that still concatenates it produces nothing rather than "undefined".
+CATEGORIES.forEach(function (cat) { cat.emoji = ''; });
 
 
 // ============================================
@@ -230,7 +149,7 @@ let nextId              = 1;
 let currentUserId       = null;
 let unsubscribeSnapshot = null;
 
-// Auth / profile identity state — kept separate from `tasks` (garden
+// Auth / profile identity state - kept separate from `tasks` (garden
 // data) since it describes the SIGNED-IN USER, not their garden.
 // isAnonymous === true means "Guest Gardener" (no Google account
 // linked yet); displayName/email/photoURL are populated once a
@@ -285,7 +204,7 @@ const pageFriendsEl    = document.getElementById('page-friends');
 // fixed scene element, so opening it never touches #gardenScene and
 // the user's own garden keeps its scroll position and render state.
 // Declared here, next to the other page/scene refs, and NOT
-// re-declared in 07 — these files share one global scope, so a
+// re-declared in 07 - these files share one global scope, so a
 // second `var` of the same name there would be a redeclaration.
 const pageFriendGardenEl   = document.getElementById('page-friend-garden');
 const friendGardenSceneEl  = document.getElementById('friendGardenScene');
@@ -370,104 +289,79 @@ categorySelect.value = 'misc';
 
 
 // ============================================
-// Build category sub-nav and tab panels
+// Build the category plot and its tab panels
+//
+// One card per plant, not a row of text pills. The card shows the
+// species' own artwork, so the tasks page finally has plants on it -
+// which is the whole point of the app and used to be invisible here.
+//
+// Split in two on purpose: the shells are built once at parse time,
+// but the artwork and the counts need task data, which arrives later
+// and changes on every tick. refreshCategoryCards() does that half and
+// is called from renderTaskList().
 // ============================================
 function buildCategoryTabs() {
-  var subnav    = document.getElementById('catSubnav');
+  var plot      = document.getElementById('catSubnav');
   var container = document.getElementById('taskTabsContainer');
-  if (!subnav || !container) return;
+  if (!plot || !container) return;
 
-  subnav.innerHTML    = '';
+  plot.innerHTML      = '';
   container.innerHTML = '';
 
-  // "All" tab button
-  var allBtn         = document.createElement('button');
-  allBtn.className   = 'cat-tab active';
-  allBtn.dataset.tab = 'all';
-  allBtn.textContent = 'All tasks';
-  allBtn.addEventListener('click', function () { switchTaskTab('all'); });
-  subnav.appendChild(allBtn);
+  // "All tasks" is a card too, but a plainer one - it has no species.
+  var allCard         = document.createElement('button');
+  allCard.type        = 'button';
+  allCard.className   = 'plot-card plot-card-all active';
+  allCard.dataset.tab = 'all';
+  allCard.innerHTML   =
+    '<span class="plot-card-name">All tasks</span>' +
+    '<span class="plot-card-count" id="plot-count-all"></span>';
+  allCard.addEventListener('click', function () { switchTaskTab('all'); });
+  plot.appendChild(allCard);
 
   CATEGORIES.forEach(function (cat) {
-    // Tab button
-    var btn         = document.createElement('button');
-    btn.className   = 'cat-tab';
-    btn.dataset.tab = cat.id;
-    btn.textContent = cat.emoji + ' ' + cat.name;
-    btn.addEventListener('click', function () { switchTaskTab(cat.id); });
-    subnav.appendChild(btn);
+    var card         = document.createElement('button');
+    card.type        = 'button';
+    card.className   = 'plot-card';
+    card.dataset.tab = cat.id;
+    card.innerHTML =
+      '<span class="plot-card-art" id="plot-art-' + cat.id + '"></span>' +
+      '<span class="plot-card-name">' + cat.name + '</span>' +
+      '<span class="plot-card-count" id="plot-count-' + cat.id + '"></span>' +
+      '<span class="plot-card-streak hidden" id="plot-streak-' + cat.id + '"></span>';
+    card.addEventListener('click', function () { switchTaskTab(cat.id); });
+    plot.appendChild(card);
 
-    // Tab panel
-    var content = CATEGORY_CONTENT[cat.id] || { lore: '', suggestions: [] };
-    var panel   = document.createElement('div');
+    // ---- Tab panel: header, list, empty state. Nothing else. ----
+    var panel = document.createElement('div');
     panel.id        = 'tab-' + cat.id;
     panel.className = 'task-tab-panel hidden';
 
-    // Lore header
-    var header = document.createElement('div');
-    header.className = 'cat-lore-header';
+    var head = document.createElement('div');
+    head.className = 'panel-head';
 
-    var nameEl       = document.createElement('h3');
-    nameEl.className = 'cat-lore-name';
+    var nameEl         = document.createElement('h3');
+    nameEl.className   = 'panel-head-name';
     nameEl.textContent = cat.name;
 
-    var speciesEl       = document.createElement('span');
-    speciesEl.className = 'cat-lore-species';
+    var speciesEl         = document.createElement('span');
+    speciesEl.className   = 'panel-head-species';
     speciesEl.textContent = cat.species;
 
-    header.appendChild(nameEl);
-    header.appendChild(speciesEl);
-    panel.appendChild(header);
+    head.appendChild(nameEl);
+    head.appendChild(speciesEl);
+    panel.appendChild(head);
 
-    // Lore text
-    var loreEl       = document.createElement('p');
-    loreEl.className = 'cat-lore-text';
-    loreEl.textContent = content.lore;
-    panel.appendChild(loreEl);
-
-    // Suggestions
-    if (content.suggestions && content.suggestions.length) {
-      var sugSection       = document.createElement('div');
-      sugSection.className = 'cat-suggestions';
-
-      var sugLabel       = document.createElement('p');
-      sugLabel.className = 'cat-suggestions-label';
-      sugLabel.textContent = 'Suggested tasks';
-      sugSection.appendChild(sugLabel);
-
-      var sugList       = document.createElement('ul');
-      sugList.className = 'suggestion-list';
-
-      content.suggestions.forEach(function (sug) {
-        var li        = document.createElement('li');
-        var sugBtn    = document.createElement('button');
-        sugBtn.className   = 'suggestion-btn';
-        sugBtn.textContent = '+ ' + sug;
-        (function (catId, text) {
-          sugBtn.addEventListener('click', function () {
-            taskInput.value     = text;
-            categorySelect.value = catId;
-            taskInput.focus();
-          });
-        }(cat.id, sug));
-        li.appendChild(sugBtn);
-        sugList.appendChild(li);
-      });
-
-      sugSection.appendChild(sugList);
-      panel.appendChild(sugSection);
-    }
-
-    // Filtered task list
     var catListEl       = document.createElement('ul');
     catListEl.id        = 'cat-list-' + cat.id;
     catListEl.className = 'task-list';
     panel.appendChild(catListEl);
 
-    var catEmptyEl       = document.createElement('p');
-    catEmptyEl.id        = 'cat-empty-' + cat.id;
-    catEmptyEl.className = 'empty-state';
-    catEmptyEl.textContent = 'No ' + cat.name.toLowerCase() + ' tasks yet — add one above.';
+    var catEmptyEl         = document.createElement('p');
+    catEmptyEl.id          = 'cat-empty-' + cat.id;
+    catEmptyEl.className   = 'empty-state';
+    catEmptyEl.textContent = 'Nothing planted here yet. Add a ' +
+                             cat.name.toLowerCase() + ' task above.';
     panel.appendChild(catEmptyEl);
 
     container.appendChild(panel);
@@ -477,12 +371,74 @@ function buildCategoryTabs() {
 buildCategoryTabs();
 
 
+// Repaints the artwork and the numbers on every card. Safe to call
+// before 04-garden-scene.js has loaded (it owns getPlantSVG) and before
+// any tasks exist - both cases just leave the plot at its seed stage.
+function refreshCategoryCards() {
+  var allCount = document.getElementById('plot-count-all');
+  if (allCount) {
+    allCount.textContent = tasks.length
+      ? countDone(tasks) + ' of ' + tasks.length + ' done'
+      : 'empty';
+  }
+
+  CATEGORIES.forEach(function (cat) {
+    var mine = tasks.filter(function (t) { return t.categoryId === cat.id; });
+
+    var countEl = document.getElementById('plot-count-' + cat.id);
+    if (countEl) {
+      countEl.textContent = mine.length
+        ? countDone(mine) + ' of ' + mine.length + ' done'
+        : 'empty';
+    }
+
+    // The card shows this category's furthest-along plant, so the plot
+    // reads as a garden rather than a row of identical seeds.
+    var lead = null;
+    mine.forEach(function (t) {
+      if (!lead || (t.totalGrowthDays || 0) > (lead.totalGrowthDays || 0)) lead = t;
+    });
+
+    var streakEl = document.getElementById('plot-streak-' + cat.id);
+    if (streakEl) {
+      var best = 0;
+      mine.forEach(function (t) { best = Math.max(best, t.streak || 0); });
+      streakEl.textContent = best + (best === 1 ? ' day' : ' days');
+      streakEl.classList.toggle('hidden', best < 2);
+    }
+
+    var artEl = document.getElementById('plot-art-' + cat.id);
+    if (artEl && typeof getPlantSVG === 'function') {
+      var stage  = lead ? getStageIndexForDays(lead.totalGrowthDays) : 0;
+      var skinId = (lead && typeof getTaskSkinId === 'function')
+        ? getTaskSkinId(lead)
+        : null;
+      // Building seven SVG strings and reparsing them costs nothing in
+      // Firestore but is the most expensive thing on this page, and it
+      // ran on every checkbox tick. A plant's stage and skin change far
+      // less often than its done-count, so only redraw on a real change.
+      var stamp = stage + ':' + (skinId || '');
+      if (artEl.dataset.stamp !== stamp) {
+        artEl.innerHTML = getPlantSVG(cat.id, stage, skinId, 56);
+        artEl.dataset.stamp = stamp;
+      }
+    }
+  });
+}
+
+function countDone(list) {
+  var n = 0;
+  list.forEach(function (t) { if (t.completed) n++; });
+  return n;
+}
+
+
 // ============================================
 // Navigation
 // ============================================
 function navigateTo(page) {
-  // Leaving the friend garden — by the back button OR by any nav
-  // button on that page — forgets whose garden it was. Checked before
+  // Leaving the friend garden - by the back button OR by any nav
+  // button on that page - forgets whose garden it was. Checked before
   // currentPage moves, and skipped when we're navigating INTO the
   // page, since openFriendGarden() sets that state up just before it
   // calls this.
@@ -493,7 +449,7 @@ function navigateTo(page) {
 
   // Every page except home needs an account. Guests are created here,
   // at the moment someone actually enters the app, rather than on page
-  // load — so a visitor who only reads the home page never gets an
+  // load - so a visitor who only reads the home page never gets an
   // account and never costs a Firestore read. Fire-and-forget: the
   // auth observer in 02-auth-tasks.js boots everything once the
   // sign-in lands, the same way it does on a reload.
@@ -513,6 +469,10 @@ function navigateTo(page) {
 
   currentPage = page;
 
+  // Picking a destination is the end of using the menu.
+  if (typeof setNavDrawer === 'function') setNavDrawer(false);
+  if (typeof highlightNavPlank === 'function') highlightNavPlank();
+
   if (pageHomeEl)   pageHomeEl.classList.toggle('hidden',   page !== 'home');
   if (pageGardenEl) pageGardenEl.classList.toggle('hidden', page !== 'garden');
   if (pageTasksEl)  pageTasksEl.classList.toggle('hidden',  page !== 'tasks');
@@ -525,7 +485,7 @@ function navigateTo(page) {
   if (gardenSceneEl) gardenSceneEl.classList.toggle('hidden', page !== 'garden' || !authReady);
 
   // Friend garden scene: same idea, but it doesn't wait on authReady
-  // — that flag tracks the user's OWN garden snapshot, and this page
+  // - that flag tracks the user's OWN garden snapshot, and this page
   // is only ever reached by clicking a friend, which can't happen
   // before auth has resolved anyway. It draws its own loading message
   // while the summary fetch is in flight.
@@ -544,7 +504,7 @@ function navigateTo(page) {
 
   if (page === 'garden') {
     if (loadingState) loadingState.classList.toggle('hidden', authReady);
-    // Center the garden scene's horizontal scroll on this visit —
+    // Center the garden scene's horizontal scroll on this visit -
     // consumed by renderGarden() below (or later, once auth/data is
     // ready, whenever it next runs).
     pendingGardenScrollCenter = true;
@@ -573,7 +533,7 @@ function navigateTo(page) {
     // The friend-request listeners live here rather than at sign-in:
     // nothing outside this page reads them, so opening the page is the
     // first moment they're worth paying for. Attaches once per session
-    // — see startFriendRequestListeners in 06-friends.js.
+    // - see startFriendRequestListeners in 06-friends.js.
     if (typeof startFriendRequestListeners === 'function') {
       startFriendRequestListeners();
     }
@@ -583,7 +543,7 @@ function navigateTo(page) {
     if (authReady) renderFriendsPage();
     // No modal is opened here. The page renders a "Choose a username"
     // button when there isn't one yet (renderFriendsMe in 06), and that
-    // button is the only thing that opens it — arriving on this page is
+    // button is the only thing that opens it - arriving on this page is
     // not the same as asking to be prompted.
   }
 
@@ -607,7 +567,7 @@ function switchTaskTab(tabId) {
   currentTaskTab = tabId;
 
   // Update button active states
-  document.querySelectorAll('.cat-tab').forEach(function (btn) {
+  document.querySelectorAll('.plot-card').forEach(function (btn) {
     btn.classList.toggle('active', btn.dataset.tab === tabId);
   });
 
@@ -635,13 +595,13 @@ function switchTaskTab(tabId) {
 // saveData() forever. It is NOT a security control. Anyone can open
 // DevTools and call the Firestore SDK directly, or hit the REST API
 // with their own ID token, and never execute a line of this file. Real
-// enforcement has to live in firestore.rules or App Check — see the
+// enforcement has to live in firestore.rules or App Check - see the
 // notes in firestore.rules. Treat everything here as a courtesy to the
 // quota, not a defence of it.
 //
 // WHY IT MATTERS AT ALL
 // On the free Spark plan, exceeding the daily write allowance doesn't
-// bill anybody — it stops the app for EVERY user until midnight
+// bill anybody - it stops the app for EVERY user until midnight
 // Pacific. A single person with a stuck key can do that. These limits
 // make that essentially impossible by accident.
 // ============================================
@@ -674,7 +634,7 @@ function rateLimitWaitSeconds(key, minIntervalMs) {
 // hour; this cap is far above that and only trips on something broken
 // or deliberate.
 //
-// Session-scoped, so a reload resets it. That's fine — it's a runaway
+// Session-scoped, so a reload resets it. That's fine - it's a runaway
 // stopper, not a quota enforcer, and the thing it's stopping happens
 // within one page's lifetime.
 var WRITE_BUDGET_MAX       = 300;
@@ -696,7 +656,7 @@ function budgetAllowsWrite(label) {
     if (!writeBudgetWarned) {
       writeBudgetWarned = true;
       console.error(
-        'DISCIPLANT: blocked "' + label + '" — more than ' + WRITE_BUDGET_MAX +
+        'DISCIPLANT: blocked "' + label + '" - more than ' + WRITE_BUDGET_MAX +
         ' writes in an hour from this tab. That is far past normal use, so ' +
         'something is almost certainly looping. Writes are paused until the ' +
         'hour rolls forward or the page is reloaded.'
@@ -713,49 +673,61 @@ function budgetAllowsWrite(label) {
 // ============================================
 // Navigation event listeners
 // ============================================
-document.getElementById('btn-to-garden').addEventListener('click',  function () { navigateTo('garden'); });
-document.getElementById('btn-to-tasks').addEventListener('click',   function () { navigateTo('tasks');  });
-document.getElementById('garden-nav-home').addEventListener('click',  function () { navigateTo('home');   });
-document.getElementById('garden-nav-tasks').addEventListener('click', function () { navigateTo('tasks');  });
-document.getElementById('garden-nav-stats').addEventListener('click', function () { navigateTo('stats');  });
-document.getElementById('tasks-nav-home').addEventListener('click',   function () { navigateTo('home');   });
-document.getElementById('tasks-nav-garden').addEventListener('click', function () { navigateTo('garden'); });
-document.getElementById('tasks-nav-stats').addEventListener('click',  function () { navigateTo('stats');  });
-document.getElementById('stats-nav-home').addEventListener('click',   function () { navigateTo('home');   });
-document.getElementById('stats-nav-garden').addEventListener('click', function () { navigateTo('garden'); });
-document.getElementById('stats-nav-tasks').addEventListener('click',  function () { navigateTo('tasks');  });
+// ============================================
+// Navigation drawer
+//
+// Replaces six copies of the same link row (and the 36 element IDs
+// that went with them) with one panel. The home page keeps its own
+// entry buttons - those are the front door, not navigation.
+// ============================================
+const navPostEl   = document.getElementById('navPost');
+const navScrimEl  = document.getElementById('navScrim');
+const navDrawerEl = document.getElementById('navDrawer');
 
-// Greenhouse — reachable from the home page and from every nav bar
-document.getElementById('btn-to-greenhouse').addEventListener('click',        function () { navigateTo('greenhouse'); });
-document.getElementById('garden-nav-greenhouse').addEventListener('click',    function () { navigateTo('greenhouse'); });
-document.getElementById('tasks-nav-greenhouse').addEventListener('click',     function () { navigateTo('greenhouse'); });
-document.getElementById('stats-nav-greenhouse').addEventListener('click',     function () { navigateTo('greenhouse'); });
-document.getElementById('greenhouse-nav-home').addEventListener('click',      function () { navigateTo('home');   });
-document.getElementById('greenhouse-nav-garden').addEventListener('click',    function () { navigateTo('garden'); });
-document.getElementById('greenhouse-nav-tasks').addEventListener('click',     function () { navigateTo('tasks');  });
-document.getElementById('greenhouse-nav-stats').addEventListener('click',     function () { navigateTo('stats');  });
+function setNavDrawer(open) {
+  if (!navDrawerEl) return;
+  navDrawerEl.classList.toggle('is-open', open);
+  if (navScrimEl) navScrimEl.classList.toggle('is-open', open);
+  navDrawerEl.setAttribute('aria-hidden', open ? 'false' : 'true');
+  if (navPostEl) navPostEl.setAttribute('aria-expanded', open ? 'true' : 'false');
+  document.body.classList.toggle('nav-open', open);
+}
 
-// Friends — reachable from the home page and from every nav bar
-document.getElementById('btn-to-friends').addEventListener('click',          function () { navigateTo('friends'); });
-document.getElementById('garden-nav-friends').addEventListener('click',      function () { navigateTo('friends'); });
-document.getElementById('tasks-nav-friends').addEventListener('click',       function () { navigateTo('friends'); });
-document.getElementById('stats-nav-friends').addEventListener('click',       function () { navigateTo('friends'); });
-document.getElementById('greenhouse-nav-friends').addEventListener('click',  function () { navigateTo('friends'); });
-document.getElementById('friends-nav-home').addEventListener('click',        function () { navigateTo('home');   });
-document.getElementById('friends-nav-garden').addEventListener('click',      function () { navigateTo('garden'); });
-document.getElementById('friends-nav-tasks').addEventListener('click',       function () { navigateTo('tasks');  });
-document.getElementById('friends-nav-stats').addEventListener('click',       function () { navigateTo('stats');  });
-document.getElementById('friends-nav-greenhouse').addEventListener('click',  function () { navigateTo('greenhouse'); });
+function toggleNavDrawer() {
+  setNavDrawer(!(navDrawerEl && navDrawerEl.classList.contains('is-open')));
+}
 
-// Friend garden — reachable only by picking a friend on the Friends
-// page (see openFriendGarden in 07), so it has no inbound nav button
-// of its own, just the usual way back out.
-document.getElementById('friend-garden-nav-home').addEventListener('click',       function () { navigateTo('home');       });
-document.getElementById('friend-garden-nav-garden').addEventListener('click',     function () { navigateTo('garden');     });
-document.getElementById('friend-garden-nav-tasks').addEventListener('click',      function () { navigateTo('tasks');      });
-document.getElementById('friend-garden-nav-stats').addEventListener('click',      function () { navigateTo('stats');      });
-document.getElementById('friend-garden-nav-greenhouse').addEventListener('click', function () { navigateTo('greenhouse'); });
-document.getElementById('friend-garden-nav-friends').addEventListener('click',    function () { navigateTo('friends');    });
+// Marks the plank for wherever we are. Called from navigateTo(), so
+// the drawer is already correct the moment it opens.
+function highlightNavPlank() {
+  document.querySelectorAll('.nav-plank').forEach(function (plank) {
+    plank.classList.toggle('current', plank.dataset.page === currentPage);
+  });
+}
+
+if (navPostEl)  navPostEl.addEventListener('click', toggleNavDrawer);
+if (navScrimEl) navScrimEl.addEventListener('click', function () { setNavDrawer(false); });
+
+document.querySelectorAll('.nav-plank').forEach(function (plank) {
+  plank.addEventListener('click', function () {
+    navigateTo(plank.dataset.page);
+  });
+});
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') setNavDrawer(false);
+});
+
+// Home page entry buttons. These stay: arriving somewhere for the
+// first time shouldn't require finding a menu.
+document.getElementById('btn-to-garden').addEventListener('click',     function () { navigateTo('garden');     });
+document.getElementById('btn-to-tasks').addEventListener('click',      function () { navigateTo('tasks');      });
+document.getElementById('btn-to-greenhouse').addEventListener('click', function () { navigateTo('greenhouse'); });
+document.getElementById('btn-to-friends').addEventListener('click',    function () { navigateTo('friends');    });
+
+// Tasks -> Garden in one tap. The daily loop shouldn't cost a menu.
+var plotGateEl = document.getElementById('plotGate');
+if (plotGateEl) plotGateEl.addEventListener('click', function () { navigateTo('garden'); });
 
 
 // Garden sub-nav
@@ -798,7 +770,7 @@ function getCategoryById(catId) {
 //  - Size:     driven by totalGrowthDays (lifetime count of days
 //              completed). Grows by 1 each time a day is checked
 //              off. If you uncheck TODAY's box, that credit is
-//              undone and size drops back down — but only for
+//              undone and size drops back down - but only for
 //              today; once a day has rolled over it's locked in
 //              (see applyDayBoundaries()) and can't be undone later.
 //  - Vitality: driven by streak (current consecutive-day run).
@@ -810,7 +782,7 @@ function getCategoryById(catId) {
 // already defined per category in PLANT_SVG_DATA.
 var STAGE_MILESTONES = [0, 2, 15, 60];
 
-// scale = 1 + 0.074 * totalGrowthDays^0.7 — unbounded, no ceiling.
+// scale = 1 + 0.074 * totalGrowthDays^0.7 - unbounded, no ceiling.
 // Tuned to ~2.8x at day 100, ~6x at day 365, ~9.8x at day 1000.
 function computeScaleForDays(totalGrowthDays) {
   var days = Math.max(0, totalGrowthDays || 0);
@@ -838,11 +810,11 @@ function applyDayBoundaries() {
     var gap = lastResetDate ? dayGap(lastResetDate, today) : null;
 
     tasks.forEach(function (task) {
-      // gap === 1: task.completed still reflects "yesterday" — if it
+      // gap === 1: task.completed still reflects "yesterday" - if it
       // wasn't done, that day was missed, so the streak breaks now.
       // gap > 1 (or no prior reset date at all): at least one full
       // day passed with no rollover recorded, which can only mean it
-      // was missed — the streak always breaks in that case too.
+      // was missed - the streak always breaks in that case too.
       var survivedYesterday = (gap === 1) && task.completed;
 
       if (!survivedYesterday && task.streak > 0) {

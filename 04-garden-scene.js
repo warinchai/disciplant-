@@ -1,6 +1,6 @@
 // ============================================
-// 04: GARDEN SCENE — plant height/positions, grass, fence, garden rendering, drag-to-place
-// Part of DISCIPLANT — split from script.js.
+// 04: GARDEN SCENE - plant height/positions, grass, fence, garden rendering, drag-to-place
+// Part of DISCIPLANT - split from script.js.
 // Loaded as a plain global script (no modules).
 // Must load in order: 01 -> 02 -> 03 -> 04 -> 05,
 // after firebase-config.js. All functions/vars here
@@ -38,13 +38,13 @@
 //      person growing it. The tail keeps it climbing forever without
 //      the growth spurt continuing: 84 m at three months, 149 m at a
 //      year, 194 m at ten. (For scale, the tallest real tree ever
-//      measured was about 116 m — a year-old plant here is beyond
+//      measured was about 116 m - a year-old plant here is beyond
 //      anything that has actually grown on Earth, which is the
 //      intent.)
 //
 // It is strictly increasing at every single day boundary, forever.
-// It does get slow in absolute terms out past a year — around 7 cm a
-// day at 365, 2 cm a day at 1000 — so the displayed figure moves
+// It does get slow in absolute terms out past a year - around 7 cm a
+// day at 365, 2 cm a day at 1000 - so the displayed figure moves
 // every few days rather than every day for very old plants.
 //
 // TWO THINGS IT DELIBERATELY IGNORES, both for the same reason: they
@@ -52,7 +52,7 @@
 // grown.
 //
 //   depth      where a plant sits front-to-back in the scene. Pure
-//              perspective — dragging a plant back does not shrink
+//              perspective - dragging a plant back does not shrink
 //              the plant, so it must not shrink its height.
 //   flourishes the Daily tab's ×1.35 bloom when today is ticked, and
 //              the Long-Term tab's streak momentum multiplier. Both
@@ -60,7 +60,7 @@
 //              underlying day count still moves the moment you tick
 //              a box (completing a task raises the streak first, and
 //              the streak is what's measured), so the number does
-//              respond — it just isn't inflated by the animation.
+//              respond - it just isn't inflated by the animation.
 //
 // So the label answers "how much has this grown", consistently, from
 // anywhere in the app; it is not a readout of pixels on screen.
@@ -91,7 +91,7 @@ function computeHeightMeters(growthDays) {
   return PLANT_SEED_HEIGHT_M + surge + ancient;
 }
 
-// Centimetres below a metre, metres above it — "0.02 m" is not how
+// Centimetres below a metre, metres above it - "0.02 m" is not how
 // anyone describes a seed. Sub-10cm keeps one decimal so the first
 // few days are visibly different from each other rather than all
 // rounding to the same whole number.
@@ -106,15 +106,15 @@ function formatHeightMeters(meters) {
 
 
 // ============================================
-// Plant positions in the garden scene — perspective depth
+// Plant positions in the garden scene - perspective depth
 // ============================================
-// Every task can be placed at any free (x, y) point in the garden —
+// Every task can be placed at any free (x, y) point in the garden -
 // there's no fixed depth row to snap to. Two internal "slots" groups
 // still exist purely so freshly-added, never-dragged plants spread
 // out across the width instead of stacking in the middle (see
-// assignPermanentPositions below) — they don't affect depth.
+// assignPermanentPositions below) - they don't affect depth.
 //
-// Depth perception: a plant's y position (bottomPct — how far up
+// Depth perception: a plant's y position (bottomPct - how far up
 // the scene it sits) continuously drives two things: how big it
 // renders (further up/back = smaller, further down/front = bigger)
 // and its stacking order (further-down/front plants paint on top of
@@ -122,7 +122,7 @@ function formatHeightMeters(meters) {
 // ============================================
 
 // Deterministic pseudo-random value in [0, 1) for a given integer
-// seed. Same input always produces the same output — this is what
+// seed. Same input always produces the same output - this is what
 // makes the automatic-slot assignment stable across renders/reloads
 // instead of re-shuffling every time the garden re-renders.
 function hashSeed(n) {
@@ -143,7 +143,7 @@ var PLANT_Z_INDEX      = 3;
 // Depth-perception tuning. bottomPct's visible range is clamped to
 // [DEPTH_BOTTOM_MIN, DEPTH_BOTTOM_MAX] by clampBottomPct() below.
 // DEFAULT_BOTTOM_PCT is treated as the "neutral" depth (scale 1x,
-// matching how auto-placed plants have always looked) — dragging a
+// matching how auto-placed plants have always looked) - dragging a
 // plant further down toward DEPTH_BOTTOM_MIN (foreground) scales it
 // up toward DEPTH_MAX_SCALE, and further up toward DEPTH_BOTTOM_MAX
 // (background) scales it down toward DEPTH_MIN_SCALE.
@@ -153,7 +153,7 @@ var DEPTH_MIN_SCALE  = 0.6;  // furthest back
 var DEPTH_MAX_SCALE  = 1.4;  // furthest front
 
 // Bigger/closer plants should always paint over smaller/further ones
-// — a simple painter's-algorithm z-index derived straight from
+// - a simple painter's-algorithm z-index derived straight from
 // bottomPct, so stacking order always matches the size cue instead
 // of depending on task order or manual z-index bookkeeping.
 function computeDepthScale(bottomPct) {
@@ -179,14 +179,14 @@ function getTaskSlotGroup(taskId) {
 
 // A task with a manually-dragged position stores posX and posY
 // (each 0–100, as a left%/bottom% pair) directly on the task,
-// bypassing the automatic slot layout below entirely — this is a
+// bypassing the automatic slot layout below entirely - this is a
 // free (x, y) point, not a snap to any row or band.
 function hasCustomPosition(task) {
   return typeof task.posX === 'number' && typeof task.posY === 'number';
 }
 
-// Keeps a plant's title — a fixed 130px-wide tag centered right below
-// it — fully on-screen. A flat percentage clamp either wastes width
+// Keeps a plant's title - a fixed 130px-wide tag centered right below
+// it - fully on-screen. A flat percentage clamp either wastes width
 // on a wide desktop or still lets labels clip off a narrow phone, so
 // instead the safe margin is computed in real pixels against the
 // current viewport width: plants can spread across almost the entire
@@ -201,7 +201,7 @@ function clampCenterPct(pct) {
 }
 
 // Keeps a dragged plant's base from landing above the top of the
-// scene or below the visible grass — a free y placement, just kept
+// scene or below the visible grass - a free y placement, just kept
 // within a sane visible range.
 function clampBottomPct(pct) {
   return Math.max(4, Math.min(92, pct));
@@ -246,7 +246,7 @@ function computePlantLayout(task, indexInGroup, groupTotal) {
 // plant's slot the moment one of them gets dragged out of that
 // pool), each plant's automatic position is computed exactly once,
 // written onto the task like a manual placement, and never touched
-// again — dragging one plant can no longer move any other plant.
+// again - dragging one plant can no longer move any other plant.
 // Returns true if any task was newly assigned (so callers know to
 // persist the change).
 function assignPermanentPositions() {
@@ -272,7 +272,7 @@ function assignPermanentPositions() {
   return assignedAny;
 }
 
-// Layout for a manually-placed plant — its left%/bottom% come
+// Layout for a manually-placed plant - its left%/bottom% come
 // straight from the saved (x, y) override, and its size + stacking
 // order are derived from that same y so plants dropped further down
 // (toward the viewer) look and paint bigger/closer than ones dropped
@@ -289,13 +289,13 @@ function computeCustomLayout(task) {
 
 
 // ============================================
-// Ground texture — grass blade clumps
+// Ground texture - grass blade clumps
 //
 // The scrollable garden track was otherwise a flat green plane, so
 // swiping left/right gave no visual feedback that the view was
 // actually moving. These clumps live INSIDE #gardenSceneTrack (the
 // element that actually scrolls), scattered across its full 300%
-// width, so they visibly slide past as you swipe — unlike the fixed
+// width, so they visibly slide past as you swipe - unlike the fixed
 // sky/lawn backdrop behind everything, which never moves.
 //
 // Deterministic (hashSeed-based) so the field looks the same on
@@ -303,13 +303,13 @@ function computeCustomLayout(task) {
 // are derived from the same depth math as the plants (computeDepthScale/
 // lerpColor, both already defined above) so clumps nearer the "front"
 // of the garden render bigger and more saturated than ones further
-// toward the horizon — reinforcing the same depth cue the plants use.
+// toward the horizon - reinforcing the same depth cue the plants use.
 // ============================================
 
 var GRASS_PALETTE = ['#3a6020', '#4a7a30', '#537d33', '#5a9035', '#487526', '#6aab45', '#436b2c'];
 var GRASS_TIP_LIGHT = '#cfe8a0';
 // The track is 3x the viewport width, so this total is split evenly
-// across those 3 "screens" — 45 total works out to ~15 clumps visible
+// across those 3 "screens" - 45 total works out to ~15 clumps visible
 // in any single field of view at a time, matching GRASS_PER_SCREEN.
 var GRASS_PER_SCREEN  = 15;
 var GRASS_CLUMP_COUNT = GRASS_PER_SCREEN * 3;
@@ -350,7 +350,7 @@ function buildGrassClump(xPct, yPct, seedBase) {
 }
 
 // ============================================
-// Garden fence — DOM elements inside the scrollable track
+// Garden fence - DOM elements inside the scrollable track
 // ============================================
 // Previously the fence lived in the fixed #gardenBackdrop, so it
 // never moved when the garden was panned. Rendering it here instead,
@@ -375,7 +375,7 @@ function renderGrassField(track) {
   // Stratified placement: the track is divided into GRASS_CLUMP_COUNT
   // equal-width cells (one clump per cell), and each clump is jittered
   // to a random spot WITHIN its own cell. This keeps clumps spread
-  // out evenly across the whole track — unlike pure random x/y, which
+  // out evenly across the whole track - unlike pure random x/y, which
   // can easily leave empty gaps in one area and a dense bunch in
   // another purely by chance.
   var cellWidth = 100 / GRASS_CLUMP_COUNT;
@@ -428,7 +428,7 @@ function buildProgressRing(comp) {
 
 // ============================================
 // Build one plant's SVG markup
-// (No progress ring — each garden section uses its own label instead)
+// (No progress ring - each garden section uses its own label instead)
 // ============================================
 function getPlantSVG(catId, stageIndex, skinId, width) {
   var data  = PLANT_SVG_DATA[catId] || PLANT_SVG_DATA.misc;
@@ -436,7 +436,7 @@ function getPlantSVG(catId, stageIndex, skinId, width) {
   var body  = data[stage];
 
   // The skin only supplies CSS variables (and optionally a few extra
-  // elements) — the base art below is the same string either way.
+  // elements) - the base art below is the same string either way.
   var skin = getSkin(catId, skinId || SKIN_DEFAULT_ID);
   ensureSkinDefs(catId, skin);
 
@@ -472,7 +472,7 @@ function switchGardenTab(tabId) {
 
 // Remembers which art stage each task was last rendered at, so we can
 // detect "just crossed a milestone" and crossfade into the new stage
-// instead of just popping to it. Session-only (not persisted) — on a
+// instead of just popping to it. Session-only (not persisted) - on a
 // fresh page load a plant just appears at its correct current stage.
 var plantStageMemory = {};
 
@@ -501,7 +501,7 @@ function buildPlantVisual(task, cat, stageIdx) {
     return container;
   }
 
-  // Stage just changed — crossfade the old art out and the new art in.
+  // Stage just changed - crossfade the old art out and the new art in.
   var oldLayer = document.createElement('div');
   oldLayer.className = 'plant-stage-layer';
   oldLayer.innerHTML = getPlantSVG(cat.id, prevStage, skinId);
@@ -536,13 +536,32 @@ function buildPlantVisual(task, cat, stageIdx) {
 // Centers the garden scene's horizontal scroll position on its full
 // (3x-viewport-wide) track. Deferred a frame so it runs after the
 // browser has laid out this render's plants and recalculated
-// scrollWidth — reading it synchronously right after an innerHTML
+// scrollWidth - reading it synchronously right after an innerHTML
 // swap can still reflect the previous render's width.
 function centerGardenScroll() {
   requestAnimationFrame(function () {
     if (!gardenSceneEl) return;
     gardenSceneEl.scrollLeft = (gardenSceneEl.scrollWidth - gardenSceneEl.clientWidth) / 2;
   });
+}
+
+// A signpost standing in the plot, pointing back to the tasks list.
+// Deliberately part of the scene rather than a button floating in a
+// corner: it sits inside the scrollable track with the grass and the
+// fence, so it pans with the garden like everything else growing here.
+function renderSignpost(track) {
+  var post = document.createElement('button');
+  post.type      = 'button';
+  post.className = 'garden-signpost';
+  post.title     = 'Back to your tasks';
+  post.innerHTML =
+    '<span class="garden-signpost-board">Tasks</span>' +
+    '<span class="garden-signpost-stake" aria-hidden="true"></span>';
+  post.addEventListener('click', function (e) {
+    e.stopPropagation();
+    navigateTo('tasks');
+  });
+  track.appendChild(post);
 }
 
 function renderGarden() {
@@ -555,21 +574,22 @@ function renderGarden() {
 
   // Ground texture and fence first, so they sit behind every plant
   // appended below (both live inside the scrollable track now, so
-  // they pan together with the plants — see renderFence() above).
+  // they pan together with the plants - see renderFence() above).
   renderGrassField(gardenTrackEl);
   renderFence(gardenTrackEl);
+  renderSignpost(gardenTrackEl);
 
   var emptyMsgEl = document.getElementById('gardenEmptyMsg');
 
   if (tasks.length === 0) {
     if (emptyMsgEl) emptyMsgEl.classList.remove('hidden');
-    // Nothing to scroll to yet — keep the message centered in view.
+    // Nothing to scroll to yet - keep the message centered in view.
     gardenSceneEl.scrollLeft = 0;
     return;
   }
   if (emptyMsgEl) emptyMsgEl.classList.add('hidden');
 
-  // Highest available art stage index — same length across every
+  // Highest available art stage index - same length across every
   // category's PLANT_SVG_DATA array (4 stages: 0–3).
   var maxStageIdx = PLANT_SVG_DATA.misc.length - 1;
 
@@ -577,7 +597,7 @@ function renderGarden() {
   // group once per render. Each task's group is a stable hash of its
   // id, so this grouping (and therefore each task's position) stays
   // consistent render to render. Manually-placed (dragged) tasks are
-  // excluded here — they don't participate in the auto grid at all,
+  // excluded here - they don't participate in the auto grid at all,
   // so they don't shift where other plants' slots fall.
   var slotGroups = { a: [], b: [] };
   tasks.forEach(function (task) {
@@ -600,16 +620,16 @@ function renderGarden() {
     var totalGrowthDays = Math.max(0, task.totalGrowthDays || 0);
     var streak          = Math.max(0, task.streak || 0);
 
-    // The day count this plant's height is read from — the same one
+    // The day count this plant's height is read from - the same one
     // its size is built from in each tab, but without the flourish
     // multipliers layered on afterwards.
     var stageIdx, scale, subLabel, heightDays;
 
     if (currentGardenTab === 'daily') {
       // Daily Garden: what today's plant looks like right now.
-      // Baseline fullness tracks the *current streak* — a long
+      // Baseline fullness tracks the *current streak* - a long
       // unbroken run already looks lush before today's box is even
-      // checked — then it blooms out fully the moment today is done.
+      // checked - then it blooms out fully the moment today is done.
       var streakStage = getStageIndexForDays(streak);
       var streakScale = computeScaleForDays(streak);
 
@@ -620,8 +640,8 @@ function renderGarden() {
       // height rises on the tick without borrowing the ×1.35 bloom.
       heightDays = streak;
 
-      subLabel = (task.completed ? 'Done today ✓' : 'Not done yet') +
-        (streak > 0 ? ' · 🔥 ' + streak + ' day streak' : '');
+      subLabel = (task.completed ? 'Done today' : 'Not done yet') +
+        (streak > 0 ? ' · ' + streak + ' day streak' : '');
     } else {
       // Long-Term Garden: permanent size from lifetime completed
       // days (never shrinks), with a bit of extra flourish layered
@@ -634,11 +654,11 @@ function renderGarden() {
       // screen but must never shrink what it has grown to.
       heightDays = totalGrowthDays;
 
-      var streakPart = streak > 0 ? ' · 🔥 ' + streak + ' day streak' : '';
+      var streakPart = streak > 0 ? ' · ' + streak + ' day streak' : '';
       subLabel = totalGrowthDays + ' days grown' + streakPart;
     }
 
-    // Depth multiplier stacks with the growth-based scale — a fully
+    // Depth multiplier stacks with the growth-based scale - a fully
     // grown far-row plant is still smaller than a fully grown
     // near-row plant, and vice versa a young near-row plant can still
     // be bigger on screen than an old far-row one.
@@ -646,18 +666,18 @@ function renderGarden() {
     scale = scale * layout.depthScale;
 
     // Read from days grown, so neither depth nor the flourish
-    // multipliers above can move it — see the height system notes at
+    // multipliers above can move it - see the height system notes at
     // the top of this file.
     var heightMeters = computeHeightMeters(heightDays);
 
-    // Ground-anchored wrapper — position only, never scales.
+    // Ground-anchored wrapper - position only, never scales.
     var wrap = document.createElement('div');
     wrap.className = 'garden-plant';
     wrap.style.left = layout.center;
     wrap.style.zIndex = layout.z;
     // Set on the wrap (not the inner .plant-visual) so both the
-    // wrap's ground-sink offset and .plant-visual's own scale — which
-    // inherits this custom property — can read the same value.
+    // wrap's ground-sink offset and .plant-visual's own scale - which
+    // inherits this custom property - can read the same value.
     wrap.style.setProperty('--plant-scale', scale.toFixed(3));
     wrap.style.setProperty('--plant-depth-bottom', layout.bottomPct + '%');
     // Stashed so the drag handler can recompute total scale live as
@@ -668,18 +688,18 @@ function renderGarden() {
     wrap.setAttribute(
       'title',
       task.text + ' · ' + cat.name + ' (' + cat.species + ') · ' +
-      totalGrowthDays + ' days grown' + (streak > 0 ? ' · 🔥 ' + streak + ' day streak' : '') +
+      totalGrowthDays + ' days grown' + (streak > 0 ? ' · ' + streak + ' day streak' : '') +
       (gardenEditMode ? ' · drag to move' : '')
     );
 
-    // Scaling visual — grows from a fixed point near the ground.
+    // Scaling visual - grows from a fixed point near the ground.
     var visual = document.createElement('div');
     visual.className = 'plant-visual';
 
     visual.appendChild(buildPlantVisual(task, cat, stageIdx));
     wrap.appendChild(visual);
 
-    // Height tooltip — hidden by default, revealed on hover via CSS
+    // Height tooltip - hidden by default, revealed on hover via CSS
     // (see .plant-height-tag / :hover rules in style.css). Sits
     // outside .plant-visual so it doesn't get scaled along with the
     // art itself.
@@ -688,7 +708,7 @@ function renderGarden() {
     heightTag.textContent = formatHeightMeters(heightMeters);
     wrap.appendChild(heightTag);
 
-    // Label — fixed size, sits below the plant at ground level.
+    // Label - fixed size, sits below the plant at ground level.
     var labelEl = document.createElement('div');
     labelEl.className = 'plant-label-tag';
     labelEl.innerHTML =
@@ -723,13 +743,13 @@ function escapeHtml(str) {
 // you let go. Rearranging ten plants cost twenty writes.
 //
 // Now moving is a mode you opt into. "Edit garden" takes a snapshot of
-// where everything currently is, then lets you drag freely — all of it
+// where everything currently is, then lets you drag freely - all of it
 // purely in memory, no network at all. "Save & exit" writes ONCE for
 // the whole session. "Discard" puts the snapshot back.
 //
 // Leaving the Garden page, or closing the tab, is a discard too: since
 // nothing is written until you press Save, walking away simply never
-// commits. That is also why there is no beforeunload handler here —
+// commits. That is also why there is no beforeunload handler here -
 // there is nothing to flush.
 // ============================================
 
@@ -756,7 +776,7 @@ function snapshotGardenPositions() {
 // drags into Firestore.
 //
 // checkDayRollover() fires every 60 seconds and calls saveData() when
-// the date flips, and saveData() serializes the LIVE tasks array — so
+// the date flips, and saveData() serializes the LIVE tasks array - so
 // a midnight rollover in the middle of an editing session would have
 // quietly committed positions the user hadn't saved and might be about
 // to discard. saveData() asks this function for each task's position
@@ -778,7 +798,7 @@ function getPersistedPosition(task) {
 // Called from renderGarden() as well as from the mode changes below,
 // so the bar can never drift out of step with the actual state.
 function updateGardenEditUI() {
-  // Nothing to arrange in an empty garden — hide the whole bar rather
+  // Nothing to arrange in an empty garden - hide the whole bar rather
   // than offer a mode that does nothing.
   if (gardenEditBarEl) gardenEditBarEl.classList.toggle('hidden', tasks.length === 0);
 
@@ -792,7 +812,7 @@ function enterGardenEditMode() {
   gardenEditSnapshot = snapshotGardenPositions();
   gardenEditMode     = true;
   updateGardenEditUI();
-  // Re-render so every plant gets its drag listeners bound — outside
+  // Re-render so every plant gets its drag listeners bound - outside
   // edit mode they simply aren't attached (see renderGarden).
   renderGarden();
 }
@@ -839,7 +859,7 @@ updateGardenEditUI();
 // ============================================
 // Drag-to-place: inside edit mode, press a plant and it comes up
 // immediately, follows the pointer anywhere in the garden, and
-// drops where you let go. Nothing is written to Firestore here —
+// drops where you let go. Nothing is written to Firestore here -
 // the move lives in memory until "Save & exit".
 //
 // Outside edit mode none of this is bound at all (renderGarden only
@@ -853,7 +873,7 @@ var activePlantDrag = null; // { taskId, wrap, moved, pendingX, pendingY }
 function setupPlantDrag(wrap, taskId) {
   // No hold delay and no movement threshold: in edit mode the only
   // reason to touch a plant is to move it, so pressing it picks it up
-  // at once. A press with no movement is still a no-op — the plant is
+  // at once. A press with no movement is still a no-op - the plant is
   // put back down exactly where it was and nothing is marked changed.
   //
   // Hovering does nothing: this is pointerdown, so the plant is never
@@ -866,7 +886,7 @@ function setupPlantDrag(wrap, taskId) {
   });
 
   // Only applied to plants that are actually draggable, i.e. only in
-  // edit mode — stops touch scrolling and the long-press callout menu
+  // edit mode - stops touch scrolling and the long-press callout menu
   // from fighting the drag.
   wrap.style.touchAction = 'none';
   wrap.style.userSelect  = 'none';
@@ -892,7 +912,7 @@ function beginPlantDrag(taskId, wrap, pointerId, floating) {
   document.addEventListener('pointermove', onPlantDragMove);
 
   if (floating) {
-    // Picked up via double-click — the mouse button isn't held down,
+    // Picked up via double-click - the mouse button isn't held down,
     // so there's no pointerup to end on. Instead, follow the pointer
     // on plain movement and finalize on the next click anywhere.
     document.addEventListener('click', onPlantDragEnd, { capture: true, once: true });
@@ -909,7 +929,7 @@ function onPlantDragMove(e) {
 
   var rect = gardenTrackEl.getBoundingClientRect();
   // Free placement: track the pointer directly, anywhere across the
-  // (scrollable, 3x-wide) track — no row/band to snap to.
+  // (scrollable, 3x-wide) track - no row/band to snap to.
   var xPct = clampCenterPct(((e.clientX - rect.left) / rect.width) * 100);
   var yPct = ((e.clientY - rect.top) / rect.height) * 100;
   var bottomPct = clampBottomPct(100 - yPct);
@@ -929,7 +949,7 @@ function onPlantDragMove(e) {
 function onPlantDragEnd(e) {
   if (e && e.type === 'click') {
     // This click is the "drop" for a floating carry, not a real
-    // click on whatever happens to be underneath — don't let it
+    // click on whatever happens to be underneath - don't let it
     // also trigger that element's own click behavior.
     e.preventDefault();
     e.stopPropagation();
@@ -951,12 +971,12 @@ function onPlantDragEnd(e) {
   if (!task) { renderGarden(); return; }
 
   if (drag.moved) {
-    // Dropped somewhere new — lock in the free (x, y) position.
+    // Dropped somewhere new - lock in the free (x, y) position.
     task.posX = drag.pendingX;
     task.posY = drag.pendingY;
   }
   // else: released without moving (a tap, or a press let go in place)
-  // — leave the plant's position exactly as it was. No reset to the
+  // - leave the plant's position exactly as it was. No reset to the
   // automatic spot.
 
   // Deliberately NO saveData() here. The new position lives in memory

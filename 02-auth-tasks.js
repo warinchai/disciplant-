@@ -1,6 +1,6 @@
 // ============================================
-// 02: AUTH + TASKS — Firebase auth, sign-in/out, task add/toggle/remove, task list rendering
-// Part of DISCIPLANT — split from script.js.
+// 02: AUTH + TASKS - Firebase auth, sign-in/out, task add/toggle/remove, task list rendering
+// Part of DISCIPLANT - split from script.js.
 // Loaded as a plain global script (no modules).
 // Must load in order: 01 -> 02 -> 03 -> 04 -> 05,
 // after firebase-config.js. All functions/vars here
@@ -15,7 +15,7 @@
 // signs the visitor in ANONYMOUSLY so they can start planting right
 // away. That anonymous account can later be upgraded to a Google
 // account (via linkWithPopup) without losing any of the guest's
-// existing garden data — the anonymous uid keeps its Firestore
+// existing garden data - the anonymous uid keeps its Firestore
 // documents, only the auth PROVIDER changes.
 //
 // currentUserProfile (see state block above) tracks the signed-in
@@ -26,7 +26,7 @@
 var googleProvider = new firebase.auth.GoogleAuthProvider();
 
 // ---- Step 1: sign the visitor in anonymously (fallback identity) ----
-// Only signs in as a guest if there's truly no session yet — this is
+// Only signs in as a guest if there's truly no session yet - this is
 // checked inside the onIdTokenChanged observer below (`if (!user)`)
 // rather than fired unconditionally here, so it never races with a
 // Google redirect sign-in/link that's still being processed after
@@ -47,7 +47,7 @@ var REDIRECT_IS_USABLE = AUTH_DOMAIN === APP_HOST;
 if (!REDIRECT_IS_USABLE) {
   console.warn(
     'DISCIPLANT: authDomain (' + AUTH_DOMAIN + ') does not match this app\'s host (' +
-    APP_HOST + '). Redirect sign-in CANNOT complete here — popup only. ' +
+    APP_HOST + '). Redirect sign-in CANNOT complete here - popup only. ' +
     'Fix by pointing authDomain at this domain and serving /__/auth/* from it.'
   );
 }
@@ -55,14 +55,14 @@ if (!REDIRECT_IS_USABLE) {
 // ---- Catch the result of a redirect-based sign-in / link ----
 // We record a flag in sessionStorage before navigating away, so that on
 // the way back we can tell the difference between "no redirect was ever
-// in progress" (normal page load — stay quiet) and "a redirect WAS in
-// progress and came back empty" (the storage-partitioning failure —
+// in progress" (normal page load - stay quiet) and "a redirect WAS in
+// progress and came back empty" (the storage-partitioning failure -
 // surface a real error instead of failing silently).
 var redirectWasPending = false;
 try {
   redirectWasPending = sessionStorage.getItem('disciplant:redirectPending') === '1';
   sessionStorage.removeItem('disciplant:redirectPending');
-} catch (e) { /* sessionStorage unavailable (private mode) — ignore */ }
+} catch (e) { /* sessionStorage unavailable (private mode) - ignore */ }
 
 auth.getRedirectResult().then(function (result) {
   if (result && result.user) {
@@ -77,7 +77,7 @@ auth.getRedirectResult().then(function (result) {
     authActionError = 'Sign-in could not be completed. Please try again.';
     console.error(
       'DISCIPLANT: redirect result was lost. authDomain=' + AUTH_DOMAIN +
-      ' host=' + APP_HOST + ' — these must match for redirect sign-in to work.'
+      ' host=' + APP_HOST + ' - these must match for redirect sign-in to work.'
     );
     renderAuthModal();
   }
@@ -86,7 +86,7 @@ auth.getRedirectResult().then(function (result) {
   var code = error && error.code;
   if (code === 'auth/credential-already-in-use') {
     // The guest account can't take this Google credential because another
-    // account already owns it. Do NOT auto-fire another redirect here —
+    // account already owns it. Do NOT auto-fire another redirect here -
     // that runs with no user gesture and can loop. Ask the user instead.
     authActionError = 'That Google account is already in use. Tap Sign in with Google again to switch to it.';
   } else if (code && code !== 'auth/no-auth-event') {
@@ -96,7 +96,7 @@ auth.getRedirectResult().then(function (result) {
   renderAuthModal();
 });
 
-// ---- User profile doc (users/{uid}) — separate from garden data ----
+// ---- User profile doc (users/{uid}) - separate from garden data ----
 // Holds just identity info (display name, email, avatar, provider),
 // kept in sync with Firebase Auth on every sign-in. Garden data
 // itself stays in the existing gardens/{uid} collection untouched.
@@ -135,7 +135,7 @@ function ensureUserProfileDoc(user) {
 // Reads a field off the Firebase user, falling back to its linked
 // provider's own copy of that field. Needed because linkWithPopup()
 // doesn't always immediately copy the newly-linked provider's
-// displayName/email/photoURL onto the top-level user object — the
+// displayName/email/photoURL onto the top-level user object - the
 // data IS there under providerData[0], just not yet mirrored up, so
 // without this fallback the profile header can show blank fields
 // right after linking until the next full page reload.
@@ -164,7 +164,7 @@ function applyUserToProfileState(user) {
 //      updates the instant the popup closes instead of waiting on an
 //      observer round-trip.
 //
-// This is deliberately idempotent — running it twice in a row costs
+// This is deliberately idempotent - running it twice in a row costs
 // nothing and paints the same result, which is what lets both callers
 // fire without coordinating.
 function refreshIdentityUI(user) {
@@ -183,14 +183,14 @@ function refreshIdentityUI(user) {
 // back to a plain sign-in, which switches to that account's own garden.
 //
 // POPUP IS ALWAYS TRIED FIRST, and it is called directly off the click with
-// no intervening window.open() — the browser's user-activation token must
+// no intervening window.open() - the browser's user-activation token must
 // still be live at the moment signInWithPopup()/linkWithPopup() runs, or the
 // popup gets blocked. (An earlier version probed for popup support by
 // opening and closing a test window; that spent the activation token and
 // tripped popup blockers, i.e. it caused the very failure it tested for.)
 //
 // Redirect is used as a fallback ONLY when it can actually complete on this
-// origin — see REDIRECT_IS_USABLE above. Otherwise we show a real error
+// origin - see REDIRECT_IS_USABLE above. Otherwise we show a real error
 // telling the user to allow pop-ups, rather than bouncing them through a
 // redirect that will silently lose the result.
 function signInWithGoogle() {
@@ -206,7 +206,7 @@ function signInWithGoogle() {
     return isAnon
       ? currentUser.linkWithRedirect(googleProvider)
       : auth.signInWithRedirect(googleProvider);
-    // Page navigates away here — nothing after this runs.
+    // Page navigates away here - nothing after this runs.
   }
 
   function fail(message, error) {
@@ -234,13 +234,13 @@ function signInWithGoogle() {
       var code = error && error.code;
 
       if (code === 'auth/credential-already-in-use') {
-        // That Google account already has its own saved garden — sign into
+        // That Google account already has its own saved garden - sign into
         // it directly instead of linking.
         //
         // NOT with a second popup. The click's user-activation token was
         // spent opening the FIRST popup, and this runs after that popup has
         // already resolved, so window.open() here has no gesture behind it
-        // and every browser blocks it — auth/popup-blocked, every time, on
+        // and every browser blocks it - auth/popup-blocked, every time, on
         // localhost as well as in production. (This was a real bug: the
         // popup-blocked handler further down would have recovered it, but
         // this inner catch swallowed the error into a generic failure
@@ -257,7 +257,7 @@ function signInWithGoogle() {
         if (REDIRECT_IS_USABLE) {
           try { sessionStorage.setItem('disciplant:redirectPending', '1'); } catch (e) {}
           return auth.signInWithRedirect(googleProvider);
-          // Page navigates away here — nothing after this runs.
+          // Page navigates away here - nothing after this runs.
         }
         return fail(
           'That Google account already has its own garden. Tap Sign in with ' +
@@ -277,7 +277,7 @@ function signInWithGoogle() {
       }
 
       if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-        // User backed out on purpose — not an error worth showing.
+        // User backed out on purpose - not an error worth showing.
         authActionPending = false;
         renderAuthModal();
         return;
@@ -309,7 +309,7 @@ function renderAuthWidget() {
   } else {
     authAvatarImg.classList.add('hidden');
     authAvatarFallback.classList.remove('hidden');
-    authAvatarFallback.textContent = profile.isAnonymous ? '🌱' : '🌻';
+    authAvatarFallback.innerHTML = AVATAR_SPROUT_SVG;
   }
 
   authWidgetLabel.textContent = profile.isAnonymous
@@ -327,6 +327,10 @@ function closeAuthModal() {
   if (authModalEl) authModalEl.classList.add('hidden');
 }
 
+// Stands in wherever there is no profile photo.
+var AVATAR_SPROUT_SVG =
+  '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 22 V11" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M12 12 C12 7 8 5 4 5 C4 10 8 12 12 12 Z" fill="currentColor"/><path d="M12 14 C12 10 15 8 19 8 C19 12 15 14 12 14 Z" fill="currentColor" opacity="0.72"/></svg>';
+
 var GOOGLE_G_ICON_SVG =
   '<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">' +
   '<path fill="#EA4335" d="M24 9.5c3.4 0 6.4 1.2 8.8 3.5l6.6-6.6C35.3 2.5 30 0 24 0 14.6 0 6.5 5.4 2.5 13.2l7.7 6C12.1 13 17.6 9.5 24 9.5z"/>' +
@@ -342,7 +346,7 @@ function renderAuthModal() {
 
   var avatarHtml = (!profile.isAnonymous && profile.photoURL)
     ? '<img src="' + profile.photoURL + '" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />'
-    : (profile.isAnonymous ? '🌱' : '🌻');
+    : AVATAR_SPROUT_SVG;
 
   var titleText = profile.isAnonymous
     ? 'Guest Gardener'
@@ -369,7 +373,7 @@ function renderAuthModal() {
     : '';
 
   var noteHtml = profile.isAnonymous
-    ? '<p class="auth-modal-note">Your current garden stays exactly as it is — linking just adds Google sign-in on top.</p>'
+    ? '<p class="auth-modal-note">Your current garden stays exactly as it is - linking just adds Google sign-in on top.</p>'
     : '';
 
   authModalBody.innerHTML =
@@ -392,7 +396,7 @@ function renderAuthModal() {
 //
 // This used to fire on page load, which meant someone who opened the
 // site, read the tagline and left still got an anonymous account, a
-// garden document, and a full set of listener attachments — several
+// garden document, and a full set of listener attachments - several
 // Firestore reads for a visitor who never tended anything. At launch,
 // when most traffic is people glancing at a shared link, that is
 // mostly what the quota would have gone on.
@@ -407,21 +411,21 @@ function renderAuthModal() {
 // ============================================
 var pendingAnonSignIn = null;
 
-// THE RACE THIS EXISTS TO PREVENT — do not remove this gate.
+// THE RACE THIS EXISTS TO PREVENT - do not remove this gate.
 //
 // auth.currentUser is null for the first few hundred milliseconds of
 // EVERY page load, while Firebase restores the saved session out of
 // IndexedDB. It is not "no user"; it is "not known yet". Checking it
 // directly and creating a guest on null meant that clicking into the
 // app quickly enough replaced a real signed-in session with a brand
-// new anonymous one — the user watched themselves turn into a guest.
+// new anonymous one - the user watched themselves turn into a guest.
 //
 // For an anonymous user the same race is worse: the new guest gets a
 // new uid, and the old guest's garden becomes unreachable forever,
 // because nothing but that uid ever pointed at it.
 //
 // The auth observer's FIRST callback is the signal that Firebase has
-// finished making up its mind — it fires after the session has been
+// finished making up its mind - it fires after the session has been
 // restored, and after any pending Google redirect has been resolved.
 // So the answer is: never decide before that has happened.
 var authSessionResolved = false;
@@ -448,7 +452,7 @@ function ensureSignedIn() {
       if (auth.currentUser) return auth.currentUser;
 
       return auth.signInAnonymously().then(function (credential) {
-        // Nothing else to do here — onIdTokenChanged fires next and
+        // Nothing else to do here - onIdTokenChanged fires next and
         // boots the app exactly as it does on reload.
         return credential.user;
       });
@@ -478,8 +482,8 @@ if (authModalBackdrop) authModalBackdrop.addEventListener('click', closeAuthModa
 // onIdTokenChanged, NOT onAuthStateChanged.
 //
 // onAuthStateChanged only fires when *which user* is signed in changes.
-// Linking Google onto an anonymous guest keeps the SAME uid — the auth
-// state technically never changed — so that callback stays silent and
+// Linking Google onto an anonymous guest keeps the SAME uid - the auth
+// state technically never changed - so that callback stays silent and
 // the widget goes on saying "Guest" until a manual page reload.
 // onIdTokenChanged additionally fires whenever the ID token is reissued,
 // which linking always does (the new token carries the new provider), so
@@ -496,14 +500,14 @@ auth.onIdTokenChanged(function (user) {
   noteAuthSessionResolved();
 
   if (!user) {
-    // No session, and DELIBERATELY no sign-in here — see
+    // No session, and DELIBERATELY no sign-in here - see
     // ensureSignedIn() below for why. A visitor reading the home page
     // has no account, no garden document and costs no Firestore reads;
     // the widget stays on its default "Guest" state until they go in.
     //
     // This callback is also where a Google redirect result lands, and
     // Firebase holds off firing it with `null` until any pending
-    // redirect has resolved — so reaching here really does mean there
+    // redirect has resolved - so reaching here really does mean there
     // is no session, not that one is still in flight.
     return;
   }
@@ -516,7 +520,7 @@ auth.onIdTokenChanged(function (user) {
   console.log('Signed in as:', currentUserId, user.isAnonymous ? '(guest)' : '(Google)');
 
   // Username / friends listeners live in 06-friends.js and key off the
-  // same uid. Guarded because 06 loads after this file — on the very
+  // same uid. Guarded because 06 loads after this file - on the very
   // rare occasion auth resolves first, 06 catches up on its own.
   if (typeof startFriendsListeners === 'function') startFriendsListeners(currentUserId);
 
@@ -550,19 +554,19 @@ auth.onIdTokenChanged(function (user) {
               // task already had a streak before this field existed.
               maxStreak:         Math.max(t.maxStreak || 0, t.streak || 0),
               // All-time high-water mark for totalGrowthDays, which
-              // is NOT monotonic — un-ticking today's box takes a day
+              // is NOT monotonic - un-ticking today's box takes a day
               // back off it. Without this, a plant sitting exactly on
               // a 30-day skin unlock would lose that skin the moment
               // its owner corrected a mis-tap. Backfilled from the
               // current total for tasks saved before this existed.
               maxGrowthDays:     Math.max(t.maxGrowthDays || 0, t.totalGrowthDays || 0),
-              // Per-day completion log — { "YYYY-MM-DD": true, ... } —
+              // Per-day completion log - { "YYYY-MM-DD": true, ... } -
               // one entry per day this task was actually checked off.
               // Powers the Stats page heatmaps; only starts recording
               // from whenever this field was introduced, so days
               // before that won't have an entry.
               history:           (t.history && typeof t.history === 'object') ? t.history : {},
-              // Manual placement override — set when the user drags
+              // Manual placement override - set when the user drags
               // this plant to a spot themselves. null/undefined means
               // "use the automatic layout" (see computePlantLayout).
               posX:              (typeof t.posX === 'number') ? t.posX : null,
@@ -589,7 +593,7 @@ auth.onIdTokenChanged(function (user) {
         }
 
         // Covers the case where the friends list arrived before the
-        // garden did — see ensureGardenSummaryPublished(). Whichever of
+        // garden did - see ensureGardenSummaryPublished(). Whichever of
         // the two lands second does the write; the flag stops both.
         ensureGardenSummaryPublished();
 
@@ -641,8 +645,8 @@ function buildCleanTasks() {
     // Position comes via getPersistedPosition() (04-garden-scene.js)
     // rather than straight off the task. While the garden is in edit
     // mode that returns the pre-edit snapshot, so a save triggered by
-    // something else entirely — a midnight rollover, a habit ticked on
-    // another page — writes those changes without also committing
+    // something else entirely - a midnight rollover, a habit ticked on
+    // another page - writes those changes without also committing
     // drags the user hasn't saved yet and may still discard.
     var pos = (typeof getPersistedPosition === 'function') ? getPersistedPosition(t) : t;
     return {
@@ -668,7 +672,7 @@ function buildCleanTasks() {
 //
 // The FIRST save in a burst goes straight through, so ticking a habit
 // still feels instant. Anything within the cooldown after it is folded
-// into one deferred save at the end — and because that deferred call
+// into one deferred save at the end - and because that deferred call
 // re-reads the live tasks array, the final state always lands. Nothing
 // is dropped; repeats are merged.
 //
@@ -683,7 +687,7 @@ function saveData() {
 
   var sinceLast = Date.now() - lastSaveAt;
   if (sinceLast < SAVE_MIN_INTERVAL_MS) {
-    // Already one queued — it will pick up whatever the tasks array
+    // Already one queued - it will pick up whatever the tasks array
     // looks like when it fires, including this change.
     if (!pendingSaveTimer) {
       pendingSaveTimer = setTimeout(function () {
@@ -723,18 +727,18 @@ function saveData() {
 // rules let friends read that one.
 //
 // Because it's derived, it must be rewritten from the same task data
-// in the same place every time — hence being called straight out of
+// in the same place every time - hence being called straight out of
 // saveData() above rather than on some separate schedule. Anything
 // that drifts here shows a friend a stale garden.
 //
 // WHAT'S DELIBERATELY MISSING
-//   text               — the whole point; free-text habits are private
-//   history            — a day-by-day activity log of someone's life
-//   maxStreak          — not needed to draw anything
+//   text               - the whole point; free-text habits are private
+//   history            - a day-by-day activity log of someone's life
+//   maxStreak          - not needed to draw anything
 //   lastCleanDate,
-//   prevLastCleanDate  — internal day-rollover bookkeeping
+//   prevLastCleanDate  - internal day-rollover bookkeeping
 //   lastResetDate,
-//   updatedAt          — both disclose roughly when this person last
+//   updatedAt          - both disclose roughly when this person last
 //                        opened the app, which is a fact about their
 //                        habits rather than about their garden. Left
 //                        out by decision; see the note on `completed`
@@ -752,7 +756,7 @@ function buildGardenSummary(cleanTasks) {
 
     // No timestamp of any kind by design. That means a reader cannot
     // tell whether this snapshot is from ten seconds or ten days ago,
-    // so `completed` below can't be pinned to a specific day either —
+    // so `completed` below can't be pinned to a specific day either -
     // the friend view says so in plain words instead of guessing.
 
     plants: cleanTasks.map(function (t) {
@@ -763,21 +767,21 @@ function buildGardenSummary(cleanTasks) {
         id:              t.id,
         // Drives which species art is drawn. NOTE: this necessarily
         // discloses the CATEGORY of each habit (Exercise, Finance,
-        // Sleep...) even though the task's text stays private — see
+        // Sleep...) even though the task's text stays private - see
         // the note in the handover summary; showing real species is a
         // product decision, not a technical requirement.
         categoryId:      t.categoryId,
-        // The skin actually WORN, not the one stored — a plant whose
+        // The skin actually WORN, not the one stored - a plant whose
         // skin is currently locked shows a friend the same classic it
         // shows its owner, rather than a look it isn't wearing.
         skinId:          getTaskSkinId(t),
-        // Growth inputs — the two numbers the garden is actually a
+        // Growth inputs - the two numbers the garden is actually a
         // picture of.
         streak:          t.streak || 0,
         totalGrowthDays: t.totalGrowthDays || 0,
         // Whether this was ticked off as of the owner's last save.
         // Without a date on the document there's no way for a reader
-        // to know WHICH day that was — if its owner hasn't opened the
+        // to know WHICH day that was - if its owner hasn't opened the
         // app since yesterday, no day-rollover has run and this still
         // holds yesterday's answer. The friend view therefore labels
         // it "last saved" rather than "today". Reveals how many habits
@@ -804,14 +808,14 @@ var gardenSummaryWritten = false;
 
 // Does anyone exist who is actually allowed to read the summary?
 //
-// The rules let a FRIEND read gardenSummaries/{uid} and nobody else —
+// The rules let a FRIEND read gardenSummaries/{uid} and nobody else -
 // so with an empty friends list this document is unreadable by every
 // person alive, including its owner. Writing it anyway doubled the
 // write cost of every single save for solo users and for every guest
 // who never claimed a username, publishing to an audience of zero.
 //
 // getFriendCount() lives in 06-friends.js, which loads after this file
-// — hence the typeof guard. If it isn't there yet we skip the write,
+// - hence the typeof guard. If it isn't there yet we skip the write,
 // which is the safe direction: the backstop below will publish as soon
 // as the friends list is known.
 function summaryHasAudience() {
@@ -824,7 +828,7 @@ function summaryHasAudience() {
 // WHY THIS IS NEEDED: with the skip above, someone who gains a friend
 // and then never saves their garden again would never publish a
 // summary at all, and their friend would see "hasn't opened DISCIPLANT
-// since garden sharing was added" — which would be a lie. This writes
+// since garden sharing was added" - which would be a lie. This writes
 // once, at the first moment the document actually becomes readable.
 //
 // Guarded on authReady so it can't publish an empty summary before the
@@ -842,7 +846,7 @@ function ensureGardenSummaryPublished() {
 function saveGardenSummary(cleanTasks) {
   if (!currentUserId) return;
 
-  // Nobody can read it yet — don't pay to publish it. The moment a
+  // Nobody can read it yet - don't pay to publish it. The moment a
   // friend request is accepted, ensureGardenSummaryPublished() writes
   // the current state, and ordinary saves take over from there.
   if (!summaryHasAudience()) return;
@@ -862,7 +866,7 @@ function writeGardenSummary(cleanTasks) {
       if (error && error.code === 'permission-denied') {
         console.error(
           'DISCIPLANT: could not write gardenSummaries/' + currentUserId + '. ' +
-          'The gardenSummaries rules are probably not published yet — ' +
+          'The gardenSummaries rules are probably not published yet - ' +
           'paste firestore.rules into Firebase Console -> Firestore -> Rules -> Publish. ' +
           'Your own garden saved fine; only the friend-visible copy is missing.'
         );
@@ -921,7 +925,7 @@ function toggleTask(taskId, newChecked) {
   // Compare against the PREVIOUS completed state, not a date string.
   // completed and "credit given" are always toggled in lockstep by
   // this function, so "was it already completed" is a perfectly
-  // reliable signal for "was today's credit already given" — and
+  // reliable signal for "was today's credit already given" - and
   // unlike comparing lastCleanDate to today's date string, it can't
   // be thrown off by the dev rollover simulation, timezone edge
   // cases, or any other date-comparison mismatch.
@@ -930,17 +934,17 @@ function toggleTask(taskId, newChecked) {
   if (!task.history) task.history = {};
 
   if (newChecked && !wasCompleted) {
-    // Fresh completion — grow both streak and size, once, and log
+    // Fresh completion - grow both streak and size, once, and log
     // today in this task's per-day history (powers the Stats page
     // heatmaps).
     task.streak          = (task.streak || 0) + 1;
     task.totalGrowthDays = (task.totalGrowthDays || 0) + 1;
     task.history[getTodayString()] = true;
     task.maxStreak        = Math.max(task.maxStreak || 0, task.streak);
-    // Banked, and never given back — see the field's note on load.
+    // Banked, and never given back - see the field's note on load.
     task.maxGrowthDays    = Math.max(task.maxGrowthDays || 0, task.totalGrowthDays);
   } else if (!newChecked && wasCompleted) {
-    // Undoing a completion — reverse today's credit for both, and
+    // Undoing a completion - reverse today's credit for both, and
     // remove today's history entry so the heatmap reflects reality.
     task.streak          = Math.max(0, (task.streak || 0) - 1);
     task.totalGrowthDays = Math.max(0, (task.totalGrowthDays || 0) - 1);
@@ -999,11 +1003,11 @@ function renderFilteredList(catId, listEl, emptyEl) {
       var badge            = document.createElement('span');
       badge.className      = 'cat-badge';
       badge.dataset.category = task.categoryId;
-      badge.textContent    = cat.emoji + ' ' + cat.name;
+      badge.textContent    = cat.name;
       li.appendChild(badge);
     }
 
-    // Skin pip — shows the plant's current colours right on the
+    // Skin pip - shows the plant's current colours right on the
     // row, and doubles as a shortcut into the Greenhouse, where
     // skins are actually chosen.
     var skinBtn       = document.createElement('button');
@@ -1011,7 +1015,7 @@ function renderFilteredList(catId, listEl, emptyEl) {
     skinBtn.className = 'skin-btn';
     skinBtn.innerHTML = skinPipHtml(getSkin(task.categoryId, getTaskSkinId(task)));
     skinBtn.setAttribute('aria-label', 'Open this ' + cat.species + ' in the Greenhouse');
-    skinBtn.title     = 'Change how this ' + cat.species + ' looks — opens the Greenhouse';
+    skinBtn.title     = 'Change how this ' + cat.species + ' looks - opens the Greenhouse';
     (function (id) {
       skinBtn.addEventListener('click', function () { openPlantSkins(id); });
     }(task.id));
@@ -1019,7 +1023,7 @@ function renderFilteredList(catId, listEl, emptyEl) {
 
     var removeBtn      = document.createElement('button');
     removeBtn.className  = 'remove';
-    removeBtn.textContent = '✕';
+    removeBtn.innerHTML   = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>';
     removeBtn.setAttribute('aria-label', 'Remove task');
     (function (id) {
       removeBtn.addEventListener('click', function () { removeTask(id); });
@@ -1034,6 +1038,10 @@ function renderFilteredList(catId, listEl, emptyEl) {
 
 // Renders all task views: the "all" tab and every category tab.
 function renderTaskList() {
+  // The plot of plant cards above the lists: counts, streaks and the
+  // artwork all move when a task is ticked.
+  if (typeof refreshCategoryCards === 'function') refreshCategoryCards();
+
   // "All" tab
   renderFilteredList('all', taskList, emptyState);
 

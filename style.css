@@ -1,15 +1,84 @@
-/* ---------- Palette ----------
-  --soil:      #6B4F3B   deep warm brown, grounding colour
-  --leaf:      #3A6B4A   forest green, primary accent
-  --sprout:    #8FBF7F   soft new-growth green
-  --sun:       #F2B84B   warm sunlight yellow
-  --cream:     #FBF7EE   card / page background
-  --ink:       #2E2A22   near-black text with a warm tint
-  --grass:     #4a7a30   deep grass green (ground scene)
-  --mist:      #e8dfc8   warm light text on dark sky
-------------------------------- */
+/* ============================================================
+   DISCIPLANT - visual identity
+   ------------------------------------------------------------
+   Three nested surfaces, darkest on the outside:
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Fredoka:wght@500;600&family=Nunito:wght@400;600;700&display=swap');
+       bark   (wooden frame, carries the grain)
+        └── clay   (tan panel)
+             └── linen  (light card, where words live)
+
+   Everything reads from the tokens below. If a colour is not
+   in this block it is garden scenery (sky, soil, plant art),
+   not interface, and is deliberately left alone.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap');
+
+:root {
+  /* --- Bark: frame layer --- */
+  --bark:        #7A5C42;
+  --bark-deep:   #5E4632;
+  --bark-light:  #9A7855;
+
+  /* --- Clay: panel layer --- */
+  --clay:        #E7CDA6;
+  --clay-edge:   #D4B58A;
+  --clay-deep:   #C39F73;
+
+  /* --- Linen: card layer --- */
+  --linen:       #F8EEDC;
+  --linen-edge:  #EADFC6;
+
+  /* --- Text --- */
+  --ink:         #4A3826;
+  --ink-soft:    #8A6E52;
+  --ink-faint:   #A98D6B;
+  --ink-on-dark: #E7CDA6;
+
+  /* --- Accents. One job each, never decoration. --- */
+  --leaf:        #7FA968;   /* done, growth, focus */
+  --leaf-deep:   #5C8149;
+  --leaf-dark:   #47673A;
+  --sun:         #E8B75C;   /* streaks, current page */
+  --sun-deep:    #C4913A;
+  --bloom:       #D89A8E;   /* delete, warnings */
+  --bloom-deep:  #A5544A;
+  --bloom-tint:  #F7E4DF;
+  --dusk:        #9C8FB8;   /* locked */
+
+  /* --- Type scale. Five sizes. Nothing outside this list. --- */
+  --fs-xs:   0.75rem;
+  --fs-sm:   0.875rem;
+  --fs-base: 1rem;
+  --fs-lg:   1.25rem;
+  --fs-xl:   1.75rem;
+  --fs-2xl:  2.5rem;
+
+  --font-display: 'Baloo 2', 'Nunito', sans-serif;
+  --font-body:    'Nunito', sans-serif;
+
+  /* --- Corners --- */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+
+  /* --- Grain. Laid over bark surfaces only. --- */
+  --wood-grain: repeating-linear-gradient(
+      93deg,
+      rgba(60, 42, 28, 0)       0px,
+      rgba(60, 42, 28, 0)       9px,
+      rgba(60, 42, 28, 0.15)    9px,
+      rgba(60, 42, 28, 0.15)   11px,
+      rgba(60, 42, 28, 0)      11px,
+      rgba(60, 42, 28, 0)      26px,
+      rgba(255, 231, 194, 0.06) 26px,
+      rgba(255, 231, 194, 0.06) 29px
+    );
+
+  /* --- The hard bottom edge that makes a control look pressable. --- */
+  --lip:      0 4px 0;
+  --lip-deep: 0 6px 0;
+}
 
 * {
   box-sizing: border-box;
@@ -24,13 +93,13 @@ body {
   padding: 0;
   min-height: 100vh;
   background: transparent;
-  font-family: 'Nunito', sans-serif;
-  color: #2E2A22;
+  font-family: var(--font-body);
+  color: var(--ink);
 }
 
 
 /* ========================================
-   Garden page backdrop — replaces the universal
+   Garden page backdrop - replaces the universal
    sky/hills scene while on the Garden page
    ======================================== */
 
@@ -47,7 +116,7 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  bottom: 50vh; /* horizon line — matches the top edge of the plot (garden-scene: 0 + 50vh) below */
+  bottom: 50vh; /* horizon line - matches the top edge of the plot (garden-scene: 0 + 50vh) below */
   background: linear-gradient(180deg, #8ec6e8 0%, #bfe0ef 55%, #cfe8d0 100%);
 }
 
@@ -125,7 +194,7 @@ body {
     88vw 57vh rgba(255,255,255,0.6);
 }
 
-/* Night state — toggled on #gardenBackdrop by JS to match real time */
+/* Night state - toggled on #gardenBackdrop by JS to match real time */
 .garden-backdrop.gb-night .gb-stars {
   opacity: 1;
 }
@@ -246,7 +315,7 @@ body {
 
 .sky-body {
   position: absolute;
-  font-size: 2.4rem;
+  font-size: var(--fs-2xl);
   line-height: 1;
   transform: translateX(-50%);
   transition: left 62s linear, top 32s ease-in-out;
@@ -316,15 +385,16 @@ body {
 
 .loading-state {
   text-align: center;
-  color: #e8dfc8;
-  font-size: 1rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--clay);
+  font-size: var(--fs-base);
   margin: 60px 0;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
 }
 
 
 /* ========================================
-   Garden scene — SVG plants in the world
+   Garden scene - SVG plants in the world
    ======================================== */
 
 .garden-scene {
@@ -357,7 +427,7 @@ body {
   background: rgba(242, 184, 75, 0.75);
 }
 
-/* The actual wide canvas plants are placed in — 3x the visible
+/* The actual wide canvas plants are placed in - 3x the visible
    width, so there's real room to spread more plants out. Percentage
    left/bottom values on .garden-plant are relative to THIS box, not
    the viewport, so a plant's x-position is stable no matter how the
@@ -369,7 +439,7 @@ body {
   flex-shrink: 0;
 }
 
-/* Ground texture layer — grass blade clumps scattered across the
+/* Ground texture layer - grass blade clumps scattered across the
    scrollable garden track (see renderGrassField in script.js). Lives
    inside .garden-scene-track so it scrolls WITH the content, giving
    swipe/scroll a visible sense of motion that a flat green plane
@@ -397,7 +467,7 @@ body {
 
 
 /* ========================================
-   Garden fence — lives INSIDE #gardenSceneTrack
+   Garden fence - lives INSIDE #gardenSceneTrack
    (the scrollable element), not the fixed
    backdrop, so it moves together with the plants
    and grass field as the garden is panned. It sits
@@ -416,21 +486,21 @@ body {
   height: 42px;
   z-index: 2;
   pointer-events: none;
-  border-top: 4px solid #b89a68;
+  border-top: 4px solid var(--clay-deep);
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.20);
   opacity: 0.95;
   /* Four picket shades of the same tan/brown family, cycling every
-     104px. A single flat colour would look static while scrolling —
+     104px. A single flat colour would look static while scrolling -
      alternating shades make the panning motion obvious at a glance. */
   background-image: repeating-linear-gradient(
     90deg,
-    #e0cd9c 0px,  #e0cd9c 9px,
+    var(--clay) 0px,  var(--clay) 9px,
     transparent 9px, transparent 26px,
-    #d3ba85 26px, #d3ba85 35px,
+    var(--clay-edge) 26px, var(--clay-edge) 35px,
     transparent 35px, transparent 52px,
-    #c7ad76 52px, #c7ad76 61px,
+    var(--clay-deep) 52px, var(--clay-deep) 61px,
     transparent 61px, transparent 78px,
-    #b89a68 78px, #b89a68 87px,
+    var(--clay-deep) 78px, var(--clay-deep) 87px,
     transparent 87px, transparent 104px
   );
 }
@@ -443,7 +513,7 @@ body {
   /* Matches the fence strip's own top (-7%) + height (42px) exactly,
      so the shadow always starts right at the fence's actual bottom
      edge instead of a fixed pixel offset that drifted away from it
-     on taller/shorter viewports — that drift was what produced a
+     on taller/shorter viewports - that drift was what produced a
      stray, disconnected dark-green sliver above the real fence base. */
   top: calc(-7% + 42px);
   left: 0;
@@ -463,7 +533,7 @@ body {
   filter: blur(5px);
 }
 
-/* Night dimming — toggled via .scene-night on #gardenScene (see
+/* Night dimming - toggled via .scene-night on #gardenScene (see
    updateSky() in script.js), kept in sync with the same real-time
    day/night state as the rest of the garden. */
 .garden-scene.scene-night .garden-fence-strip {
@@ -485,16 +555,16 @@ body {
 }
 
 
-/* Perspective planting bed — a literal patch of soil narrowing
+/* Perspective planting bed - a literal patch of soil narrowing
    toward the top (far/horizon) and widening toward the bottom
    (near/foreground), matching the far/mid/near depth rows plants
    are assigned to in script.js. Sits behind every .garden-plant
    (which carry z-index 2–4) since this pseudo-element has no
    z-index of its own and is first in paint order. Purely decorative
-   — pointer-events are already off on the whole .garden-scene. */
+   - pointer-events are already off on the whole .garden-scene. */
 /* Ground-anchored wrapper. bottom is pulled below the scene's own
    bottom edge, deliberately sinking the plant a bit INTO the grass
-   rather than sitting exactly on the seam — the base doesn't need to
+   rather than sitting exactly on the seam - the base doesn't need to
    touch the literal top pixel of the ground to read as "grounded";
    sitting a little lower in the green still reads as closer/rooted.
    The sink grows along with the plant's own --plant-scale so bigger
@@ -525,7 +595,7 @@ body {
 /* Depth rows are drawn with a fixed stacking order (far behind mid
    behind near), which normally means a "far" plant can end up
    partly covered by a closer one. On hover, force the hovered plant
-   — and everything inside it, including its label — to the very
+   - and everything inside it, including its label - to the very
    front of the stack, overriding the inline z-index set in JS, so
    it (and its description) is always fully visible while inspected. */
 .garden-plant:hover {
@@ -549,7 +619,7 @@ body {
   filter: brightness(1.12) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.30)) drop-shadow(0 0 12px rgba(242, 184, 75, 0.45));
 }
 
-/* Discrete growth — stacked SVG stages that crossfade into each
+/* Discrete growth - stacked SVG stages that crossfade into each
    other when a task crosses a milestone day (2 / 15 / 60), rather
    than the same shape just stretching bigger. */
 .plant-stage-crossfade {
@@ -564,14 +634,14 @@ body {
   transition: opacity 0.8s ease;
 }
 
-/* Height tooltip — small dark pill that appears above a plant only
+/* Height tooltip - small dark pill that appears above a plant only
    while it's hovered, showing its current height in meters. Sits
    outside .plant-visual so it stays a fixed, readable size no matter
    how big/small the plant itself has scaled. */
 /* Positioned at ~40% of the plant's actual rendered height rather than
    a fixed offset above the layout box. transform: scale() on
    .plant-visual doesn't affect layout size, so bottom:100% never
-   tracked growth/depth — this reads the same --plant-scale custom
+   tracked growth/depth - this reads the same --plant-scale custom
    property the plant's own scale transform uses (see .plant-visual),
    so the tag rises and falls together with however big the plant is
    actually drawn on screen right now, live during drag too. 195px is
@@ -586,9 +656,9 @@ body {
   border-radius: 20px;
   background: rgba(20, 16, 10, 0.86);
   border: 1px solid rgba(242, 184, 75, 0.45);
-  color: #F2B84B;
-  font-family: 'Fredoka', sans-serif;
-  font-size: 0.72rem;
+  color: var(--sun);
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -605,10 +675,10 @@ body {
 
 @media (max-width: 600px) {
   .plant-height-tag {
-    font-size: 0.66rem;
+    font-size: var(--fs-xs);
     padding: 2px 7px;
     /* Mobile scales .plant-visual by an extra 0.60x on top of
-       --plant-scale (see .plant-visual below) — match it here so the
+       --plant-scale (see .plant-visual below) - match it here so the
        tag still lands at ~40% of the plant's actual on-screen height
        instead of floating too high above a smaller mobile plant. */
     bottom: calc(var(--plant-scale, 1) * 46.8px);
@@ -635,19 +705,19 @@ body {
   width: 82%;
   max-width: 340px;
   text-align: center;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.95rem;
-  color: #e8dfc8;
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  color: var(--ink-on-dark);
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
   pointer-events: none;
 }
 
 .plant-label-name {
   display: block;
-  font-family: 'Fredoka', sans-serif;
-  font-size: 0.80rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
   font-weight: 600;
-  color: #ffffff;
+  color: var(--linen);
   text-shadow:
     0 1px 6px rgba(0, 0, 0, 0.95),
     0 0 16px rgba(0, 0, 0, 0.70);
@@ -657,10 +727,10 @@ body {
 
 .plant-label-streak {
   display: block;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.66rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
   font-weight: 700;
-  color: #F2B84B;
+  color: var(--sun);
   text-shadow:
     0 1px 5px rgba(0, 0, 0, 0.95),
     0 0 12px rgba(0, 0, 0, 0.80);
@@ -676,16 +746,16 @@ body {
     transform: scale(calc(var(--plant-scale, 1) * 0.60));
   }
   .plant-label-name {
-    font-size: 0.64rem;
+    font-size: var(--fs-xs);
   }
   .plant-label-streak {
-    font-size: 0.54rem;
+    font-size: var(--fs-xs);
   }
 }
 
 
 /* ========================================
-   Sky ambient detail — stars, clouds, hills,
+   Sky ambient detail - stars, clouds, hills,
    birds, fireflies, ground tufts
    ======================================== */
 
@@ -698,7 +768,7 @@ body {
   transition: opacity 3s ease;
 }
 
-/* Small star field — 1 px dots via box-shadow */
+/* Small star field - 1 px dots via box-shadow */
 .sky-stars::before {
   content: '';
   position: absolute;
@@ -946,7 +1016,7 @@ body {
   pointer-events: none;
 }
 
-/* Far left hill — muted cool-green, lower opacity */
+/* Far left hill - muted cool-green, lower opacity */
 .sky-hills::before {
   content: '';
   position: absolute;
@@ -959,7 +1029,7 @@ body {
   opacity: 0.42;
 }
 
-/* Far right hill — slightly darker, offset */
+/* Far right hill - slightly darker, offset */
 .sky-hills::after {
   content: '';
   position: absolute;
@@ -1075,7 +1145,7 @@ body {
 
 
 /* ========================================
-   Page containers — client-side routing
+   Page containers - client-side routing
    ======================================== */
 
 .page {
@@ -1108,22 +1178,22 @@ body {
 }
 
 .home-eyebrow {
-  font-family: 'Fredoka', sans-serif;
-  font-size: 0.80rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
   font-weight: 600;
   letter-spacing: 0.20em;
   text-transform: uppercase;
-  color: #F2B84B;
+  color: var(--sun);
   margin: 0 0 14px;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
   opacity: 0.90;
 }
 
 .hero-title {
-  font-family: 'DM Serif Display', Georgia, serif;
+  font-family: var(--font-display);
   font-size: clamp(3.2rem, 12vw, 6.8rem);
   font-weight: 400;
-  color: #f5f0e4;
+  color: var(--linen);
   margin: 0;
   letter-spacing: 0.14em;
   text-align: center;
@@ -1135,8 +1205,8 @@ body {
 }
 
 .hero-tagline {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.97rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
   font-weight: 400;
   color: #ddd4b8;
   margin: 16px 0 0;
@@ -1151,53 +1221,46 @@ body {
   width: 100%;
   max-width: 280px;
   padding: 15px 24px;
-  border: none;
-  border-radius: 14px;
-  font-family: 'Fredoka', sans-serif;
-  font-size: 1.10rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
+  border: 2px solid var(--bark-deep);
+  border-radius: var(--r-md);
+  font-family: var(--font-display);
+  font-size: var(--fs-base);
+  font-weight: 700;
+  letter-spacing: 0.06em;
   cursor: pointer;
-  transition: transform 0.18s, box-shadow 0.20s;
+  transition: transform 0.1s, box-shadow 0.1s, background 0.16s;
   text-align: center;
 }
 
 .cta-btn:hover {
-  transform: translateY(-2px);
+  filter: brightness(1.06);
 }
 
 .cta-btn:active {
-  transform: translateY(0px);
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 var(--bark-deep);
 }
 
 .cta-primary {
-  background: #3A6B4A;
-  color: #fff;
+  background: var(--leaf-deep);
+  color: var(--linen);
   margin: 36px auto 0;
-  box-shadow:
-    0 6px 26px rgba(58, 107, 74, 0.50),
-    0 2px 8px rgba(0, 0, 0, 0.30);
+  box-shadow: var(--lip-deep) var(--leaf-dark);
 }
 
 .cta-primary:hover {
-  box-shadow:
-    0 10px 36px rgba(58, 107, 74, 0.60),
-    0 4px 14px rgba(0, 0, 0, 0.30);
+  filter: brightness(1.06);
 }
 
 .cta-secondary {
-  background: #5C3E2A;
-  color: #FBF7EE;
+  background: var(--bark-light);
+  color: var(--linen);
   margin: 22px auto 0;
-  box-shadow:
-    0 6px 26px rgba(92, 62, 42, 0.50),
-    0 2px 8px rgba(0, 0, 0, 0.30);
+  box-shadow: var(--lip-deep) var(--bark-deep);
 }
 
 .cta-secondary:hover {
-  box-shadow:
-    0 10px 36px rgba(92, 62, 42, 0.60),
-    0 4px 14px rgba(0, 0, 0, 0.30);
+  filter: brightness(1.06);
 }
 
 .cta-tertiary {
@@ -1218,7 +1281,7 @@ body {
 /* ========================================
    Community counters on the home page
    Sits between the tagline and the first
-   CTA. Deliberately quiet — it's context,
+   CTA. Deliberately quiet - it's context,
    not the point of the page.
    ======================================== */
 
@@ -1238,7 +1301,7 @@ body {
   -webkit-backdrop-filter: blur(6px);
 }
 
-/* The strip is absent, not blank, until its data arrives — see
+/* The strip is absent, not blank, until its data arrives - see
    renderHomeStats() in 08-home-stats.js. `display: none` rather than
    visibility so it takes up no vertical space and the CTA doesn't
    jump down when the numbers land. */
@@ -1256,18 +1319,18 @@ body {
 }
 
 .home-stat-value {
-  font-family: 'Fredoka', sans-serif;
-  font-size: 1.34rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
   font-weight: 600;
   line-height: 1;
-  color: #F2B84B;
+  color: var(--sun);
   text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55);
   font-variant-numeric: tabular-nums;
 }
 
 .home-stat-label {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.65rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -1286,8 +1349,8 @@ body {
 
 @media (max-width: 420px) {
   .home-stats     { gap: 2px; padding: 11px 5px; }
-  .home-stat-value { font-size: 1.16rem; }
-  .home-stat-label { font-size: 0.60rem; letter-spacing: 0.05em; }
+  .home-stat-value { font-size: var(--fs-lg); }
+  .home-stat-label { font-size: var(--fs-xs); letter-spacing: 0.05em; }
 }
 
 
@@ -1306,10 +1369,10 @@ body {
 }
 
 .home-copy p {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.95rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
   line-height: 1.78;
-  color: #3A2E22;
+  color: var(--bark-deep);
   margin: 0 0 13px;
 }
 
@@ -1319,53 +1382,13 @@ body {
 
 
 /* ========================================
-   Site nav — small persistent bar
+   Site nav - small persistent bar
    ======================================== */
 
-.site-nav {
-  position: relative;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  row-gap: 6px;
-  padding: 14px 18px;
-}
 
-.nav-btn {
-  background: rgba(251, 247, 238, 0.16);
-  border: 1px solid rgba(251, 247, 238, 0.28);
-  border-radius: 8px;
-  padding: 6px 13px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.86rem;
-  font-weight: 700;
-  color: #e0d8c0;
-  cursor: pointer;
-  transition: background 0.16s, color 0.16s, border-color 0.16s;
-  letter-spacing: 0.02em;
-}
 
-.nav-btn:hover {
-  background: rgba(251, 247, 238, 0.28);
-  color: #fff;
-  border-color: rgba(251, 247, 238, 0.42);
-}
 
-.nav-current {
-  font-family: 'Fredoka', sans-serif;
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: #F2B84B;
-  letter-spacing: 0.04em;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
-}
 
-.nav-sep {
-  color: rgba(232, 223, 200, 0.35);
-  font-size: 0.85rem;
-}
 
 
 /* ========================================
@@ -1377,9 +1400,6 @@ body {
   pointer-events: none;       /* let clicks reach garden scene below */
 }
 
-.page-garden .site-nav {
-  pointer-events: auto;       /* but nav must be clickable */
-}
 
 .page-garden #loadingState {
   pointer-events: none;
@@ -1397,7 +1417,7 @@ body {
    ======================================== */
 
 .page-tasks {
-  background: rgba(8, 5, 2, 0.42);
+  background: rgba(58, 40, 26, 0.55);
 }
 
 .tasks-nav {
@@ -1412,21 +1432,15 @@ body {
   padding: 12px 18px 72px;
 }
 
-/* Add-task form section — sits flush under the nav */
+/* Add-task form section - sits flush under the nav */
 .task-add-section {
-  background: rgba(251, 247, 238, 0.97);
-  border-radius: 16px;
-  padding: 14px 14px 16px;
-  margin-bottom: 12px;
-  box-shadow:
-    0 6px 28px rgba(0, 0, 0, 0.28),
-    0 1px 0 rgba(255, 255, 255, 0.55) inset;
-  background-image: repeating-linear-gradient(
-    transparent,
-    transparent 31px,
-    rgba(107, 79, 59, 0.05) 31px,
-    rgba(107, 79, 59, 0.05) 32px
-  );
+  margin: 0 14px 14px;
+  padding: 10px;
+  background-color: var(--bark);
+  background-image: var(--wood-grain);
+  border: 2px solid var(--bark-deep);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lip) var(--bark-deep);
 }
 
 
@@ -1436,72 +1450,80 @@ body {
 
 .task-form {
   display: flex;
+  gap: 8px;
   flex-wrap: wrap;
-  gap: 7px;
+  padding: 10px;
+  background: var(--clay);
+  border: 2px solid var(--clay-deep);
+  border-radius: var(--r-md);
 }
 
 .task-form input[type="text"] {
-  flex: 1 1 100px;
-  padding: 9px 11px;
-  border: 1.5px solid #D9CFB8;
-  border-radius: 10px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.90rem;
-  background: rgba(255, 253, 248, 0.85);
-  color: #2E2A22;
+  flex: 1 1 140px;
+  padding: 11px 13px;
+  border: 2px solid var(--clay-deep);
+  border-radius: var(--r-sm);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  background: var(--linen);
+  color: var(--ink);
   transition: border-color 0.18s, box-shadow 0.18s;
 }
 
 .task-form input[type="text"]::placeholder {
-  color: #b0a898;
+  color: var(--ink-faint);
+  font-weight: 400;
 }
 
 .task-form input[type="text"]:focus {
   outline: none;
-  border-color: #8FBF7F;
-  box-shadow: 0 0 0 3px rgba(143, 191, 127, 0.22);
+  border-color: var(--leaf);
+  box-shadow: 0 0 0 3px rgba(127, 169, 104, 0.35);
 }
 
 .cat-select {
-  padding: 9px 8px;
-  border: 1.5px solid #D9CFB8;
-  border-radius: 10px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.84rem;
-  background: rgba(255, 253, 248, 0.85);
-  color: #2E2A22;
+  padding: 11px 10px;
+  border: 2px solid var(--clay-deep);
+  border-radius: var(--r-sm);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  background: var(--linen);
+  color: var(--ink);
   cursor: pointer;
   transition: border-color 0.18s, box-shadow 0.18s;
 }
 
 .cat-select:focus {
   outline: none;
-  border-color: #8FBF7F;
-  box-shadow: 0 0 0 3px rgba(143, 191, 127, 0.22);
+  border-color: var(--leaf);
+  box-shadow: 0 0 0 3px rgba(127, 169, 104, 0.35);
 }
 
 .task-form button {
-  padding: 9px 15px;
-  border: none;
-  border-radius: 10px;
-  background: #3A6B4A;
-  color: #fff;
-  font-family: 'Nunito', sans-serif;
+  padding: 11px 20px;
+  border: 2px solid var(--leaf-dark);
+  border-radius: var(--r-sm);
+  background: var(--leaf-deep);
+  color: var(--linen);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
   font-weight: 700;
-  font-size: 0.90rem;
   cursor: pointer;
   white-space: nowrap;
-  letter-spacing: 0.02em;
-  transition: background 0.18s, transform 0.14s;
+  letter-spacing: 0.03em;
+  box-shadow: var(--lip) var(--leaf-dark);
+  transition: transform 0.1s, box-shadow 0.1s, filter 0.16s;
 }
 
 .task-form button:hover {
-  background: #2E5539;
-  transform: translateY(-1px);
+  filter: brightness(1.07);
 }
 
 .task-form button:active {
-  transform: translateY(0);
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--leaf-dark);
 }
 
 
@@ -1511,10 +1533,10 @@ body {
 
 .cat-subnav {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   overflow-x: auto;
-  padding-bottom: 2px;
-  margin-bottom: 12px;
+  padding: 0 14px 8px;
+  margin-bottom: 14px;
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
@@ -1525,28 +1547,30 @@ body {
 
 .cat-tab {
   flex-shrink: 0;
-  padding: 6px 14px;
-  border: 1.5px solid rgba(217, 207, 184, 0.45);
-  border-radius: 24px;
-  background: rgba(251, 247, 238, 0.72);
-  color: #5C4A34;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.83rem;
-  font-weight: 700;
+  padding: 8px 16px 9px;
+  border: 2px solid var(--bark-deep);
+  border-radius: var(--r-sm);
+  background: var(--bark-light);
+  color: var(--linen);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.16s, border-color 0.16s, color 0.16s;
+  box-shadow: var(--lip) var(--bark-deep);
+  transition: transform 0.1s, box-shadow 0.1s, filter 0.16s;
 }
 
 .cat-tab:hover {
-  background: rgba(251, 247, 238, 0.95);
-  border-color: rgba(143, 191, 127, 0.55);
+  filter: brightness(1.07);
 }
 
 .cat-tab.active {
-  background: #3A6B4A;
-  border-color: #3A6B4A;
-  color: #fff;
+  background: var(--linen);
+  border-color: var(--bark-deep);
+  color: var(--ink);
+  box-shadow: inset 0 3px 0 rgba(94, 70, 50, 0.14);
+  transform: translateY(3px);
 }
 
 
@@ -1555,19 +1579,12 @@ body {
    ======================================== */
 
 .task-tab-panel {
-  background: rgba(251, 247, 238, 0.97);
-  border-radius: 18px;
-  padding: 16px 16px 18px;
-  box-shadow:
-    0 8px 40px rgba(0, 0, 0, 0.28),
-    0 2px 8px rgba(0, 0, 0, 0.12),
-    0 1px 0 rgba(255, 255, 255, 0.55) inset;
-  background-image: repeating-linear-gradient(
-    transparent,
-    transparent 31px,
-    rgba(107, 79, 59, 0.06) 31px,
-    rgba(107, 79, 59, 0.06) 32px
-  );
+  background-color: var(--bark);
+  background-image: var(--wood-grain);
+  border: 2px solid var(--bark-deep);
+  border-radius: var(--r-lg);
+  padding: 10px;
+  box-shadow: var(--lip-deep) var(--bark-deep);
 }
 
 #taskTabsContainer .task-tab-panel {
@@ -1579,86 +1596,14 @@ body {
    Category lore section
    ======================================== */
 
-.cat-lore-header {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 8px;
-}
 
-.cat-lore-name {
-  font-family: 'DM Serif Display', Georgia, serif;
-  font-size: 1.32rem;
-  font-weight: 400;
-  color: #2E2A22;
-  margin: 0;
-}
 
-.cat-lore-species {
-  font-family: 'Fredoka', sans-serif;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #9a836a;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
 
-.cat-lore-text {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.87rem;
-  line-height: 1.70;
-  color: #5C4A34;
-  margin: 0 0 14px;
-  font-style: italic;
-  padding-bottom: 14px;
-  border-bottom: 1px solid rgba(107, 79, 59, 0.12);
-}
 
-.cat-suggestions {
-  margin-bottom: 14px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid rgba(107, 79, 59, 0.12);
-}
 
-.cat-suggestions-label {
-  font-family: 'Fredoka', sans-serif;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #9a836a;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  margin: 0 0 7px;
-}
 
-.suggestion-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
 
-.suggestion-btn {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 7px 10px;
-  border: 1px solid rgba(143, 191, 127, 0.32);
-  border-radius: 8px;
-  background: rgba(143, 191, 127, 0.09);
-  color: #3A5C30;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
 
-.suggestion-btn:hover {
-  background: rgba(143, 191, 127, 0.22);
-  border-color: rgba(143, 191, 127, 0.52);
-}
 
 
 /* ========================================
@@ -1668,75 +1613,79 @@ body {
 .task-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 12px;
+  background: var(--clay);
+  border: 2px solid var(--clay-deep);
+  border-radius: var(--r-md);
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 8px;
+  min-height: 60px;
 }
 
 .task-item {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 11px;
-  border-radius: 10px;
-  background: rgba(255, 253, 248, 0.55);
-  border: 1px solid rgba(217, 207, 184, 0.45);
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--linen);
+  border: 2px solid var(--clay-edge);
   flex-wrap: wrap;
-  transition: background 0.18s, border-color 0.18s;
+  transition: background 0.18s, border-color 0.18s, transform 0.1s;
 }
 
 .task-item:hover {
-  background: rgba(255, 253, 248, 0.90);
-  border-color: rgba(143, 191, 127, 0.40);
+  background: #FDF7EA;
+  border-color: var(--leaf);
 }
 
 .task-item input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: #3A6B4A;
+  accent-color: var(--leaf-deep);
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .task-item .task-text {
   flex: 1;
-  font-size: 0.90rem;
+  font-size: var(--fs-sm);
   min-width: 50px;
   transition: color 0.22s;
 }
 
 .task-item.completed .task-text {
   text-decoration: line-through;
-  color: #b0a898;
+  color: var(--ink-faint);
 }
 
 /* Per-category badge colours */
 .cat-badge {
-  font-size: 0.64rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
   border-radius: 20px;
   padding: 2px 7px;
   white-space: nowrap;
   flex-shrink: 0;
-  background: #e8dfc8;
-  color: #6B4F3B;
+  background: var(--ink-on-dark);
+  color: var(--bark);
 }
 
 .cat-badge[data-category="education"]   { background: #eaf3ea; color: #3d7a50; }
 .cat-badge[data-category="exercise"]    { background: #fef8de; color: #8c6406; }
 .cat-badge[data-category="mindfulness"] { background: #eeeaf8; color: #6858a8; }
 .cat-badge[data-category="sleep"]       { background: #e6eef8; color: #3464a0; }
-.cat-badge[data-category="chores"]      { background: #f4ecde; color: #8a6040; }
+.cat-badge[data-category="chores"]      { background: var(--linen); color: var(--bark); }
 .cat-badge[data-category="finance"]     { background: #e3efe9; color: #2f7d63; }
-.cat-badge[data-category="misc"]        { background: #f6e8e8; color: #9c4c48; }
+.cat-badge[data-category="misc"]        { background: var(--bloom-tint); color: var(--bloom-deep); }
 
 .task-item button.remove {
   border: none;
   background: none;
-  color: #c97070;
+  color: var(--bloom);
   cursor: pointer;
-  font-size: 0.90rem;
+  font-size: var(--fs-sm);
   line-height: 1;
   flex-shrink: 0;
   padding: 2px 4px;
@@ -1750,16 +1699,17 @@ body {
 }
 
 .task-item button.remove:hover {
-  color: #a03838;
+  color: var(--bloom-deep);
   background: rgba(160, 56, 56, 0.10);
 }
 
 .empty-state {
-  color: #9A9384;
-  font-size: 0.84rem;
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 600;
   text-align: center;
-  margin-top: 18px;
-  font-style: italic;
+  margin: 14px 0 4px;
   line-height: 1.5;
 }
 
@@ -1796,21 +1746,22 @@ body {
 
 .stats-view-select {
   flex: 1 1 200px;
-  padding: 10px 12px;
-  border: 1.5px solid #D9CFB8;
-  border-radius: 12px;
-  font-family: 'Fredoka', sans-serif;
-  font-size: 0.86rem;
-  font-weight: 600;
-  background: rgba(251, 247, 238, 0.95);
-  color: #3A2E22;
+  padding: 11px 13px;
+  border: 2px solid var(--bark-deep);
+  border-radius: var(--r-sm);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  background: var(--linen);
+  color: var(--ink);
   cursor: pointer;
+  box-shadow: var(--lip) var(--bark-deep);
   transition: border-color 0.18s, box-shadow 0.18s;
 }
 
 .stats-view-select:focus {
   outline: none;
-  border-color: #8FBF7F;
+  border-color: var(--leaf);
   box-shadow: 0 0 0 3px rgba(143, 191, 127, 0.22);
 }
 
@@ -1819,25 +1770,23 @@ body {
 }
 
 .stats-heatmap-card {
-  background: rgba(251, 247, 238, 0.97);
-  border-radius: 18px;
-  padding: 16px 16px 18px;
+  background: var(--clay);
+  border: 3px solid var(--bark);
+  border-radius: var(--r-lg);
+  padding: 14px;
   margin-bottom: 14px;
-  box-shadow:
-    0 8px 40px rgba(0, 0, 0, 0.28),
-    0 2px 8px rgba(0, 0, 0, 0.12),
-    0 1px 0 rgba(255, 255, 255, 0.55) inset;
+  box-shadow: var(--lip) var(--bark-deep);
 }
 
 .stats-card-title {
-  font-family: 'DM Serif Display', Georgia, serif;
-  font-size: 1.14rem;
-  font-weight: 400;
-  color: #2E2A22;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--ink);
   margin: 0 0 12px;
 }
 
-/* GitHub-style contribution grid — scrolls horizontally on narrow
+/* GitHub-style contribution grid - scrolls horizontally on narrow
    screens rather than squeezing cells illegibly small. */
 .heatmap-wrap {
   overflow: visible;
@@ -1886,17 +1835,17 @@ body {
 .heat-stage-0 { background: rgba(107, 79, 59, 0.10); }
 .heat-stage-1 { background: #C3E4B0; }
 .heat-stage-2 { background: #7CB37F; }
-.heat-stage-3 { background: #3A6B4A; }
+.heat-stage-3 { background: var(--leaf-deep); }
 
 .heatmap-legend {
   display: flex;
   align-items: center;
   gap: 5px;
   margin-top: 10px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.72rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
   font-weight: 700;
-  color: #9a836a;
+  color: var(--ink-soft);
 }
 
 .heatmap-legend-swatch {
@@ -1913,12 +1862,12 @@ body {
   z-index: 10000;
   pointer-events: none;
   background: rgba(20, 16, 10, 0.92);
-  color: #F2B84B;
+  color: var(--sun);
   border: 1px solid rgba(242, 184, 75, 0.40);
   padding: 5px 10px;
   border-radius: 8px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.76rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
   font-weight: 700;
   white-space: nowrap;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
@@ -1937,16 +1886,15 @@ body {
   gap: 4px;
   flex: 1 1 0;
   min-width: 0;
-  background: rgba(251, 247, 238, 0.97);
-  border-radius: 14px;
-  padding: 10px 12px;
-  box-shadow:
-    0 6px 26px rgba(0, 0, 0, 0.24),
-    0 1px 0 rgba(255, 255, 255, 0.5) inset;
+  background: var(--linen);
+  border: 2px solid var(--clay-deep);
+  border-radius: var(--r-md);
+  padding: 11px 12px;
+  box-shadow: var(--lip) var(--clay-deep);
 }
 
 .stat-card-emoji {
-  font-size: 1.3rem;
+  font-size: var(--fs-lg);
   line-height: 1;
   flex-shrink: 0;
 }
@@ -1957,12 +1905,12 @@ body {
 }
 
 .stat-card-label {
-  font-family: 'Fredoka', sans-serif;
-  font-size: 0.68rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #9a836a;
+  color: var(--ink-soft);
   margin-bottom: 2px;
   white-space: nowrap;
   overflow: hidden;
@@ -1970,10 +1918,10 @@ body {
 }
 
 .stat-card-value {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.96rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
   font-weight: 700;
-  color: #2E2A22;
+  color: var(--ink);
   line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
@@ -1981,9 +1929,9 @@ body {
 }
 
 .stat-card-sub {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.72rem;
-  color: #9a836a;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
   margin-top: 1px;
   white-space: nowrap;
   overflow: hidden;
@@ -2005,16 +1953,16 @@ body {
     padding: 8px 8px;
   }
   .stat-card-emoji {
-    font-size: 1.05rem;
+    font-size: var(--fs-base);
   }
   .stat-card-label {
-    font-size: 0.56rem;
+    font-size: var(--fs-xs);
   }
   .stat-card-value {
-    font-size: 0.72rem;
+    font-size: var(--fs-xs);
   }
   .stat-card-sub {
-    font-size: 0.56rem;
+    font-size: var(--fs-xs);
   }
 }
 
@@ -2029,7 +1977,7 @@ body {
   }
 
   .hero-title {
-    font-size: 3rem;
+    font-size: var(--fs-2xl);
     letter-spacing: 0.10em;
   }
 
@@ -2049,7 +1997,7 @@ body {
 
 
 /* ========================================
-   Auth widget — persistent account pill,
+   Auth widget - persistent account pill,
    top-right corner on every page
    ======================================== */
 
@@ -2067,9 +2015,9 @@ body {
   background: rgba(20, 16, 10, 0.72);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  color: #e8dfc8;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.80rem;
+  color: var(--ink-on-dark);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
@@ -2096,8 +2044,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(145deg, #3A6B4A, #2E5539);
-  font-size: 0.82rem;
+  background: linear-gradient(145deg, var(--leaf-deep), var(--leaf-dark));
+  font-size: var(--fs-sm);
   line-height: 1;
 }
 
@@ -2158,8 +2106,8 @@ body {
   right: 14px;
   background: none;
   border: none;
-  font-size: 1rem;
-  color: #9a836a;
+  font-size: var(--fs-base);
+  color: var(--ink-soft);
   cursor: pointer;
   padding: 4px;
   opacity: 0.7;
@@ -2174,23 +2122,23 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.8rem;
-  background: linear-gradient(145deg, #8FBF7F, #3A6B4A);
-  color: #fff;
+  font-size: var(--fs-xl);
+  background: linear-gradient(145deg, var(--leaf), var(--leaf-deep));
+  color: var(--linen);
   object-fit: cover;
 }
 
 .auth-modal-title {
-  font-family: 'DM Serif Display', Georgia, serif;
-  font-size: 1.3rem;
-  color: #2E2A22;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  color: var(--ink);
   margin: 0 0 4px;
 }
 
 .auth-modal-subtitle {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.85rem;
-  color: #9a836a;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
   margin: 0 0 20px;
   line-height: 1.5;
 }
@@ -2203,17 +2151,17 @@ body {
   width: 100%;
   padding: 11px 16px;
   border-radius: 12px;
-  border: 1.5px solid #D9CFB8;
-  background: #fff;
-  color: #2E2A22;
-  font-family: 'Nunito', sans-serif;
+  border: 1.5px solid var(--clay-edge);
+  background: var(--linen);
+  color: var(--ink);
+  font-family: var(--font-body);
   font-weight: 700;
-  font-size: 0.90rem;
+  font-size: var(--fs-sm);
   cursor: pointer;
   transition: background 0.16s, box-shadow 0.16s;
 }
 .auth-google-btn:hover {
-  background: #f7f4ec;
+  background: var(--linen);
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
 }
 .auth-google-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
@@ -2223,27 +2171,27 @@ body {
   padding: 11px 16px;
   border-radius: 12px;
   border: none;
-  background: #C97070;
-  color: #fff;
-  font-family: 'Nunito', sans-serif;
+  background: var(--bloom);
+  color: var(--linen);
+  font-family: var(--font-body);
   font-weight: 700;
-  font-size: 0.90rem;
+  font-size: var(--fs-sm);
   cursor: pointer;
   transition: background 0.16s;
 }
-.auth-signout-btn:hover { background: #A03838; }
+.auth-signout-btn:hover { background: var(--bloom-deep); }
 
 .auth-modal-note {
   margin-top: 14px;
-  font-size: 0.72rem;
-  color: #b0a898;
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
   line-height: 1.5;
 }
 
 .auth-modal-error {
   margin-top: 12px;
-  font-size: 0.76rem;
-  color: #a03838;
+  font-size: var(--fs-xs);
+  color: var(--bloom-deep);
   line-height: 1.5;
 }
 
@@ -2283,9 +2231,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.6rem;
-  background: linear-gradient(145deg, #8FBF7F, #3A6B4A);
-  color: #fff;
+  font-size: var(--fs-xl);
+  background: linear-gradient(145deg, var(--leaf), var(--leaf-deep));
+  color: var(--linen);
 }
 
 .profile-id-block {
@@ -2294,19 +2242,19 @@ body {
 }
 
 .profile-name {
-  font-family: 'Fredoka', sans-serif;
-  font-size: 1.02rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-base);
   font-weight: 600;
-  color: #2E2A22;
+  color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .profile-email {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.78rem;
-  color: #9a836a;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2319,8 +2267,8 @@ body {
   border-radius: 20px;
   background: rgba(143, 191, 127, 0.20);
   color: #3A5C30;
-  font-family: 'Fredoka', sans-serif;
-  font-size: 0.68rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: 0.03em;
 }
@@ -2329,23 +2277,23 @@ body {
   flex-shrink: 0;
   padding: 8px 14px;
   border-radius: 10px;
-  border: 1.5px solid #D9CFB8;
-  background: #fff;
-  color: #2E2A22;
-  font-family: 'Nunito', sans-serif;
+  border: 1.5px solid var(--clay-edge);
+  background: var(--linen);
+  color: var(--ink);
+  font-family: var(--font-body);
   font-weight: 700;
-  font-size: 0.80rem;
+  font-size: var(--fs-sm);
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.16s, box-shadow 0.16s;
 }
 .profile-action-btn:hover {
-  background: #f7f4ec;
+  background: var(--linen);
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.10);
 }
 .profile-action-btn.is-signout {
   border-color: rgba(201, 112, 112, 0.4);
-  color: #A03838;
+  color: var(--bloom-deep);
 }
 
 .profile-quick-stats {
@@ -2365,33 +2313,33 @@ body {
 }
 
 .profile-quick-stat-value {
-  font-family: 'Fredoka', sans-serif;
-  font-size: 1.05rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-base);
   font-weight: 600;
-  color: #3A6B4A;
+  color: var(--leaf-deep);
   line-height: 1.2;
 }
 
 .profile-quick-stat-label {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.66rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: #9a836a;
+  color: var(--ink-soft);
   margin-top: 2px;
 }
 
 @media (max-width: 600px) {
   .profile-header { padding: 14px 14px 12px; }
-  .profile-avatar-img, .profile-avatar-fallback { width: 46px; height: 46px; font-size: 1.3rem; }
-  .profile-name { font-size: 0.90rem; }
-  .profile-quick-stat-value { font-size: 0.88rem; }
+  .profile-avatar-img, .profile-avatar-fallback { width: 46px; height: 46px; font-size: var(--fs-lg); }
+  .profile-name { font-size: var(--fs-sm); }
+  .profile-quick-stat-value { font-size: var(--fs-sm); }
 }
 
 
 /* ========================================
-   Developer mode — editable growth inspector
+   Developer mode - editable growth inspector
    ======================================== */
 
 .dev-toggle-btn {
@@ -2404,8 +2352,8 @@ body {
   border-radius: 50%;
   border: 1.5px solid rgba(251, 247, 238, 0.25);
   background: rgba(20, 16, 10, 0.80);
-  color: #e8dfc8;
-  font-size: 1.25rem;
+  color: var(--ink-on-dark);
+  font-size: var(--fs-lg);
   line-height: 1;
   cursor: pointer;
   display: flex;
@@ -2421,9 +2369,9 @@ body {
 }
 
 .dev-toggle-btn.active {
-  background: #F2B84B;
-  color: #2E2A22;
-  border-color: #F2B84B;
+  background: var(--sun);
+  color: var(--ink);
+  border-color: var(--sun);
 }
 
 .dev-panel {
@@ -2438,8 +2386,8 @@ body {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-left: 1px solid rgba(251, 247, 238, 0.14);
-  color: #e8dfc8;
-  font-family: 'Nunito', sans-serif;
+  color: var(--ink-on-dark);
+  font-family: var(--font-body);
   display: flex;
   flex-direction: column;
   box-shadow: -8px 0 34px rgba(0, 0, 0, 0.5);
@@ -2455,18 +2403,18 @@ body {
 }
 
 .dev-panel-title {
-  font-family: 'Fredoka', sans-serif;
-  font-size: 0.92rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
   font-weight: 600;
-  color: #F2B84B;
+  color: var(--sun);
   letter-spacing: 0.03em;
 }
 
 .dev-panel-close {
   background: none;
   border: none;
-  color: #e8dfc8;
-  font-size: 1rem;
+  color: var(--ink-on-dark);
+  font-size: var(--fs-base);
   cursor: pointer;
   opacity: 0.65;
   padding: 2px 6px;
@@ -2490,9 +2438,9 @@ body {
   border-radius: 7px;
   border: 1px solid rgba(251, 247, 238, 0.22);
   background: rgba(251, 247, 238, 0.06);
-  color: #e8dfc8;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.74rem;
+  color: var(--ink-on-dark);
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
   font-weight: 700;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
@@ -2513,15 +2461,15 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  font-size: 0.76rem;
-  color: #b0a898;
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
   margin-bottom: 8px;
 }
 
 .dev-note {
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   line-height: 1.5;
-  color: #9a836a;
+  color: var(--ink-soft);
   font-style: italic;
   margin: 0 0 16px;
   padding-bottom: 14px;
@@ -2545,24 +2493,24 @@ body {
 }
 
 .dev-task-title {
-  font-family: 'Fredoka', sans-serif;
-  font-size: 0.86rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
   font-weight: 600;
-  color: #fff;
+  color: var(--linen);
 }
 
 .dev-task-done {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.72rem;
-  color: #b0a898;
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .dev-task-done input {
-  accent-color: #F2B84B;
+  accent-color: var(--sun);
   cursor: pointer;
 }
 
@@ -2575,9 +2523,9 @@ body {
 }
 
 .dev-field-label {
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
-  color: #9a836a;
+  color: var(--ink-soft);
   min-width: 76px;
 }
 
@@ -2587,15 +2535,15 @@ body {
   border-radius: 6px;
   border: 1px solid rgba(251, 247, 238, 0.25);
   background: rgba(0, 0, 0, 0.3);
-  color: #fff;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.78rem;
+  color: var(--linen);
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
   text-align: center;
 }
 
 .dev-number-input:focus {
   outline: none;
-  border-color: #F2B84B;
+  border-color: var(--sun);
 }
 
 .dev-quick-btn {
@@ -2603,8 +2551,8 @@ body {
   border-radius: 6px;
   border: 1px solid rgba(251, 247, 238, 0.18);
   background: rgba(251, 247, 238, 0.06);
-  color: #e8dfc8;
-  font-size: 0.70rem;
+  color: var(--ink-on-dark);
+  font-size: var(--fs-xs);
   font-weight: 700;
   cursor: pointer;
   transition: background 0.14s, border-color 0.14s;
@@ -2626,8 +2574,8 @@ body {
 }
 
 .dev-task-readout {
-  font-size: 0.70rem;
-  color: #F2B84B;
+  font-size: var(--fs-xs);
+  color: var(--sun);
   margin-top: 6px;
   padding-top: 7px;
   border-top: 1px dashed rgba(251, 247, 238, 0.12);
@@ -2636,8 +2584,8 @@ body {
 .dev-empty {
   text-align: center;
   font-style: italic;
-  color: #9a836a;
-  font-size: 0.82rem;
+  color: var(--ink-soft);
+  font-size: var(--fs-sm);
   margin-top: 20px;
 }
 
@@ -2655,16 +2603,16 @@ body {
     bottom: 14px;
     width: 42px;
     height: 42px;
-    font-size: 1.1rem;
+    font-size: var(--fs-base);
   }
 }
 
 /* ========================================
-   Plant skins — task-row pip + Greenhouse page
+   Plant skins - task-row pip + Greenhouse page
    ======================================== */
 
 /* Task-row button. The pip carries the skin's three key colours, so
-   the row itself tells you what that plant is wearing — tapping it
+   the row itself tells you what that plant is wearing - tapping it
    jumps to the Greenhouse with that plant's skins already open. */
 .task-item button.skin-btn {
   border: none;
@@ -2686,7 +2634,7 @@ body {
 }
 
 .task-item button.skin-btn:focus-visible {
-  outline: 2px solid #3A6B4A;
+  outline: 2px solid var(--leaf-deep);
   outline-offset: 2px;
   opacity: 1;
 }
@@ -2725,32 +2673,31 @@ body {
 }
 
 .greenhouse-title {
-  font-family: 'DM Serif Display', Georgia, serif;
-  font-size: 1.62rem;
-  font-weight: 400;
-  color: #FBF7EE;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  color: var(--sun);
   margin: 0 0 5px;
-  letter-spacing: 0.01em;
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
+  letter-spacing: 0.02em;
 }
 
 .greenhouse-subtitle {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.88rem;
-  line-height: 1.62;
-  color: rgba(240, 232, 214, 0.84);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--clay);
   margin: 0;
   max-width: 54ch;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
 }
 
 .greenhouse-empty {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.9rem;
-  color: rgba(240, 232, 214, 0.82);
+  font-family: var(--font-display);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--clay);
   text-align: center;
   padding: 34px 12px;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
 }
 
 .greenhouse-empty.hidden {
@@ -2765,6 +2712,12 @@ body {
   grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
   gap: 12px;
   align-items: start;
+  padding: 14px;
+  background-color: var(--bark);
+  background-image: var(--wood-grain);
+  border: 2px solid var(--bark-deep);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lip-deep) var(--bark-deep);
 }
 
 .plant-card {
@@ -2773,46 +2726,43 @@ body {
   align-items: center;
   gap: 3px;
   padding: 14px 10px 12px;
-  border-radius: 16px;
-  border: 2px solid rgba(217, 207, 184, 0.55);
-  border-top-width: 4px;
-  background: linear-gradient(180deg, #F4EEDC 0%, #E7DCC4 60%, #D3C4A6 100%);
+  border-radius: var(--r-md);
+  border: 2px solid var(--clay-deep);
+  border-top-width: 5px;
+  background: var(--clay);
   font: inherit;
   cursor: pointer;
   text-align: center;
   -webkit-appearance: none;
   appearance: none;
-  box-shadow:
-    0 8px 30px rgba(0, 0, 0, 0.28),
-    0 1px 0 rgba(255, 255, 255, 0.55) inset;
-  transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
+  box-shadow: var(--lip) var(--clay-deep);
+  transition: transform 0.1s, box-shadow 0.1s, background 0.16s;
 }
 
 .plant-card:hover {
-  transform: translateY(-3px);
-  border-color: rgba(58, 107, 74, 0.55);
+  background: #F0DBBB;
 }
 
 .plant-card:focus-visible {
-  outline: 2px solid #8FBF7F;
+  outline: 2px solid var(--leaf);
   outline-offset: 3px;
 }
 
 .plant-card.open {
-  border-color: #3A6B4A;
-  box-shadow:
-    0 0 0 3px rgba(58, 107, 74, 0.22),
-    0 10px 34px rgba(0, 0, 0, 0.34);
+  background: var(--linen);
+  border-color: var(--bark-deep);
+  transform: translateY(3px);
+  box-shadow: inset 0 3px 0 rgba(94, 70, 50, 0.13);
 }
 
 /* Species tint on the top edge, matching the category badges. */
-.plant-card[data-category="education"]   { border-top-color: #3d7a50; }
-.plant-card[data-category="exercise"]    { border-top-color: #c99a1e; }
-.plant-card[data-category="mindfulness"] { border-top-color: #6858a8; }
-.plant-card[data-category="sleep"]       { border-top-color: #3464a0; }
-.plant-card[data-category="chores"]      { border-top-color: #8a6040; }
-.plant-card[data-category="finance"]     { border-top-color: #2f7d63; }
-.plant-card[data-category="misc"]        { border-top-color: #9c4c48; }
+.plant-card[data-category="education"]   { border-top-color: #3D7A50; }
+.plant-card[data-category="exercise"]    { border-top-color: #C4913A; }
+.plant-card[data-category="mindfulness"] { border-top-color: #7A69B8; }
+.plant-card[data-category="sleep"]       { border-top-color: #4A7BB0; }
+.plant-card[data-category="chores"]      { border-top-color: var(--bark); }
+.plant-card[data-category="finance"]     { border-top-color: #2F8A6C; }
+.plant-card[data-category="misc"]        { border-top-color: #B4675C; }
 
 /* Fixed-height stage so every card lines up whatever the plant. */
 .plant-card-art {
@@ -2831,11 +2781,11 @@ body {
 }
 
 .plant-card-name {
-  font-family: 'Fredoka', sans-serif;
-  font-size: 0.86rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
   font-weight: 600;
   line-height: 1.32;
-  color: #2E2A22;
+  color: var(--ink);
   overflow-wrap: anywhere;
   width: 100%;
   /* Cap at 2 lines and reserve that height even for a short name, so
@@ -2848,8 +2798,8 @@ body {
 }
 
 .plant-card-species {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.72rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
   color: #7d6d58;
 }
 
@@ -2861,8 +2811,8 @@ body {
   padding: 3px 10px;
   border-radius: 999px;
   background: rgba(46, 42, 34, 0.09);
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.7rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
   font-weight: 700;
   color: #4a4034;
 }
@@ -2907,18 +2857,18 @@ body {
 }
 
 .skin-drawer-title {
-  font-family: 'DM Serif Display', Georgia, serif;
-  font-size: 1.14rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
   font-weight: 400;
-  color: #2E2A22;
+  color: var(--ink);
   margin: 0 0 3px;
   overflow-wrap: anywhere;
 }
 
 .skin-drawer-subtitle {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.78rem;
-  color: #9a836a;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
   margin: 0;
 }
 
@@ -2929,8 +2879,8 @@ body {
   border: none;
   border-radius: 50%;
   background: rgba(46, 42, 34, 0.08);
-  color: #6f6353;
-  font-size: 0.82rem;
+  color: var(--ink-soft);
+  font-size: var(--fs-sm);
   line-height: 1;
   cursor: pointer;
   transition: background 0.16s, color 0.16s;
@@ -2938,11 +2888,11 @@ body {
 
 .skin-drawer-close:hover {
   background: rgba(46, 42, 34, 0.16);
-  color: #2E2A22;
+  color: var(--ink);
 }
 
 .skin-drawer-close:focus-visible {
-  outline: 2px solid #3A6B4A;
+  outline: 2px solid var(--leaf-deep);
   outline-offset: 2px;
 }
 
@@ -2972,12 +2922,12 @@ body {
 }
 
 .skin-tile:focus-visible {
-  outline: 2px solid #3A6B4A;
+  outline: 2px solid var(--leaf-deep);
   outline-offset: 2px;
 }
 
 .skin-tile.selected {
-  border-color: #3A6B4A;
+  border-color: var(--leaf-deep);
   box-shadow: 0 0 0 3px rgba(58, 107, 74, 0.18);
 }
 
@@ -3000,28 +2950,33 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-family: 'Fredoka', sans-serif;
-  font-size: 0.82rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
   font-weight: 600;
-  color: #2E2A22;
+  color: var(--ink);
 }
 
 .skin-tile-note {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.68rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
   line-height: 1.35;
-  color: #6f6353;
+  color: var(--ink-soft);
 }
 
 .skin-tile.selected .skin-tile-name::after {
-  content: '✓';
-  color: #3A6B4A;
-  font-size: 0.78rem;
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 9px;
+  margin-left: 5px;
+  border: solid var(--leaf-deep);
+  border-width: 0 2.5px 2.5px 0;
+  transform: translateY(-1px) rotate(45deg);
 }
 
 /* ---- Locked skins -------------------------------------------------
    A locked tile is still a full tile: same size, same slot, and the
-   plant at FULL colour. Nothing is dimmed or desaturated — a skin
+   plant at FULL colour. Nothing is dimmed or desaturated - a skin
    nobody can see is a skin nobody wants, and wanting it is the whole
    mechanic. The tile carries its unavailability elsewhere instead: a
    padlock pinned to the top-right corner, a muted name, and the
@@ -3036,7 +2991,7 @@ body {
   background: linear-gradient(180deg, #E7E1D3 0%, #DAD2BF 62%, #C6BDA8 100%);
 }
 
-/* No lift and no green edge on hover — a locked tile must not feel
+/* No lift and no green edge on hover - a locked tile must not feel
    clickable even for the moment before nothing happens. */
 .skin-tile.locked:hover {
   transform: none;
@@ -3049,7 +3004,7 @@ body {
 
 /* Pinned to the tile's corner rather than laid over the plant, so it
    never covers the thing it's advertising. The opaque disc keeps it
-   legible against whatever colour happens to be behind it — these
+   legible against whatever colour happens to be behind it - these
    plants run from near-white to neon. */
 .skin-lock {
   position: absolute;
@@ -3064,7 +3019,7 @@ body {
   border-radius: 50%;
   background: rgba(247, 243, 233, 0.94);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   line-height: 1;
   pointer-events: none;
 }
@@ -3075,17 +3030,17 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.68rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
   line-height: 1.3;
-  color: #7a6f5e;
+  color: var(--ink-soft);
 }
 
 .skin-tile-progress {
-  font-family: 'Fredoka', sans-serif;
-  font-size: 0.7rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
   font-weight: 600;
-  color: #3A6B4A;
+  color: var(--leaf-deep);
   background: rgba(58, 107, 74, 0.12);
   border-radius: 999px;
   padding: 1px 8px;
@@ -3094,14 +3049,14 @@ body {
 /* Only rendered when that plant still has something left to earn, so
    a fully unlocked card never carries it. */
 .plant-card-locked {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.66rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
   font-weight: 700;
-  color: #7a6f5e;
+  color: var(--ink-soft);
 }
 
 @media (max-width: 600px) {
-  .greenhouse-title { font-size: 1.38rem; }
+  .greenhouse-title { font-size: var(--fs-lg); }
   .greenhouse-content { padding: 12px 14px 72px; }
   .plant-card-grid { grid-template-columns: repeat(auto-fill, minmax(134px, 1fr)); gap: 10px; }
   .plant-card-art { height: 116px; }
@@ -3111,9 +3066,9 @@ body {
 
 @media (max-width: 420px) {
   .skin-tile-art { height: 100px; }
-  .skin-tile-note { font-size: 0.64rem; }
-  .skin-tile-req { font-size: 0.63rem; }
-  .skin-lock { width: 20px; height: 20px; font-size: 0.66rem; top: 5px; right: 5px; }
+  .skin-tile-note { font-size: var(--fs-xs); }
+  .skin-tile-req { font-size: var(--fs-xs); }
+  .skin-lock { width: 20px; height: 20px; font-size: var(--fs-xs); top: 5px; right: 5px; }
   .plant-card-art { height: 104px; }
 }
 
@@ -3146,39 +3101,31 @@ body {
   padding: 12px 18px 72px;
 }
 
-/* Card shell — same paper treatment as .task-tab-panel */
+/* Card shell - same paper treatment as .task-tab-panel */
 .friends-section {
-  background: rgba(251, 247, 238, 0.97);
-  border-radius: 18px;
-  padding: 16px 16px 18px;
+  background: var(--clay);
+  border: 3px solid var(--bark);
+  border-radius: var(--r-lg);
+  padding: 14px;
   margin-bottom: 12px;
-  box-shadow:
-    0 8px 40px rgba(0, 0, 0, 0.28),
-    0 2px 8px rgba(0, 0, 0, 0.12),
-    0 1px 0 rgba(255, 255, 255, 0.55) inset;
-  background-image: repeating-linear-gradient(
-    transparent,
-    transparent 31px,
-    rgba(107, 79, 59, 0.06) 31px,
-    rgba(107, 79, 59, 0.06) 32px
-  );
+  box-shadow: var(--lip) var(--bark-deep);
 }
 
 .friends-section-title {
-  font-family: 'DM Serif Display', Georgia, serif;
-  font-size: 1.14rem;
-  font-weight: 400;
-  color: #2E2A22;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--ink);
   margin: 0 0 12px;
 }
 
 .friends-sub-label {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.74rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #9A9384;
+  color: var(--ink-faint);
   margin: 14px 0 6px;
 }
 
@@ -3196,42 +3143,45 @@ body {
 }
 
 .friends-search-form input[type="text"] {
-  flex: 1 1 140px;
-  padding: 9px 11px;
-  border: 1.5px solid #D9CFB8;
-  border-radius: 10px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.90rem;
-  background: rgba(255, 253, 248, 0.85);
-  color: #2E2A22;
+  flex: 1 1 160px;
+  padding: 11px 13px;
+  border: 2px solid var(--clay-deep);
+  border-radius: var(--r-sm);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  background: var(--linen);
+  color: var(--ink);
   transition: border-color 0.18s, box-shadow 0.18s;
 }
 
 .friends-search-form input[type="text"]::placeholder {
-  color: #b0a898;
+  color: var(--ink-faint);
 }
 
 .friends-search-form input[type="text"]:focus {
   outline: none;
-  border-color: #8FBF7F;
+  border-color: var(--leaf);
   box-shadow: 0 0 0 3px rgba(143, 191, 127, 0.22);
 }
 
 .friends-search-form button {
-  padding: 9px 18px;
-  border: none;
-  border-radius: 10px;
-  background: #3A6B4A;
-  color: #fff;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.88rem;
+  padding: 11px 18px;
+  border: 2px solid var(--leaf-dark);
+  border-radius: var(--r-sm);
+  background: var(--leaf-deep);
+  color: var(--linen);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.16s;
+  white-space: nowrap;
+  box-shadow: var(--lip) var(--leaf-dark);
+  transition: transform 0.1s, box-shadow 0.1s, filter 0.16s;
 }
 
 .friends-search-form button:hover {
-  background: #2f5a3d;
+  filter: brightness(1.07);
 }
 
 .friends-search-result:not(:empty) {
@@ -3240,7 +3190,7 @@ body {
 
 .friends-status {
   margin: 10px 0 0;
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   line-height: 1.45;
   color: #4A6B4A;
 }
@@ -3262,10 +3212,10 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 9px 11px;
-  border: 1.5px solid rgba(217, 207, 184, 0.55);
-  border-radius: 12px;
-  background: rgba(255, 253, 248, 0.72);
+  padding: 10px 12px;
+  border: 2px solid var(--clay-deep);
+  border-radius: var(--r-sm);
+  background: var(--linen);
 }
 
 .friends-list {
@@ -3282,17 +3232,17 @@ body {
 }
 
 .friend-name {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.92rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
   font-weight: 700;
-  color: #2E2A22;
+  color: var(--ink);
   word-break: break-word;
 }
 
 .friend-sub {
   flex: 1 1 auto;
-  font-size: 0.78rem;
-  color: #9A9384;
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
   line-height: 1.4;
 }
 
@@ -3308,9 +3258,9 @@ body {
   border: 1.5px solid rgba(217, 207, 184, 0.75);
   border-radius: 20px;
   background: rgba(251, 247, 238, 0.9);
-  color: #5C4A34;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.80rem;
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -3318,14 +3268,14 @@ body {
 }
 
 .friend-btn:hover {
-  background: #fff;
+  background: var(--linen);
   border-color: rgba(143, 191, 127, 0.7);
 }
 
 .friend-btn.is-primary {
-  background: #3A6B4A;
-  border-color: #3A6B4A;
-  color: #fff;
+  background: var(--leaf-deep);
+  border-color: var(--leaf-deep);
+  color: var(--linen);
 }
 
 .friend-btn.is-primary:hover {
@@ -3340,7 +3290,7 @@ body {
 
 
 /* ========================================
-   Username modal — sits inside the shared
+   Username modal - sits inside the shared
    .auth-modal shell
    ======================================== */
 
@@ -3354,22 +3304,22 @@ body {
 .username-input {
   width: 100%;
   padding: 10px 12px;
-  border: 1.5px solid #D9CFB8;
+  border: 1.5px solid var(--clay-edge);
   border-radius: 12px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.95rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
   background: rgba(255, 253, 248, 0.9);
-  color: #2E2A22;
+  color: var(--ink);
   transition: border-color 0.18s, box-shadow 0.18s;
 }
 
 .username-input::placeholder {
-  color: #b0a898;
+  color: var(--ink-faint);
 }
 
 .username-input:focus {
   outline: none;
-  border-color: #8FBF7F;
+  border-color: var(--leaf);
   box-shadow: 0 0 0 3px rgba(143, 191, 127, 0.22);
 }
 
@@ -3384,7 +3334,7 @@ body {
 
 
 /* ========================================
-   Friend garden page — read-only view of
+   Friend garden page - read-only view of
    one friend's plot. The scene, plants,
    grass and fence all reuse the Garden
    page's own classes, so only this page's
@@ -3392,17 +3342,13 @@ body {
    ======================================== */
 
 /* Transparent overlay above the fixed scene, exactly like .page-garden
-   — clicks must fall through to the garden underneath, so only the
+   - clicks must fall through to the garden underneath, so only the
    real controls opt back in below. */
 .page-friend-garden {
   background: transparent;
   pointer-events: none;
 }
 
-.page-friend-garden .site-nav,
-.page-friend-garden .friend-garden-bar {
-  pointer-events: auto;
-}
 
 .page-friend-garden .garden-subnav {
   pointer-events: auto;
@@ -3421,15 +3367,15 @@ body {
 }
 
 .friend-garden-title {
-  font-family: 'DM Serif Display', Georgia, serif;
-  font-size: 1.16rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
   font-weight: 400;
-  color: #FBF7EE;
+  color: var(--linen);
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
   margin: 0;
 }
 
-/* Says plainly that nothing here can be changed — this garden belongs
+/* Says plainly that nothing here can be changed - this garden belongs
    to someone else, and none of it is editable or draggable. */
 .friend-garden-readonly {
   margin-left: auto;
@@ -3437,22 +3383,22 @@ body {
   border: 1px solid rgba(242, 184, 75, 0.45);
   border-radius: 20px;
   background: rgba(20, 16, 10, 0.55);
-  color: #F2B84B;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.72rem;
+  color: var(--sun);
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.04em;
   white-space: nowrap;
 }
 
-/* Staleness note — shown when the summary's date isn't today, i.e.
+/* Staleness note - shown when the summary's date isn't today, i.e.
    its owner hasn't opened the app yet today. */
 .friend-garden-note {
   max-width: 640px;
   margin: 6px auto 0;
   padding: 0 18px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.80rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
   color: rgba(251, 247, 238, 0.82);
   text-shadow: 0 1px 5px rgba(0, 0, 0, 0.55);
 }
@@ -3461,7 +3407,7 @@ body {
   display: none;
 }
 
-/* Text only — must not intercept clicks meant for the scene below. */
+/* Text only - must not intercept clicks meant for the scene below. */
 .friend-garden-note,
 .page-friend-garden .garden-empty-msg {
   pointer-events: none;
@@ -3480,7 +3426,7 @@ body {
   .friend-actions { margin-left: 0; }
   .friend-garden-bar { padding: 10px 14px 0; }
   .friend-garden-note { padding: 0 14px; }
-  .friend-garden-title { font-size: 1.02rem; }
+  .friend-garden-title { font-size: var(--fs-base); }
 }
 
 /* ========================================
@@ -3509,11 +3455,11 @@ body {
 }
 
 .garden-edit-hint {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.72rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: #FBF7EE;
+  color: var(--linen);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
   padding-right: 2px;
 }
@@ -3521,7 +3467,7 @@ body {
 .garden-edit-save {
   border-color: rgba(122, 168, 88, 0.75);
   background: rgba(122, 168, 88, 0.92);
-  color: #FBF7EE;
+  color: var(--linen);
 }
 
 .garden-edit-discard {
@@ -3531,7 +3477,7 @@ body {
 }
 
 /* While editing, plants get a soft halo so it's obvious which things
-   are currently grabbable — and that the mode is on at all. */
+   are currently grabbable - and that the mode is on at all. */
 .garden-scene.garden-editing .garden-plant {
   cursor: grab;
 }
@@ -3542,4 +3488,474 @@ body {
 
 @media (max-width: 600px) {
   .garden-edit-hint { display: none; }
+}
+
+
+/* ============================================================
+   Quality floor
+   ============================================================ */
+
+/* One visible focus ring for the whole app. Sun is reserved for
+   "you are here", which is exactly what focus means. */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--sun);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* The lip animation is the only motion that matters here; drop it
+   along with everything else when the person has asked for less. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Planks need room to breathe before they can be chunky. Below this
+   the nav wraps to two rows rather than shrinking the tap targets. */
+@media (max-width: 560px) {
+  .task-add-section {
+    margin: 0 10px 12px;
+  }
+  .cat-subnav {
+    padding: 0 10px 8px;
+  }
+}
+
+
+/* ============================================================
+   The plot - one card per plant, replacing the pill row
+   ============================================================ */
+
+.plot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
+  gap: 10px;
+  margin: 0 14px 16px;
+  padding: 12px;
+  background-color: var(--bark);
+  background-image: var(--wood-grain);
+  border: 2px solid var(--bark-deep);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lip) var(--bark-deep);
+}
+
+.plot-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 8px 12px;
+  background: var(--clay);
+  border: 2px solid var(--clay-deep);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  box-shadow: var(--lip) var(--clay-deep);
+  transition: transform 0.1s, box-shadow 0.1s, background 0.16s;
+}
+
+.plot-card:hover { background: #F0DBBB; }
+
+.plot-card.active {
+  background: var(--linen);
+  border-color: var(--bark-deep);
+  transform: translateY(3px);
+  box-shadow: inset 0 3px 0 rgba(94, 70, 50, 0.13);
+}
+
+/* A fixed art box so cards stay the same height whether the plant is
+   a seed or a full canopy. The plant sits on the floor of it. */
+.plot-card-art {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 74px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.plot-card-art svg { max-height: 100%; width: auto; }
+
+.plot-card-name {
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.plot-card-count {
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.plot-card-streak {
+  margin-top: 4px;
+  padding: 1px 8px 2px;
+  border-radius: 20px;
+  background: var(--sun);
+  border: 1.5px solid var(--sun-deep);
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: #4A3009;
+}
+
+/* "All tasks" has no species, so it gets the empty plot's height. */
+.plot-card-all {
+  justify-content: center;
+  gap: 4px;
+  min-height: 118px;
+}
+
+/* ---- The way back to the garden ---------------------------------
+   Not a button in a corner with an arrow. A strip of the actual
+   ground, sitting under the plot the way soil sits under plants. */
+.plot-gate {
+  display: block;
+  width: calc(100% - 28px);
+  margin: -6px 14px 18px;
+  padding: 30px 0 14px;
+  border: 2px solid #3E5B28;
+  border-top: none;
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+  background:
+    linear-gradient(180deg, #6FA044 0 14px, #5B3F28 14px);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #F2E4C8;
+  cursor: pointer;
+  transition: filter 0.16s;
+}
+
+.plot-gate:hover { filter: brightness(1.12); }
+
+
+/* ============================================================
+   Tab panel header - name and species, nothing more
+   ============================================================ */
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 2px 4px 10px;
+}
+
+.panel-head-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--linen);
+}
+
+.panel-head-species {
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--clay);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+
+/* ============================================================
+   Navigation drawer
+   ============================================================ */
+
+.nav-post {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  z-index: 9994;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 10px 18px;
+  border: 2px solid var(--bark-deep);
+  border-right: none;
+  border-radius: var(--r-md) 0 0 var(--r-md);
+  background-color: var(--bark);
+  background-image: var(--wood-grain);
+  cursor: pointer;
+  box-shadow: -4px 0 0 var(--bark-deep);
+  transition: filter 0.16s;
+}
+
+.nav-post:hover { filter: brightness(1.1); }
+
+.nav-post-slat {
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--clay);
+  box-shadow: 0 6px 0 var(--clay), 0 12px 0 var(--clay);
+  margin-bottom: 12px;
+}
+
+.nav-post-label {
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--linen);
+  writing-mode: vertical-rl;
+  text-transform: uppercase;
+}
+
+.nav-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 9995;
+  background: rgba(30, 20, 12, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+
+.nav-scrim.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.nav-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9996;
+  width: 320px;
+  max-width: 78vw;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 22px 16px;
+  overflow-y: auto;
+  background-color: var(--bark);
+  background-image: var(--wood-grain);
+  border-left: 3px solid var(--bark-deep);
+  transform: translateX(100%);
+  transition: transform 0.24s ease;
+}
+
+.nav-drawer.is-open { transform: translateX(0); }
+
+.nav-drawer-title {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: var(--sun);
+}
+
+.nav-plank {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 13px 16px 14px;
+  background: var(--bark-light);
+  border: 2px solid var(--bark-deep);
+  border-radius: var(--r-sm);
+  font-family: var(--font-display);
+  font-size: var(--fs-base);
+  font-weight: 700;
+  color: var(--linen);
+  cursor: pointer;
+  box-shadow: var(--lip) var(--bark-deep);
+  transition: transform 0.1s, box-shadow 0.1s, filter 0.16s;
+}
+
+.nav-plank:hover { filter: brightness(1.09); }
+
+.nav-plank:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--bark-deep);
+}
+
+/* Where you already are. Pressed into the frame rather than raised. */
+.nav-plank.current {
+  background: var(--linen);
+  color: var(--ink);
+  transform: translateY(3px);
+  box-shadow: inset 0 3px 0 rgba(94, 70, 50, 0.14);
+  cursor: default;
+}
+
+body.nav-open { overflow: hidden; }
+
+/* The drawer covers the screen on a phone; 1/4 of 390px cannot hold
+   the word "Greenhouse" at a size worth tapping. */
+@media (max-width: 560px) {
+  .nav-drawer { width: 100%; max-width: 82vw; }
+  .plot-grid { margin: 0 10px 14px; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); }
+  .plot-gate { width: calc(100% - 20px); margin: -6px 10px 16px; }
+}
+
+
+/* Buttons on these three pages share the tasks-page press. */
+.plant-card:active,
+.stat-card:active,
+.stats-view-select:active,
+.friends-search-form button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--clay-deep);
+}
+
+/* ============================================================
+   Garden signpost - the way back to the tasks list.
+   Lives inside the scrollable track, so it pans with the plot.
+   ============================================================ */
+
+.garden-signpost {
+  position: absolute;
+  left: 26px;
+  bottom: 12%;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: transform 0.14s ease;
+}
+
+.garden-signpost:hover { transform: translateY(-3px) rotate(-1.5deg); }
+
+.garden-signpost-board {
+  padding: 8px 16px 9px;
+  background-color: var(--bark-light);
+  background-image: var(--wood-grain);
+  border: 2px solid var(--bark-deep);
+  border-radius: 4px 4px 10px 10px;
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--linen);
+  transform: rotate(-2deg);
+  box-shadow: var(--lip) var(--bark-deep);
+}
+
+.garden-signpost-stake {
+  width: 8px;
+  height: 46px;
+  margin-top: -2px;
+  background: var(--bark);
+  border: 2px solid var(--bark-deep);
+  border-top: none;
+  border-radius: 0 0 3px 3px;
+}
+
+@media (max-width: 560px) {
+  .garden-signpost { left: 14px; }
+  .garden-signpost-stake { height: 34px; }
+}
+
+
+/* ============================================================
+   Drawn icons
+   Nothing here is a character in a font. The padlock is built from
+   the element's own corners so it inherits the wood palette, and
+   .skin-lock zeroes its font-size so any glyph a render path still
+   pushes into it stays invisible.
+   ============================================================ */
+
+.skin-lock {
+  font-size: 0;
+  color: transparent;
+  background: var(--linen);
+  border: 2px solid var(--bark-deep);
+  box-shadow: none;
+  width: 24px;
+  height: 24px;
+}
+
+.skin-lock::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 9px;
+  height: 7px;
+  border: 2px solid var(--bark-deep);
+  border-bottom: none;
+  border-radius: 5px 5px 0 0;
+}
+
+.skin-lock::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 13px;
+  height: 9px;
+  background: var(--bark-deep);
+  border-radius: 2px;
+}
+
+/* The stat cards used to lead with an emoji. The label carries the
+   meaning on its own. */
+.stat-card-emoji { display: none; }
+
+/* Close and remove buttons now hold an SVG cross rather than a glyph. */
+.auth-modal-close svg,
+.dev-panel-close svg,
+.task-item .remove svg {
+  display: block;
+}
+
+.auth-avatar-fallback svg {
+  display: block;
+  color: var(--leaf);
+}
+
+
+/* ============================================================
+   Garden toolbar - view tabs and the edit button on one row
+   ============================================================ */
+
+.garden-toolbar {
+  pointer-events: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px 8px;
+}
+
+.garden-toolbar .garden-subnav,
+.garden-toolbar .garden-edit-bar {
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+}
+
+.garden-toolbar .garden-edit-bar.hidden {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .garden-toolbar { gap: 6px; }
 }
