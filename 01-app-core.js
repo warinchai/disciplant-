@@ -189,7 +189,6 @@ const taskList          = document.getElementById('taskList');
 const emptyState        = document.getElementById('emptyState');
 const gardenSceneEl     = document.getElementById('gardenScene');
 const gardenTrackEl     = document.getElementById('gardenSceneTrack');
-const gardenBackdropEl  = document.getElementById('gardenBackdrop');
 const skyEl             = document.getElementById('sky');
 const skyBodyEl         = document.getElementById('skyBody');
 
@@ -244,7 +243,6 @@ const authModalBody      = document.getElementById('authModalBody');
     mainContent:       mainContent,
     gardenSceneEl:     gardenSceneEl,
     gardenTrackEl:     gardenTrackEl,
-    gardenBackdropEl:  gardenBackdropEl,
     taskForm:          taskForm,
     taskInput:         taskInput,
     categorySelect:    categorySelect,
@@ -491,15 +489,21 @@ function navigateTo(page) {
   // while the summary fetch is in flight.
   if (friendGardenSceneEl) friendGardenSceneEl.classList.toggle('hidden', page !== 'friend-garden');
 
-  // The universal time-of-day sky (gradient, stars, hills, fireflies,
-  // clouds/birds, sun/moon) stays visible on every page, including
-  // Garden, so night/day looks identical everywhere. The garden
-  // backdrop now only adds the garden-specific ground (fence + lawn)
-  // on top of it while on the Garden page.
-  // The friend garden page shows the same ground as the user's own
-  // garden, so the lawn stays on for both.
-  if (gardenBackdropEl) {
-    gardenBackdropEl.classList.toggle('hidden', page !== 'garden' && page !== 'friend-garden');
+  // The universal time-of-day sky (gradient, stars, clouds/birds,
+  // sun/moon) stays visible on every page, including Garden, so
+  // night/day looks identical everywhere.
+  //
+  // What comes OFF on the two garden pages is everything that sky
+  // keeps at its own horizon - its ground strip, hills, haze and
+  // fireflies. Those are pinned to the window, and the garden's ground
+  // scrolls, so leaving them on would slide a second, motionless
+  // horizon out from behind the real one as soon as you scrolled up.
+  // The garden draws its own lawn inside the scrollable track instead
+  // (renderLawn in 04). Nothing about the unscrolled view changes:
+  // all of it sits below the 50vh line, where the lawn covered it
+  // anyway.
+  if (skyEl) {
+    skyEl.classList.toggle('sky-on-garden', page === 'garden' || page === 'friend-garden');
   }
 
   if (page === 'garden') {
@@ -777,16 +781,62 @@ function getCategoryById(catId) {
 //              Resets to 0 the moment a full day is missed.
 // ============================================
 
+// How much faster plants grow than they used to.
+//
+// This is a compression of TIME, not a bigger number bolted onto the
+// end of the curve. A plant on day 4 is now the size a plant on day 11
+// used to be - same curve, same shape, same proportions at every point
+// along it, just walked faster. Nothing here changes what a plant CAN
+// become, only how long it takes to get there.
+//
+// It reaches only as far as SIZE. The two other things a day count
+// drives are left alone on purpose:
+//
+//   the art stages    STAGE_MILESTONES below still turn over on days
+//                     2, 15 and 60, so each of the four drawings is
+//                     worn for just as long as before - just at a
+//                     larger size.
+//   the hover height  untouched. That number answers "how much has
+//                     this grown"; it is read straight from the day
+//                     count in computeHeightMeters()
+//                     (04-garden-scene.js) and has never been derived
+//                     from the on-screen size, so a plant that is now
+//                     the size of a two-month-old at three weeks still
+//                     honestly says three weeks' worth of metres.
+var GROWTH_SPEEDUP = 2.75;
+
 // Day thresholds where the art itself changes to a more detailed
 // stage (seed → sprout → young → mature). Matches the 4 SVG stages
 // already defined per category in PLANT_SVG_DATA.
+//
+// Deliberately NOT divided by GROWTH_SPEEDUP. The speedup applies to
+// size only: a plant swells toward its full scale in a third of the
+// time, but it still earns the right to redraw itself as a sprout on
+// day 2, a young plant on day 15 and a mature one on day 60. So the
+// four pieces of art are each worn for longer, at larger sizes, rather
+// than being raced through in three weeks.
 var STAGE_MILESTONES = [0, 2, 15, 60];
 
-// scale = 1 + 0.074 * totalGrowthDays^0.7 - unbounded, no ceiling.
-// Tuned to ~2.8x at day 100, ~6x at day 365, ~9.8x at day 1000.
+// scale = 1 + GROWTH_SCALE_K * totalGrowthDays^0.7 - unbounded, no
+// ceiling.
+//
+// Speeding the curve up means feeding it GROWTH_SPEEDUP * days instead
+// of days. Because the curve is a plain power law, that factor can be
+// pulled straight out of the exponent -
+//
+//     (k * d)^0.7  ==  k^0.7 * d^0.7
+//
+// - so multiplying the coefficient once, here, is exactly the same
+// thing as scaling every day count at every call site, for a fraction
+// of the arithmetic. 0.074 * 2.75^0.7 works out to about 0.150.
+//
+// Where that lands: ~2.3x at day 60 became ~3.6x, ~5.6x at a year
+// became ~10.3x. Day 22 is now the size day 60 used to be.
+var GROWTH_SCALE_K = 0.074 * Math.pow(GROWTH_SPEEDUP, 0.7);
+
 function computeScaleForDays(totalGrowthDays) {
   var days = Math.max(0, totalGrowthDays || 0);
-  return 1 + 0.074 * Math.pow(days, 0.7);
+  return 1 + GROWTH_SCALE_K * Math.pow(days, 0.7);
 }
 
 function getStageIndexForDays(totalGrowthDays) {

@@ -240,7 +240,13 @@ function computeIndividualStats(taskId) {
   var totalGrowthDays  = task.totalGrowthDays || 0;
   var stageIdx         = getStageIndexForDays(totalGrowthDays);
   var scale            = computeScaleForDays(totalGrowthDays);
-  var heightMeters     = computeHeightMeters(scale);
+  // Days, not `scale`. computeHeightMeters() takes a day count, and
+  // handing it the size multiplier instead quietly reported the height
+  // of a two-or-three-day-old plant no matter how old the plant was.
+  // It went unnoticed while the two numbers were the same order of
+  // magnitude; speeding growth up would have moved this readout, which
+  // is exactly what the height figure is supposed to never do.
+  var heightMeters     = computeHeightMeters(totalGrowthDays);
   var streak           = task.streak || 0;
   var maxStreak         = Math.max(task.maxStreak || 0, streak);
 
@@ -518,6 +524,23 @@ function lerpColor(hexA, hexB, t) {
   );
 }
 
+// Pulls an already-interpolated 'rgb(r, g, b)' string toward black.
+// Takes the string rather than the two hex keyframes because the
+// colour it is given has already been mixed between them.
+function deepenColor(rgbString, amount) {
+  var match = /rgb\((\d+),\s*(\d+),\s*(\d+)\)/.exec(rgbString);
+  if (!match) return rgbString;
+
+  var keep = Math.max(0, 1 - amount);
+  return (
+    'rgb(' +
+    Math.round(match[1] * keep) + ',' +
+    Math.round(match[2] * keep) + ',' +
+    Math.round(match[3] * keep) +
+    ')'
+  );
+}
+
 function updateSky() {
   var now         = new Date();
   var timeDecimal = now.getHours() + now.getMinutes() / 60;
@@ -538,6 +561,20 @@ function updateSky() {
   skyEl.style.background =
     'linear-gradient(180deg, ' + topColor + ' 0%, ' + botColor + ' 100%)';
 
+  // The garden scrolls up past the top of the frame, and the strip of
+  // sky above it is painted from these two: the colour the top of the
+  // frame is showing right now, and that same colour taken further
+  // toward space. See .garden-sky-extension in style.css.
+  //
+  // Published as custom properties on the document rather than written
+  // onto the strip itself, because renderGarden() rebuilds that
+  // element from scratch on every render and would throw an inline
+  // style away - this way the sky keeps following the clock without
+  // either side having to know when the other runs.
+  var rootStyle = document.documentElement.style;
+  rootStyle.setProperty('--sky-top',  topColor);
+  rootStyle.setProperty('--sky-high', deepenColor(topColor, 0.55));
+
   var isDay         = timeDecimal >= 7 && timeDecimal < 19;
   skyBodyEl.textContent = isDay ? '☀️' : '🌙';
 
@@ -545,11 +582,10 @@ function updateSky() {
   skyEl.classList.toggle('sky-day',   isDay);
   skyEl.classList.toggle('sky-night', !isDay);
 
-  // Garden page ground (fence + lawn) — the sky itself is now the
-  // shared #sky element above, so this just keeps the ground's
-  // night-dimming in sync with real time.
-  if (gardenBackdropEl) gardenBackdropEl.classList.toggle('gb-night', !isDay);
-  if (gardenSceneEl)    gardenSceneEl.classList.toggle('scene-night', !isDay);
+  // Garden page ground (lawn + fence) — all of it lives inside the
+  // scrollable scene now, so one class on the scene dims the lot in
+  // step with real time.
+  if (gardenSceneEl) gardenSceneEl.classList.toggle('scene-night', !isDay);
   // The friend garden is a second scene element (see 01), so it needs
   // the same night class or a friend's plot would stay lit at midnight
   // while the user's own garden dims.

@@ -392,6 +392,116 @@ function renderGrassField(track) {
 
 
 // ============================================
+// The sky above the garden, and the lawn below it
+//
+// The garden scrolls UP as well as sideways. What is up there is not
+// a new scene - it is the same sky the top of the frame is already
+// showing, carried further up and darkening as it goes, the way the
+// sky does when you tip your head back. It is repainted from the real
+// clock along with everything else: 05-stats-app.js publishes the
+// current sky colours as --sky-top and --sky-high on every updateSky()
+// tick, and the gradient below reads them, so noon up there is a paler
+// blue than 3am with no code here knowing what time it is.
+//
+// The bottom of that strip fades out completely well before it reaches
+// the plot, which is what keeps the unscrolled view byte-for-byte what
+// it always was: the band of sky you can see without scrolling is the
+// fixed #sky backdrop, untouched, exactly as before.
+//
+// The lawn moved in here too. It used to be a fixed element in
+// #gardenBackdrop, which is why it sat still while the fence and the
+// plants standing on it slid away - the ground stayed welded to the
+// window. Rendered into the track it scrolls with everything rooted in
+// it, and the fixed sky's own hills, haze and ground are switched off
+// on the garden pages (see .sky-on-garden in style.css) so no second,
+// motionless horizon can appear from behind this one.
+// ============================================
+
+// A whole starfield in one element: an invisible 2px dot wearing one
+// box-shadow copy of itself per star. Cheaper than a node per star by
+// two orders of magnitude, and hashSeed keeps the same sky coming back
+// on every render instead of reshuffling.
+//
+// Offsets are in vw/vh so the field stays spread across the track at
+// any window size - the track is 300% wide, hence the 300vw span.
+// Placed only in the part of the strip you have to scroll to reach:
+// the band already on screen has the fixed sky's own stars in it, and
+// two starfields over each other reads as neither.
+function buildStarfield(count, seedBase, topVh, spanVh) {
+  var parts = [];
+  for (var i = 0; i < count; i++) {
+    var s      = seedBase + i * 4.113;
+    var x      = (hashSeed(s) * 300).toFixed(2);
+    var y      = (topVh + hashSeed(s + 0.61) * spanVh).toFixed(2);
+    var alpha  = (0.3 + hashSeed(s + 1.27) * 0.6).toFixed(2);
+    // Roughly one star in eight is a bright one.
+    var spread = hashSeed(s + 2.03) < 0.13 ? '0.9px' : '0';
+    parts.push(x + 'vw ' + y + 'vh 0 ' + spread + ' rgba(226,238,255,' + alpha + ')');
+  }
+  return parts.join(', ');
+}
+
+// Built once and reused: renderGarden() empties and refills the track
+// on every render, and the stars are the one part of it that never
+// depend on the tasks. The colours aren't in here - those live in the
+// stylesheet as custom properties, so the strip keeps following the
+// clock without being rebuilt.
+var starfieldCache = null;
+
+function getStarfieldMarkup() {
+  if (starfieldCache === null) {
+    starfieldCache =
+      '<span class="sky-dust" style="box-shadow:' + buildStarfield(58, 17.5, 2, 94) + '"></span>' +
+      '<span class="sky-dust sky-dust-b" style="box-shadow:' + buildStarfield(34, 89.3, 4, 90) + '"></span>';
+  }
+  return starfieldCache;
+}
+
+// Takes the track as an argument for the same reason renderGrassField
+// and renderFence do: 07-friend-garden.js renders into a different
+// track and gets the same sky for free.
+function renderSky(track) {
+  var strip = document.createElement('div');
+  strip.className = 'garden-sky-extension';
+  // Scenery, with nothing in it a screen reader could use.
+  strip.setAttribute('aria-hidden', 'true');
+  strip.innerHTML = getStarfieldMarkup();
+  track.appendChild(strip);
+}
+
+// The ground the whole plot stands on. First thing into the track, so
+// the grass clumps, the fence and every plant paint over it.
+function renderLawn(track) {
+  var lawn = document.createElement('div');
+  lawn.className = 'garden-lawn';
+  lawn.setAttribute('aria-hidden', 'true');
+  track.appendChild(lawn);
+}
+
+// The scene is two screens taller than the window now, and the plot is
+// at the BOTTOM of it - but a scroll container starts at scrollTop 0,
+// which up there is empty sky. So every scroll reset has to mean "all
+// the way back down" rather than "back to zero".
+//
+// Set twice on purpose: immediately, so the scene can never paint a
+// frame up in the air, and again next frame, because scrollHeight read
+// straight after an innerHTML swap can still be the previous render's.
+// A scene that is still hidden measures zero and is left alone, so the
+// next render tries again.
+function scrollSceneToGround(sceneEl) {
+  if (!sceneEl) return;
+
+  var settle = function () {
+    if (!sceneEl.clientHeight) return;
+    sceneEl.scrollTop = sceneEl.scrollHeight - sceneEl.clientHeight;
+  };
+
+  settle();
+  requestAnimationFrame(settle);
+}
+
+
+// ============================================
 // Daily-progress ring at the plant's base
 // ============================================
 function buildProgressRing(comp) {
@@ -533,15 +643,26 @@ function buildPlantVisual(task, cat, stageIdx) {
   return container;
 }
 
+// Has the scene ever been pulled down onto the plot? Purely a guard
+// against opening the garden in deep space: renderGarden() can run
+// while the scene is still hidden (it is called whenever data lands,
+// whichever page you are on), and a hidden element measures zero, so
+// the grounding silently does nothing and has to be tried again on the
+// next render. Once it takes, it never needs to happen unasked again.
+var gardenSceneGrounded = false;
+
 // Centers the garden scene's horizontal scroll position on its full
-// (3x-viewport-wide) track. Deferred a frame so it runs after the
-// browser has laid out this render's plants and recalculated
-// scrollWidth - reading it synchronously right after an innerHTML
-// swap can still reflect the previous render's width.
+// (3x-viewport-wide) track, and puts the vertical scroll back on the
+// ground. Deferred a frame so it runs after the browser has laid out
+// this render's plants and recalculated scrollWidth - reading it
+// synchronously right after an innerHTML swap can still reflect the
+// previous render's width.
 function centerGardenScroll() {
   requestAnimationFrame(function () {
     if (!gardenSceneEl) return;
     gardenSceneEl.scrollLeft = (gardenSceneEl.scrollWidth - gardenSceneEl.clientWidth) / 2;
+    scrollSceneToGround(gardenSceneEl);
+    if (gardenSceneEl.clientHeight) gardenSceneGrounded = true;
   });
 }
 
@@ -572,9 +693,12 @@ function renderGarden() {
   var shouldCenterScroll = pendingGardenScrollCenter;
   pendingGardenScrollCenter = false;
 
-  // Ground texture and fence first, so they sit behind every plant
-  // appended below (both live inside the scrollable track now, so
-  // they pan together with the plants - see renderFence() above).
+  // Sky, lawn, ground texture and fence first, so they sit behind
+  // every plant appended below. All four live inside the scrollable
+  // track, which is what makes them move with the plants instead of
+  // staying pinned to the window - see renderLawn() above.
+  renderSky(gardenTrackEl);
+  renderLawn(gardenTrackEl);
   renderGrassField(gardenTrackEl);
   renderFence(gardenTrackEl);
   renderSignpost(gardenTrackEl);
@@ -583,8 +707,11 @@ function renderGarden() {
 
   if (tasks.length === 0) {
     if (emptyMsgEl) emptyMsgEl.classList.remove('hidden');
-    // Nothing to scroll to yet - keep the message centered in view.
+    // Nothing to pan to yet - keep the message in view, which means
+    // parking on the plot rather than up in the sky above it.
     gardenSceneEl.scrollLeft = 0;
+    scrollSceneToGround(gardenSceneEl);
+    if (gardenSceneEl.clientHeight) gardenSceneGrounded = true;
     return;
   }
   if (emptyMsgEl) emptyMsgEl.classList.add('hidden');
@@ -723,7 +850,11 @@ function renderGarden() {
     gardenTrackEl.appendChild(wrap);
   });
 
-  if (shouldCenterScroll) centerGardenScroll();
+  // The `|| !gardenSceneGrounded` half is the first-render case: if
+  // the very first render that could measure the scene wasn't a fresh
+  // visit, the view would still be sitting at scrollTop 0 - which is
+  // now the top of the sky, not the garden.
+  if (shouldCenterScroll || !gardenSceneGrounded) centerGardenScroll();
 }
 
 // Escapes a task's free-text text before it's inserted via innerHTML

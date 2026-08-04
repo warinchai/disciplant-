@@ -98,207 +98,6 @@ body {
 }
 
 
-/* ========================================
-   Garden page backdrop - replaces the universal
-   sky/hills scene while on the Garden page
-   ======================================== */
-
-.garden-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.gb-sky {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 50vh; /* horizon line - matches the top edge of the plot (garden-scene: 0 + 50vh) below */
-  background: linear-gradient(180deg, #8ec6e8 0%, #bfe0ef 55%, #cfe8d0 100%);
-}
-
-.gb-sun {
-  position: absolute;
-  top: 9%;
-  right: 11%;
-  width: 68px;
-  height: 68px;
-  border-radius: 50%;
-  background: #F7CE6A;
-  box-shadow: 0 0 46px rgba(247, 206, 106, 0.55);
-  transition: opacity 1.5s ease;
-}
-
-/* --- Garden backdrop moon (shown instead of the sun at night) --- */
-.gb-moon {
-  position: absolute;
-  top: 9%;
-  right: 11%;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: #e9e6da;
-  box-shadow: 0 0 34px rgba(233, 230, 218, 0.45);
-  transition: opacity 1.5s ease;
-}
-.gb-moon::before {
-  content: '';
-  position: absolute;
-  top: 4px;
-  left: -6px;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: #bfe0ef; /* matches the daytime sky base so it reads as a crescent cut */
-  opacity: 0;
-}
-
-/* --- Garden backdrop stars (night only) --- */
-.gb-stars {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 50vh;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 2.5s ease;
-  overflow: hidden;
-}
-.gb-stars::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 2px;
-  height: 2px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.9);
-  box-shadow:
-    8vw 18vh rgba(255,255,255,0.85),
-    18vw 35vh rgba(255,255,255,0.6),
-    27vw 12vh rgba(255,255,255,0.75),
-    38vw 28vh rgba(255,255,255,0.9),
-    47vw 42vh rgba(255,255,255,0.55),
-    58vw 15vh rgba(255,255,255,0.8),
-    67vw 33vh rgba(255,255,255,0.65),
-    76vw 20vh rgba(255,255,255,0.85),
-    85vw 40vh rgba(255,255,255,0.55),
-    93vw 22vh rgba(255,255,255,0.75),
-    13vw 55vh rgba(255,255,255,0.6),
-    32vw 60vh rgba(255,255,255,0.7),
-    52vw 58vh rgba(255,255,255,0.55),
-    71vw 62vh rgba(255,255,255,0.7),
-    88vw 57vh rgba(255,255,255,0.6);
-}
-
-/* Night state - toggled on #gardenBackdrop by JS to match real time */
-.garden-backdrop.gb-night .gb-stars {
-  opacity: 1;
-}
-.garden-backdrop.gb-night .gb-cloud,
-.garden-backdrop.gb-night .gb-butterfly {
-  opacity: 0 !important;
-  transition: opacity 1.5s ease;
-}
-.garden-backdrop.gb-night .gb-lawn {
-  filter: brightness(0.45) saturate(0.85);
-  transition: filter 1.5s ease;
-}
-.gb-lawn {
-  transition: filter 1.5s ease;
-}
-
-.gb-cloud {
-  position: absolute;
-  background: rgba(255, 255, 255, 0.88);
-  border-radius: 100px;
-}
-.gb-cloud::before,
-.gb-cloud::after {
-  content: '';
-  position: absolute;
-  background: inherit;
-  border-radius: 50%;
-}
-.gb-cloud-1 {
-  width: 90px; height: 26px;
-  top: 14%; left: 12%;
-  animation: gbCloudDrift 70s ease-in-out infinite alternate;
-}
-.gb-cloud-1::before { width: 42px; height: 36px; top: -20px; left: 14px; }
-.gb-cloud-1::after  { width: 30px; height: 26px; top: -14px; right: 16px; }
-
-.gb-cloud-2 {
-  width: 70px; height: 20px;
-  top: 24%; left: 55%;
-  opacity: 0.85;
-  animation: gbCloudDrift 95s ease-in-out infinite alternate 12s;
-}
-.gb-cloud-2::before { width: 32px; height: 26px; top: -14px; left: 10px; }
-.gb-cloud-2::after  { width: 24px; height: 20px; top: -10px; right: 12px; }
-
-@keyframes gbCloudDrift {
-  from { transform: translateX(0); }
-  to   { transform: translateX(140px); }
-}
-
-.gb-butterfly {
-  position: absolute;
-  width: 16px;
-  height: 12px;
-  animation: gbButterflyDrift 15s ease-in-out infinite;
-}
-.gb-butterfly span {
-  position: absolute;
-  top: 0;
-  width: 8px;
-  height: 12px;
-  background: #E8709C;
-  border-radius: 65% 40% 65% 40%;
-}
-.gb-butterfly span:first-child { left: 0;  transform-origin: right center; animation: gbFlutter 0.7s ease-in-out infinite alternate; }
-.gb-butterfly span:last-child  { right: 0; transform-origin: left center;  background: #F0A0BC; animation: gbFlutter 0.7s ease-in-out infinite alternate-reverse; }
-
-@keyframes gbFlutter {
-  from { transform: scaleX(1); }
-  to   { transform: scaleX(0.35); }
-}
-
-.gb-butterfly-1 { top: 26%; left: 22%; }
-.gb-butterfly-2 { top: 20%; left: 68%; animation-duration: 19s; animation-direction: reverse; }
-
-@keyframes gbButterflyDrift {
-  0%, 100% { transform: translate(0, 0); }
-  25%      { transform: translate(26px, -16px); }
-  50%      { transform: translate(46px, 4px); }
-  75%      { transform: translate(14px, 18px); }
-}
-
-.gb-lawn {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 50vh;
-  background: linear-gradient(to bottom, #6fae46 0%, #58973a 45%, #3f7a2a 100%);
-}
-.gb-lawn::before {
-  content: '';
-  position: absolute;
-  top: -18px;
-  left: -3%;
-  width: 106%;
-  height: 40px;
-  background: #6fae46;
-  border-radius: 52% 48% 58% 42% / 55% 62% 40% 50%;
-}
-
-@media (max-width: 600px) {
-  .gb-sun    { width: 48px; height: 48px; }
-}
 
 
 /* ========================================
@@ -363,6 +162,22 @@ body {
   pointer-events: none;
 }
 
+/* On the two garden pages the ground is the garden's own, and it
+   scrolls. Everything the fixed sky keeps down at its own horizon -
+   the ground strip, the hills, the haze, the fireflies - is pinned to
+   the window instead, so leaving it on would slide a second, perfectly
+   motionless horizon out from behind the real one the moment you
+   scrolled up. Toggled by navigateTo() in 01-app-core.js.
+
+   None of this changes the unscrolled view: all four sit below the
+   50vh line, where the lawn has always covered them anyway. */
+.sky-bg.sky-on-garden .sky-ground,
+.sky-bg.sky-on-garden .sky-hills,
+.sky-bg.sky-on-garden .sky-horizon-haze,
+.sky-bg.sky-on-garden .sky-fireflies {
+  display: none;
+}
+
 .sky-ground-inner {
   position: absolute;
   top: -18px;
@@ -404,10 +219,25 @@ body {
   bottom: 0;
   height: 100vh;
   z-index: 5;
-  overflow-x: auto;
-  overflow-y: hidden;
-  display: flex;
-  align-items: flex-end;
+
+  /* How much empty sky stands above the plot, and therefore how far
+     up the scene scrolls: two half-screen layers of sky on top of the
+     half-screen of ordinary sky that was always visible. Read by the
+     track's top margin and by the empty-garden message below, so the
+     whole scene resizes from this one number. */
+  --garden-sky-lift: 150vh;
+
+  /* Both axes now. The vertical scroll is the sky - see the "sky above
+     the garden" section near the end of this file for the layer map.
+     display was flex/align-items:flex-end, which pinned the 50vh track
+     to the bottom of the 100vh scene; a flex item taller than its line
+     overflows the START edge, and overflow past the start edge cannot
+     be scrolled to, so the sky above the plot would have been
+     unreachable. Plain block flow plus the track's top margin puts the
+     plot in exactly the same place and keeps every pixel above it
+     scrollable. */
+  overflow: auto;
+  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: rgba(242, 184, 75, 0.55) transparent;
@@ -415,6 +245,7 @@ body {
 
 .garden-scene::-webkit-scrollbar {
   height: 8px;
+  width: 8px;
 }
 .garden-scene::-webkit-scrollbar-track {
   background: transparent;
@@ -436,8 +267,55 @@ body {
   position: relative;
   width: 300%;
   height: 50vh;
-  flex-shrink: 0;
+  /* Deliberately still 50vh. Every .garden-plant's bottom% is a
+     percentage of THIS box, so growing the track to make room for the
+     sky would have moved every plant in every garden. The sky is
+     bought with margin instead, which adds scrollable height without
+     touching the coordinate space the plants live in. .garden-scene
+     establishes its own formatting context (overflow: auto), so this
+     margin cannot collapse out through the top of it. */
+  margin-top: var(--garden-sky-lift, 150vh);
 }
+
+/* The lawn. This used to be a fixed element in #gardenBackdrop, which
+   is exactly why it stayed put while the fence and the plants standing
+   on it scrolled away - the ground was welded to the window. As a
+   child of the track it fills the plot precisely as before (the track
+   IS the bottom 50vh) and now moves with everything rooted in it.
+   Painted first and z-indexed under the grass clumps (1), the fence
+   (2) and the plants (3+). Built by renderLawn() in 04. */
+.garden-lawn {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, #6fae46 0%, #58973a 45%, #3f7a2a 100%);
+  transition: filter 1.5s ease;
+}
+
+/* The soft crest where the lawn meets the sky, sitting just proud of
+   the top edge so the horizon isn't a ruled line. Full width rather
+   than the old 106%: that 3% overhang was invisible on a backdrop the
+   width of the window, but on a track three screens wide it is 9vw of
+   green sticking out past the right-hand end of the plot, and the
+   scene would scroll to it. */
+.garden-lawn::before {
+  content: '';
+  position: absolute;
+  top: -18px;
+  left: 0;
+  width: 100%;
+  height: 40px;
+  background: #6fae46;
+  border-radius: 52% 48% 58% 42% / 55% 62% 40% 50%;
+}
+
+/* Same real-time night dimming the lawn always had, moved onto the
+   scene's own night class (see updateSky in 05-stats-app.js). */
+.garden-scene.scene-night .garden-lawn {
+  filter: brightness(0.45) saturate(0.85);
+}
+
 
 /* Ground texture layer - grass blade clumps scattered across the
    scrollable garden track (see renderGrassField in script.js). Lives
@@ -697,11 +575,16 @@ body {
   width: 130px;
 }
 
+/* Absolutely positioned inside the scroller, which means it is placed
+   against the scroll ORIGIN (the top of the sky), not against the
+   plot - so this is measured down from the top instead of up from the
+   bottom, landing it in the middle of the plot where the garden it is
+   describing actually is. */
 .garden-empty-msg {
   position: absolute;
   left: 50%;
-  bottom: 25vh;
-  transform: translate(-50%, 50%);
+  top: calc(var(--garden-sky-lift, 150vh) + 25vh);
+  transform: translate(-50%, -50%);
   width: 82%;
   max-width: 340px;
   text-align: center;
@@ -3958,4 +3841,74 @@ body.nav-open { overflow: hidden; }
 
 @media (max-width: 560px) {
   .garden-toolbar { gap: 6px; }
+}
+
+
+/* ============================================================
+   The sky above the garden
+   ------------------------------------------------------------
+   The scene scrolls up two half-screens past the top of the frame,
+   and this is what fills them: not a second scene, just the sky
+   already on screen carried further up and deepening as it goes.
+
+   Reading DOWN the scrollable scene, in content coordinates:
+
+     0     - ~110vh   this strip, darkest at the very top
+     ~110vh - 150vh   nothing at all. The strip has faded out by here,
+                      so this band is the fixed #sky backdrop showing
+                      through untouched - which is why the unscrolled
+                      view is exactly what it always was.
+     150vh - 200vh    the plot: lawn, fence, grass, plants
+
+   The two colours come from the clock, not from this file.
+   updateSky() in 05-stats-app.js publishes --sky-top (whatever the
+   top of the frame is showing right now) and --sky-high (that same
+   colour taken further toward space) every sixty seconds, so this
+   gradient follows the time of day on its own. The fallbacks below
+   are .sky-bg's own base colours, for the moment before the first
+   tick lands.
+
+   The strip is built by renderSky() in 04-garden-scene.js and lives
+   INSIDE the track, so it pans left and right with the plot rather
+   than sitting still behind it - the same choice the fence and the
+   grass field made.
+   ============================================================ */
+
+.garden-sky-extension {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;          /* stands directly on top of the plot */
+  height: var(--garden-sky-lift, 150vh);
+  z-index: 0;            /* under the grass field (1) and the plants (3+) */
+  overflow: hidden;
+  pointer-events: none;
+  /* Fully transparent by 73% (about 110vh down), which is above the
+     band you can see without scrolling - so there is no seam to line
+     up against the fixed sky, and nothing tints the default view. */
+  background: linear-gradient(
+    to bottom,
+    var(--sky-high, #05091a) 0%,
+    var(--sky-top, #0a1628) 46%,
+    transparent 73%
+  );
+}
+
+/* Stars for the scrolled-to part of the strip, one element per field
+   (see buildStarfield in 04). They fade in and out with real nightfall
+   on the same 3s transition .sky-stars uses, so the two agree. */
+.garden-sky-extension .sky-dust {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: transparent;   /* only the box-shadow copies are visible */
+  opacity: 0;
+  transition: opacity 3s ease;
+}
+
+.garden-scene.scene-night .garden-sky-extension .sky-dust {
+  opacity: 1;
 }

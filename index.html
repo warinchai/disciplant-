@@ -82,26 +82,23 @@
     </div>
   </div>
 
-  <!-- Garden page backdrop - a simple daytime yard, only shown on the
-       Garden page. Replaces the universal time-of-day sky/hills scene
-       (#sky) for this page, which is hidden instead via JS. -->
-  <div id="gardenBackdrop" class="garden-backdrop hidden">
-    <!-- Sky, stars, hills, and fireflies are shared with the
-         universal #sky element (kept visible behind this one - see
-         script.js/style.css) so night/day appearance matches Home
-         exactly. Only the ground (lawn) is garden-specific - the
-         fence itself now lives inside #gardenSceneTrack (rendered by
-         script.js) so it scrolls with the plants instead of sitting
-         fixed on top of them. -->
-    <div class="gb-lawn"></div>
-  </div>
+  <!-- The garden's lawn is not here. It used to be a fixed backdrop
+       element, which is why it sat still while the fence and the
+       plants standing on it scrolled away; it is now drawn inside
+       #gardenSceneTrack alongside them (renderLawn in
+       04-garden-scene.js), and the universal #sky above drops its own
+       horizon furniture on this page to stay out of its way. -->
 
-  <!-- Garden scene - SVG plants, horizontally scrollable overlay,
-       visible only on Garden page. #gardenSceneTrack is 3x the
-       viewport width so more plants can spread out; #gardenScene
-       itself is the scrolling viewport and its own scroll position
-       is never disturbed by re-renders (only the track's children
-       are replaced on each render). -->
+  <!-- Garden scene - SVG plants in a scrollable overlay, visible only
+       on the Garden page. #gardenSceneTrack is 3x the viewport width
+       so more plants can spread out, and carries enough top margin for
+       two extra half-screens of sky above the plot, so the scene
+       scrolls UP into more of the same time-of-day sky as well as
+       sideways (see renderSky() in 04-garden-scene.js and the
+       "sky above the garden" section of style.css). #gardenScene
+       itself is the scrolling viewport and its own scroll position is
+       never disturbed by re-renders (only the track's children are
+       replaced on each render). -->
   <div id="gardenScene" class="garden-scene hidden">
     <p id="gardenEmptyMsg" class="garden-empty-msg hidden">Your garden is empty. Add a task to plant your first seed.</p>
     <div id="gardenSceneTrack" class="garden-scene-track"></div>

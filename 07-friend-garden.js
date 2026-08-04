@@ -252,14 +252,21 @@ function renderFriendGardenMessage(plants) {
   return !!message;
 }
 
-// Centers the (3x-viewport-wide) friend track, same deferred-frame
-// trick as centerGardenScroll() in 04 — scrollWidth read immediately
-// after an innerHTML swap can still be the previous render's.
+// Centers the (3x-viewport-wide) friend track and drops the view back
+// onto the plot, same deferred-frame trick as centerGardenScroll() in
+// 04 — scrollWidth read immediately after an innerHTML swap can still
+// be the previous render's.
+//
+// No "have we grounded this yet" flag here, unlike the owner's garden:
+// this scene is only ever rendered from an explicit click on a friend,
+// and every one of those renders ends here, so it can never be left
+// parked up in the sky.
 function centerFriendGardenScroll() {
   requestAnimationFrame(function () {
     if (!friendGardenSceneEl) return;
     friendGardenSceneEl.scrollLeft =
       (friendGardenSceneEl.scrollWidth - friendGardenSceneEl.clientWidth) / 2;
+    scrollSceneToGround(friendGardenSceneEl);
   });
 }
 
@@ -288,10 +295,12 @@ function renderFriendGarden() {
   if (!friendGardenSceneEl || !friendGardenTrackEl) return;
   friendGardenTrackEl.innerHTML = '';
 
-  // Same ground and fence as the owner's garden, so a friend's plot
-  // reads as the same place rather than a different screen. Both take
-  // the track as an argument (see 04), which is what makes them
-  // reusable here.
+  // Same sky, lawn, ground texture and fence as the owner's garden, so
+  // a friend's plot reads as the same place rather than a different
+  // screen — and scrolls up into the same sky. All four take the track
+  // as an argument (see 04), which is what makes them reusable here.
+  renderSky(friendGardenTrackEl);
+  renderLawn(friendGardenTrackEl);
   renderGrassField(friendGardenTrackEl);
   renderFence(friendGardenTrackEl);
 
@@ -300,7 +309,10 @@ function renderFriendGarden() {
     : [];
 
   if (renderFriendGardenMessage(plants)) {
+    // Loading, errored, or an empty plot — park on the ground where
+    // the message is, not in the sky above it.
     friendGardenSceneEl.scrollLeft = 0;
+    scrollSceneToGround(friendGardenSceneEl);
     return;
   }
 
@@ -383,9 +395,17 @@ function renderFriendGarden() {
     visual.appendChild(buildFriendPlantVisual(plant, cat, stageIdx));
     wrap.appendChild(visual);
 
+    // Days, not `growthOnlyScale`. computeHeightMeters() takes a day
+    // count, and this was handing it the size multiplier - so every
+    // friend's plant reported the height of a two-day-old seedling.
+    // Which day count depends on the tab, exactly as it does in the
+    // owner's own garden (see renderGarden in 04): the daily plot is
+    // built from the streak, the long-term plot from lifetime days.
+    var heightDays = friendGardenTab === 'daily' ? streak : totalGrowthDays;
+
     var heightTag = document.createElement('div');
     heightTag.className = 'plant-height-tag';
-    heightTag.textContent = formatHeightMeters(computeHeightMeters(growthOnlyScale));
+    heightTag.textContent = formatHeightMeters(computeHeightMeters(heightDays));
     wrap.appendChild(heightTag);
 
     // The owner's garden labels each plant with its task text. That's
