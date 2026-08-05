@@ -29,7 +29,7 @@
 <body>
 
   <!-- Sky background - updated every 60 s to reflect local time of day -->
-  <div id="sky" class="sky-bg">
+  <div id="sky" class="sky-bg sky-off">
     <div id="skyBody" class="sky-body"></div>
 
     <!-- Night stars -->
@@ -118,12 +118,62 @@
 
   <!-- ================================================
        PAGE: HOME
+
+       A close-up of a potting bench. There is no sky and
+       no horizon on this page: #sky above is switched off
+       by the sky-off class while home is showing, because
+       the bench is opaque and would hide it anyway.
+
+       Everything below is empty scaffolding. style.css
+       decides where each piece sits and how big it is;
+       renderHomeScene() in 01-app-core.js drops one SVG
+       into each host id. Nothing here is data, nothing
+       here touches Firestore, and a visitor who stops on
+       this page never gets an account created for them.
        ================================================ -->
   <div id="page-home" class="page page-home">
+
+    <!-- Layer 0: the table. Boards, then the marks in the
+         boards, then the pool of light across them. -->
+    <div class="bench" aria-hidden="true">
+      <span class="bench-boards"></span>
+
+      <span class="bench-marks">
+        <span class="bench-mark bench-knot-a" id="benchKnotA"></span>
+        <span class="bench-mark bench-knot-b" id="benchKnotB"></span>
+        <span class="bench-mark bench-knot-c" id="benchKnotC"></span>
+        <span class="bench-mark bench-split"  id="benchSplit"></span>
+      </span>
+
+      <span class="bench-light"></span>
+    </div>
+
+    <!-- Layer 1: objects further from the viewer. Smaller,
+         higher in the frame, and knocked back in contrast
+         by a filter in the stylesheet. -->
+    <div class="bench-props bench-props-back" aria-hidden="true">
+      <span class="bench-prop prop-can"      id="benchCan"></span>
+      <span class="bench-prop prop-pot-back" id="benchPotBack"></span>
+      <span class="bench-prop prop-leaf-b"   id="benchLeafB"></span>
+      <span class="bench-prop prop-twine"    id="benchTwine"></span>
+    </div>
+
+    <!-- Layer 2: the menu, lying among the objects. -->
     <div class="home-inner">
-      <p class="home-eyebrow">A living habit garden</p>
-      <h1 class="hero-title">DISCIPLANT</h1>
-      <p class="hero-tagline">Tend your habits. Watch them bloom.</p>
+
+      <!-- The wordmark: a plank with the vine grown across
+           the grain. The lettering is drawn, not set - see
+           HB_LETTERS in 01-app-core.js - so no font has to
+           load before the title looks right. -->
+      <div class="home-tag">
+        <span class="home-nail home-nail-tl"></span>
+        <span class="home-nail home-nail-tr"></span>
+        <span class="home-nail home-nail-bl"></span>
+        <span class="home-nail home-nail-br"></span>
+        <div class="home-tag-face" id="homeWordmark"></div>
+      </div>
+
+      <p class="home-label">Tend your habits. Watch them bloom.</p>
 
       <!-- Community counters - CURRENTLY DORMANT.
            This markup is left in place, but 08-home-stats.js is
@@ -148,12 +198,50 @@
         </div>
       </div>
 
-      <button class="cta-btn cta-primary" id="btn-to-garden">TO GARDEN</button>
+      <!-- The four destinations, as painted signs lying on the
+           bench. Same ids as before, so the wiring at the bottom
+           of 01-app-core.js is untouched.
 
-      <button class="cta-btn cta-secondary" id="btn-to-tasks">TO TASKS</button>
-      <button class="cta-btn cta-tertiary" id="btn-to-greenhouse">TO GREENHOUSE</button>
-      <button class="cta-btn cta-tertiary" id="btn-to-friends">TO FRIENDS</button>
+           The labels are NOT text. Each button holds an empty
+           .marker-face that renderHomeScene() fills with carved
+           lettering built from HB_GLYPHS in 01-app-core.js. That is
+           why every button carries an aria-label: it is the only
+           thing a screen reader has to go on, and it keeps working
+           whether or not the script runs. -->
+      <button class="marker marker-primary marker-green" id="btn-to-garden" aria-label="Enter garden">
+        <span class="marker-face" id="cutGarden"></span>
+      </button>
+
+      <div class="home-markers">
+        <button class="marker marker-sm marker-blue marker-tasks" id="btn-to-tasks" aria-label="Tasks">
+          <span class="marker-face" id="cutTasks"></span>
+        </button>
+        <button class="marker marker-sm marker-yellow marker-greenhouse" id="btn-to-greenhouse" aria-label="Greenhouse">
+          <span class="marker-face" id="cutGreenhouse"></span>
+        </button>
+        <button class="marker marker-sm marker-red marker-friends" id="btn-to-friends" aria-label="Friends">
+          <span class="marker-face" id="cutFriends"></span>
+        </button>
+      </div>
     </div>
+
+    <!-- Layer 3: objects nearer the viewer. Larger, lower,
+         sharper, and deliberately allowed to overlap the
+         buttons - the layer is pointer-events:none, so an
+         overlap is a picture and the tap still lands. -->
+    <div class="bench-props bench-props-front" aria-hidden="true">
+      <span class="bench-prop prop-pot-small" id="benchPotSmall"></span>
+      <span class="bench-prop prop-pot-main"  id="benchPotMain"></span>
+      <span class="bench-prop prop-soil"      id="benchSoil"></span>
+      <span class="bench-prop prop-trowel"    id="benchTrowel"></span>
+      <span class="bench-prop prop-packets"   id="benchPackets"></span>
+      <span class="bench-prop prop-leaf-a"    id="benchLeafA"></span>
+    </div>
+
+    <!-- Layer 5: one shading pass over wood, props and
+         buttons at once. This is what makes flat drawings
+         and DOM buttons look lit by the same lamp. -->
+    <div class="bench-vignette" aria-hidden="true"></div>
   </div>
 
   <!-- ================================================

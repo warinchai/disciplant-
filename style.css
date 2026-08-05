@@ -1041,125 +1041,711 @@ body {
 
 
 /* ========================================
-   Home page
+   Home page - the potting bench
+
+   The whole frame is the top of a workbench,
+   seen close up. No sky, no horizon, no
+   landscape: #sky is switched off entirely
+   while this page is showing (see the
+   sky-off rule at the end of this section
+   and the toggle in navigateTo).
+
+   Five layers, back to front:
+
+     0  .bench            the wood itself -
+                          boards, grain, seams,
+                          knots, and the pool
+                          of light
+     1  .bench-props-back objects further away:
+                          smaller, higher up
+                          the frame, slightly
+                          knocked back in
+                          contrast
+     2  .home-inner       the tag, the label
+                          and the buttons
+     3  .bench-props-front objects nearer the
+                          viewer: larger,
+                          lower, sharper, and
+                          allowed to overlap
+                          the buttons
+     5  .bench-vignette   one shading pass over
+                          everything at once
+
+   That last layer is the important one. The
+   props are flat illustrations and the buttons
+   are DOM elements; lighting each of them
+   separately would never agree. Darkening the
+   whole frame from one place is what makes
+   them look like they are sitting on the same
+   table under the same light.
+
+   Both prop layers are pointer-events:none, so
+   a leaf lying across a tag is a picture and
+   the tag underneath still takes the tap.
    ======================================== */
 
 .page-home {
+  /* The wordmark plank sets the scale for the page. Everything else
+     is measured against it: the buttons sit inside it, and the props
+     stand outside it. Change this one number to rebalance the page. */
+  --tag-width: min(560px, 90vw);
+
+  /* Where the light is. Kept as variables because the pool and the
+     vignette have to agree with each other, and every prop's own
+     shading was drawn assuming light from up here and slightly left
+     (see the shadow direction note in 01-app-core.js). */
+  --light-x: 47%;
+  --light-y: 24%;
+
   background: transparent;
-  display: flex;
-  justify-content: center;
-  padding: 0 20px 72px;
+  display: block;
 }
 
 .home-inner {
+  position: relative;
+  z-index: 2;
   width: 100%;
-  max-width: 520px;
-  padding-top: 72px;
+  max-width: 660px;
+  margin: 0 auto;
+  padding: clamp(20px, 5vh, 62px) 16px 44px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-.home-eyebrow {
-  font-family: var(--font-display);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  letter-spacing: 0.20em;
-  text-transform: uppercase;
-  color: var(--sun);
-  margin: 0 0 14px;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
-  opacity: 0.90;
+
+/* --- The table ---------------------------------------------------
+   position:fixed so the bench fills the window rather than the
+   content, and so a short window scrolls the menu over a still
+   table instead of dragging the wood up with it. .page is fixed and
+   sets no transform, so fixed here still resolves to the viewport. */
+
+.bench {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
 }
 
-.hero-title {
-  font-family: var(--font-display);
-  font-size: clamp(3.2rem, 12vw, 6.8rem);
-  font-weight: 400;
-  color: var(--linen);
-  margin: 0;
-  letter-spacing: 0.14em;
-  text-align: center;
-  line-height: 1;
-  text-shadow:
-    0 0 90px rgba(242, 184, 75, 0.30),
-    0 4px 36px rgba(0, 0, 0, 0.70),
-    0 1px 4px rgba(0, 0, 0, 0.95);
+/* Boards run front-to-back, so the seams are vertical.
+
+   Five background layers, and the order they are listed in is the
+   order they paint, topmost first:
+
+     1  fine grain, tight and low-contrast
+     2  broader figure, the wider dark streaks
+     3  seams: a dark groove with a lit edge on its right, at five
+        deliberately UNEVEN positions - evenly spaced seams are what
+        made the first attempt read as tiling rather than timber
+     4  board-to-board tone, so no two boards are quite the same
+        colour, keyed to the same five positions
+     5  the base colour underneath all of it
+
+   The grain angles are 91deg and 89.2deg rather than 90deg. That
+   half-degree of disagreement stops the two layers from lining up
+   into a moire and costs nothing. */
+.bench-boards {
+  position: absolute;
+  inset: 0;
+  background-color: #A97C50;
+  background-image:
+    repeating-linear-gradient(
+      91deg,
+      rgba(88, 58, 30, 0)      0px,  rgba(88, 58, 30, 0)      3px,
+      rgba(88, 58, 30, 0.12)   3px,  rgba(88, 58, 30, 0.12)   4px,
+      rgba(88, 58, 30, 0)      4px,  rgba(88, 58, 30, 0)     12px,
+      rgba(255, 226, 180, 0.05) 12px, rgba(255, 226, 180, 0.05) 14px,
+      rgba(88, 58, 30, 0)     14px,  rgba(88, 58, 30, 0)     23px
+    ),
+    repeating-linear-gradient(
+      89.2deg,
+      rgba(70, 44, 22, 0)      0px,  rgba(70, 44, 22, 0)     34px,
+      rgba(70, 44, 22, 0.09)  34px,  rgba(70, 44, 22, 0.09)  41px,
+      rgba(70, 44, 22, 0)     41px,  rgba(70, 44, 22, 0)     97px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0)           0%,     rgba(0, 0, 0, 0)          15.2%,
+      rgba(52, 32, 14, 0.55)    15.2%,   rgba(52, 32, 14, 0.55)    15.8%,
+      rgba(244, 206, 154, 0.16) 15.8%,   rgba(244, 206, 154, 0.16) 16.4%,
+      rgba(0, 0, 0, 0)          16.4%,   rgba(0, 0, 0, 0)          32.6%,
+      rgba(52, 32, 14, 0.55)    32.6%,   rgba(52, 32, 14, 0.55)    33.2%,
+      rgba(244, 206, 154, 0.16) 33.2%,   rgba(244, 206, 154, 0.16) 33.8%,
+      rgba(0, 0, 0, 0)          33.8%,   rgba(0, 0, 0, 0)          49.4%,
+      rgba(52, 32, 14, 0.55)    49.4%,   rgba(52, 32, 14, 0.55)    50.0%,
+      rgba(244, 206, 154, 0.16) 50.0%,   rgba(244, 206, 154, 0.16) 50.6%,
+      rgba(0, 0, 0, 0)          50.6%,   rgba(0, 0, 0, 0)          67.8%,
+      rgba(52, 32, 14, 0.55)    67.8%,   rgba(52, 32, 14, 0.55)    68.4%,
+      rgba(244, 206, 154, 0.16) 68.4%,   rgba(244, 206, 154, 0.16) 69.0%,
+      rgba(0, 0, 0, 0)          69.0%,   rgba(0, 0, 0, 0)          84.2%,
+      rgba(52, 32, 14, 0.55)    84.2%,   rgba(52, 32, 14, 0.55)    84.8%,
+      rgba(244, 206, 154, 0.16) 84.8%,   rgba(244, 206, 154, 0.16) 85.4%,
+      rgba(0, 0, 0, 0)          85.4%,   rgba(0, 0, 0, 0)         100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 226, 182, 0.05)  0%,    rgba(255, 226, 182, 0.05) 15.2%,
+      rgba(60, 38, 18, 0.06)    15.2%,  rgba(60, 38, 18, 0.06)    32.6%,
+      rgba(255, 226, 182, 0.03) 32.6%,  rgba(255, 226, 182, 0.03) 49.4%,
+      rgba(60, 38, 18, 0.05)    49.4%,  rgba(60, 38, 18, 0.05)    67.8%,
+      rgba(255, 226, 182, 0.06) 67.8%,  rgba(255, 226, 182, 0.06) 84.2%,
+      rgba(60, 38, 18, 0.07)    84.2%,  rgba(60, 38, 18, 0.07)   100%
+    ),
+    linear-gradient(178deg, #B4855A 0%, #A67A4C 46%, #96693E 100%);
 }
 
-.hero-tagline {
-  font-family: var(--font-body);
-  font-size: var(--fs-base);
-  font-weight: 400;
-  color: #ddd4b8;
-  margin: 16px 0 0;
-  text-align: center;
-  letter-spacing: 0.06em;
-  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.60);
+/* Knots and one split. They belong to the wood, so they go under
+   every prop and carry no shadow of their own - a knot with a drop
+   shadow reads as a sticker of a knot. */
+.bench-marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
-/* CTA buttons */
-.cta-btn {
+.bench-mark {
+  position: absolute;
+  display: block;
+}
+
+.bench-mark svg {
   display: block;
   width: 100%;
-  max-width: 280px;
-  padding: 15px 24px;
-  border: 2px solid var(--bark-deep);
-  border-radius: var(--r-md);
-  font-family: var(--font-display);
-  font-size: var(--fs-base);
+  height: auto;
+}
+
+.bench-knot-a { top: 14%;  left: 8%;   width: clamp(46px, 6vw, 82px);  transform: rotate(-8deg);  }
+.bench-knot-b { top: 63%;  left: 24%;  width: clamp(34px, 4.4vw, 60px); transform: rotate(14deg); }
+.bench-knot-c { top: 34%;  right: 11%; width: clamp(28px, 3.6vw, 48px); transform: rotate(-21deg); }
+
+.bench-split {
+  top: 8%;
+  right: 31%;
+  width: 26px;
+  height: 30%;
+}
+
+.bench-split svg {
+  height: 100%;
+  width: 100%;
+}
+
+/* The pool of light on the wood, and the fall-off towards the edges.
+   Under the props, so the props keep their own drawn shading; the
+   layer that unifies everything is .bench-vignette, further down. */
+.bench-light {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      118% 82% at var(--light-x) var(--light-y),
+      rgba(255, 231, 178, 0.34) 0%,
+      rgba(255, 216, 152, 0.16) 30%,
+      rgba(255, 205, 140, 0.04) 52%,
+      rgba(0, 0, 0, 0) 70%
+    ),
+    radial-gradient(
+      132% 116% at var(--light-x) 30%,
+      rgba(38, 20, 6, 0) 38%,
+      rgba(38, 20, 6, 0.16) 62%,
+      rgba(32, 17, 5, 0.36) 82%,
+      rgba(26, 13, 4, 0.56) 100%
+    );
+}
+
+/* The one shading pass over the whole frame - wood, props and
+   buttons together. Gentle, because .bench-light has already done
+   most of the work on the wood; this is only here to stop the props
+   and the buttons from looking lit differently to the table. */
+.bench-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      104% 88% at var(--light-x) var(--light-y),
+      rgba(255, 232, 186, 0.10) 0%,
+      rgba(255, 220, 164, 0.03) 34%,
+      rgba(0, 0, 0, 0) 58%
+    ),
+    radial-gradient(
+      126% 112% at var(--light-x) 34%,
+      rgba(34, 18, 5, 0) 44%,
+      rgba(34, 18, 5, 0.10) 70%,
+      rgba(28, 14, 4, 0.26) 100%
+    );
+}
+
+
+/* --- Where the objects sit ---------------------------------------
+   Every prop is placed from the CENTRE outwards, with a percentage
+   floor: `max(2%, calc(50% - 620px))`. On a wide window the props
+   keep their distance from the menu; on a narrow one the floor takes
+   over and they hug the edges instead of sliding underneath the
+   buttons. Same trick the old horizon layout used, and the reason
+   this page needs no JS to lay itself out.
+
+   Sizes are clamp()ed rather than fixed so the whole scene scales
+   with the window instead of turning into a few big objects on a
+   large empty table. */
+
+.bench-props {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.bench-props-back  { z-index: 1; }
+.bench-props-front { z-index: 3; }
+
+.bench-prop {
+  position: absolute;
+  display: block;
+}
+
+.bench-prop svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Depth, part one: the far objects lose a little contrast and warmth,
+   the way anything does at the edge of a pool of light. Part two is
+   the placement below - back props sit higher in the frame and are
+   drawn smaller. */
+.bench-props-back .bench-prop {
+  filter: saturate(0.9) brightness(0.93);
+}
+
+/* Back row */
+.prop-can {
+  top: 5vh;
+  left: max(2%, calc(50% - 620px));
+  width: clamp(122px, 15vw, 200px);
+  transform: rotate(-3deg);
+}
+
+.prop-pot-back {
+  top: 7vh;
+  right: max(3%, calc(50% - 590px));
+  width: clamp(70px, 8.5vw, 108px);
+  transform: rotate(2deg);
+}
+
+.prop-leaf-b {
+  top: 40vh;
+  left: max(4%, calc(50% - 500px));
+  width: clamp(52px, 6.5vw, 84px);
+}
+
+.prop-twine {
+  top: 44vh;
+  right: max(2%, calc(50% - 560px));
+  width: clamp(62px, 7.5vw, 100px);
+  transform: rotate(-6deg);
+}
+
+/* Front row */
+.prop-pot-main {
+  bottom: 2vh;
+  left: max(1%, calc(50% - 690px));
+  width: clamp(116px, 15vw, 188px);
+  transform: rotate(-2deg);
+}
+
+.prop-pot-small {
+  bottom: 15vh;
+  left: max(3%, calc(50% - 585px));
+  width: clamp(80px, 10vw, 128px);
+  transform: rotate(3deg);
+}
+
+.prop-soil {
+  bottom: 0;
+  left: 50%;
+  width: clamp(230px, 34vw, 420px);
+  transform: translateX(-52%);
+}
+
+.prop-trowel {
+  bottom: 18vh;
+  right: max(1%, calc(50% - 655px));
+  width: clamp(148px, 19vw, 248px);
+  transform: rotate(9deg);
+}
+
+.prop-packets {
+  bottom: 1vh;
+  right: max(2%, calc(50% - 610px));
+  width: clamp(136px, 18vw, 226px);
+  transform: rotate(-4deg);
+}
+
+.prop-leaf-a {
+  bottom: 31vh;
+  right: max(6%, calc(50% - 470px));
+  width: clamp(54px, 6.5vw, 88px);
+}
+
+
+/* --- The wordmark plank ------------------------------------------
+   A board lying flat on the table with the vine grown across it, not
+   a panel floating above one: hence the small rotation, the four
+   nails, and a lip that is short compared to the drop shadow. A tall
+   lip would stand it up on its edge. */
+
+.home-tag {
+  position: relative;
+  width: var(--tag-width);
+  padding: 20px clamp(18px, 4vw, 34px) 24px;
+  border-radius: 18px 16px 17px 15px;
+  transform: rotate(-1.2deg);
+  background-color: #C08D5A;
+  background-image:
+    repeating-linear-gradient(
+      88.6deg,
+      rgba(96, 62, 30, 0)      0px,  rgba(96, 62, 30, 0)      5px,
+      rgba(96, 62, 30, 0.13)   5px,  rgba(96, 62, 30, 0.13)   6px,
+      rgba(96, 62, 30, 0)      6px,  rgba(96, 62, 30, 0)     17px,
+      rgba(255, 232, 190, 0.07) 17px, rgba(255, 232, 190, 0.07) 19px,
+      rgba(96, 62, 30, 0)     19px,  rgba(96, 62, 30, 0)     31px
+    ),
+    linear-gradient(176deg, #CE9B66 0%, #BC8853 52%, #A87343 100%);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 231, 190, 0.34),
+    inset 0 -5px 0 rgba(80, 50, 24, 0.34),
+    0 7px 0 #7A5333,
+    0 20px 28px rgba(38, 20, 6, 0.44);
+}
+
+.home-tag-face {
+  position: relative;
+}
+
+.home-tag-face svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Four nails, one per corner, each with its own head shadow so the
+   light on them agrees with the light on everything else. */
+.home-nail {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border-radius: 50% 50% 46% 54% / 52% 48% 50% 50%;
+  background: linear-gradient(160deg, #E4D4BC 0%, #B3A791 38%, #8C806D 72%, #665C4D 100%);
+  box-shadow:
+    inset 0 -2px 0 rgba(48, 40, 30, 0.4),
+    0 2px 3px rgba(38, 20, 6, 0.45);
+}
+
+.home-nail-tl { top: 11px;    left: 13px;  }
+.home-nail-tr { top: 11px;    right: 13px; }
+.home-nail-bl { bottom: 11px; left: 13px;  }
+.home-nail-br { bottom: 11px; right: 13px; }
+
+
+/* --- The paper label --------------------------------------------
+   Paper rather than wood, on purpose: three wooden things in a
+   vertical stack all read as one object. Tilted the opposite way to
+   the plank so the two do not look glued together. */
+
+.home-label {
+  position: relative;
+  z-index: 1;
+  margin: 18px 0 0;
+  padding: 8px 20px 9px;
+  border-radius: 9px 7px 9px 8px;
+  transform: rotate(1deg);
+  background: linear-gradient(178deg, #F8ECD5 0%, #EEDFC0 58%, #DCC79E 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.62),
+    0 4px 0 #BFA67C,
+    0 11px 15px rgba(38, 20, 6, 0.32);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
   font-weight: 700;
-  letter-spacing: 0.06em;
-  cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.1s, background 0.16s;
+  letter-spacing: 0.02em;
+  color: var(--ink);
   text-align: center;
 }
 
-.cta-btn:hover {
-  filter: brightness(1.06);
-}
 
-.cta-btn:active {
-  transform: translateY(4px);
-  box-shadow: 0 2px 0 var(--bark-deep);
-}
+/* --- Buttons: painted plant markers ------------------------------
+   Each sign is TWO pieces, not one, and that is where the depth
+   comes from:
 
-.cta-primary {
-  background: var(--leaf-deep);
-  color: var(--linen);
-  margin: 36px auto 0;
-  box-shadow: var(--lip-deep) var(--leaf-dark);
-}
+     .marker       the block itself. What you see of it is the
+                   chamfer running all the way round - the cut edge
+                   of a thick piece of wood, darker than the face
+                   because it turns away from the light.
+     .marker-face  the flat top, inset inside that chamfer, lighter,
+                   with its own grain and its own bevel bands.
 
-.cta-primary:hover {
-  filter: brightness(1.06);
-}
+   A single element with a border cannot do this: a border is one
+   flat colour on all four sides, and the whole point is that the top
+   edge catches the lamp while the bottom edge does not. Two nested
+   surfaces, each with its own gradient and its own inset bands, is
+   what reads as a solid object rather than a rounded rectangle.
 
-.cta-secondary {
-  background: var(--bark-light);
-  color: var(--linen);
-  margin: 22px auto 0;
-  box-shadow: var(--lip-deep) var(--bark-deep);
-}
+   Under both: a hard offset shadow for the block's thickness, and a
+   soft one for where it meets the bench. The hard one alone floats.
 
-.cta-secondary:hover {
-  filter: brightness(1.06);
-}
+   Colour comes entirely from five custom properties set by the four
+   paint classes below, so the structure is written once. Every
+   transform composes rotate(var(--tilt)) FIRST, so hover and press
+   can move a sign without straightening it.
 
-.cta-tertiary {
-  background: #2F5F63;
-  color: #EAF6F2;
-  margin: 22px auto 0;
+   There is no stake under these. They are signs lying on a bench,
+   not markers pushed into soil. */
+
+.marker {
+  --tilt: 0deg;
+  --cut-height: 16px;
+  position: relative;
+  display: inline-block;
+  padding: 7px;
+  border: 0;
+  border-radius: 17px 15px 16px 14px;
+  background: linear-gradient(176deg, var(--rim-lit) 0%, var(--rim) 46%, var(--rim-deep) 100%);
+  cursor: pointer;
+  transform: rotate(var(--tilt));
   box-shadow:
-    0 6px 26px rgba(47, 95, 99, 0.50),
-    0 2px 8px rgba(0, 0, 0, 0.30);
+    inset 0 2px 0 rgba(255, 255, 255, 0.20),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.22),
+    0 7px 0 var(--rim-deep),
+    0 17px 22px rgba(34, 18, 5, 0.44);
+  transition: transform 0.1s, box-shadow 0.1s, filter 0.16s;
 }
 
-.cta-tertiary:hover {
+.marker-face {
+  display: block;
+  padding: 11px 17px 12px;
+  border-radius: 12px 10px 11px 10px;
+  background-color: var(--face);
+  background-image:
+    repeating-linear-gradient(
+      89deg,
+      rgba(20, 12, 4, 0)       0px,  rgba(20, 12, 4, 0)       4px,
+      rgba(20, 12, 4, 0.10)    4px,  rgba(20, 12, 4, 0.10)    5px,
+      rgba(20, 12, 4, 0)       5px,  rgba(20, 12, 4, 0)      13px,
+      rgba(255, 255, 255, 0.07) 13px, rgba(255, 255, 255, 0.07) 15px,
+      rgba(20, 12, 4, 0)      15px,  rgba(20, 12, 4, 0)      24px
+    ),
+    linear-gradient(177deg, var(--face-lit) 0%, var(--face) 52%, var(--face-deep) 100%);
+  /* The four inset bands are the chamfer between face and block:
+     bright along the top, dark along the bottom, and a weaker pair
+     on the sides where the light is glancing rather than direct. */
   box-shadow:
-    0 10px 36px rgba(47, 95, 99, 0.60),
-    0 4px 14px rgba(0, 0, 0, 0.30);
+    inset 0 3px 0 rgba(255, 255, 255, 0.30),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.26),
+    inset 2px 0 0 rgba(255, 255, 255, 0.10),
+    inset -2px 0 0 rgba(0, 0, 0, 0.16);
 }
+
+.marker-face svg {
+  display: block;
+  width: auto;
+  height: var(--cut-height);
+}
+
+.marker:hover {
+  filter: brightness(1.05);
+  transform: rotate(var(--tilt)) translateY(-2px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.20),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.22),
+    0 9px 0 var(--rim-deep),
+    0 20px 26px rgba(34, 18, 5, 0.46);
+}
+
+.marker:active {
+  transform: rotate(var(--tilt)) translateY(5px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.22),
+    0 2px 0 var(--rim-deep),
+    0 7px 11px rgba(34, 18, 5, 0.42);
+}
+
+/* --- The four paints --------------------------------------------
+   Muted rather than primary. A pure red next to a pure yellow on a
+   warm wood table fights the table; these are the same four hues
+   pulled towards the palette the rest of the app already uses, so
+   they read as painted wood rather than as plastic. */
+
+.marker-green {
+  --face-lit:  #8FBE6D;
+  --face:      #6E9E52;
+  --face-deep: #557F3E;
+  --rim-lit:   #55813C;
+  --rim:       #446F31;
+  --rim-deep:  #2C4C1F;
+}
+
+.marker-blue {
+  --face-lit:  #82B3CD;
+  --face:      #5B8CA8;
+  --face-deep: #466F88;
+  --rim-lit:   #47738C;
+  --rim:       #396078;
+  --rim-deep:  #234254;
+}
+
+.marker-red {
+  --face-lit:  #DE9583;
+  --face:      #C0705E;
+  --face-deep: #9E5545;
+  --rim-lit:   #9A5241;
+  --rim:       #834032;
+  --rim-deep:  #5B2920;
+}
+
+.marker-yellow {
+  --face-lit:  #F1CB7C;
+  --face:      #DFA94F;
+  --face-deep: #C08833;
+  --rim-lit:   #B27E29;
+  --rim:       #98681F;
+  --rim-deep:  #6E4A14;
+}
+
+/* Primary. Bigger block, deeper chamfer, taller lettering - it wins
+   on mass rather than on colour, so the other three stay readable. */
+.marker-primary {
+  --tilt: -1.6deg;
+  --cut-height: clamp(21px, 4.6vw, 30px);
+  margin: clamp(26px, 4.5vh, 52px) 0 0;
+  padding: 9px;
+  border-radius: 20px 17px 19px 16px;
+}
+
+.marker-primary .marker-face {
+  padding: 14px clamp(24px, 5vw, 40px) 15px;
+  border-radius: 14px 12px 13px 12px;
+}
+
+/* The three secondary signs. Staggered heights AND angles: three
+   identical tags at the same y is a toolbar, not a handful of signs
+   someone put down. */
+.home-markers {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: clamp(8px, 1.8vw, 16px);
+  margin: clamp(30px, 5vh, 56px) 0 0;
+}
+
+.marker-sm {
+  --cut-height: clamp(13px, 2.9vw, 17px);
+}
+
+.marker-sm .marker-face {
+  padding: 10px clamp(10px, 1.9vw, 16px) 11px;
+}
+
+.marker-tasks      { --tilt: -3.4deg; margin-top: 6px;  }
+.marker-greenhouse { --tilt:  2.2deg; margin-top: 22px; }
+.marker-friends    { --tilt: -1.2deg; margin-top: 2px;  }
+
+/* Keyboard focus has to survive all of the above. */
+.marker:focus-visible {
+  outline: 3px solid var(--linen);
+  outline-offset: 4px;
+}
+
+
+/* --- #sky is off here -------------------------------------------
+   Every other page in the app sits on the time-of-day sky. This one
+   does not, and the bench is opaque, so leaving it running would be
+   paying for star, cloud and firefly animation nobody can see.
+   navigateTo() in 01-app-core.js adds and removes this class; the
+   class is also in the markup, because home is the page the app
+   opens on and navigateTo has not run yet at that point. */
+.sky-bg.sky-off {
+  display: none;
+}
+
+
+/* --- Narrower windows -------------------------------------------
+   The props come off in order of how little they are missed. A
+   tabletop can be busy and still legible at 1200px; at 480px the
+   same object count buries the buttons. */
+
+@media (max-width: 1024px) {
+  .page-home {
+    --tag-width: min(520px, 92vw);
+  }
+
+  .prop-trowel  { bottom: 21vh; }
+  .prop-leaf-a  { bottom: 34vh; }
+}
+
+@media (max-width: 720px) {
+  /* Five objects instead of ten. The ones kept are the ones that
+     hold a corner each, so the frame still reads as full. */
+  .prop-twine,
+  .prop-leaf-b,
+  .prop-pot-small,
+  .prop-leaf-a {
+    display: none;
+  }
+
+  .prop-can       { top: 3vh; width: clamp(96px, 24vw, 140px); }
+  .prop-pot-back  { top: 4vh; width: clamp(58px, 14vw, 82px);  }
+  .prop-pot-main  { bottom: 1vh; width: clamp(94px, 26vw, 140px); }
+  .prop-trowel    { bottom: 15vh; width: clamp(112px, 32vw, 170px); }
+  .prop-packets   { bottom: 0; width: clamp(108px, 31vw, 165px); }
+  .prop-soil      { width: clamp(200px, 62vw, 300px); }
+
+  .bench-knot-c,
+  .bench-split { display: none; }
+
+  .home-inner { padding-top: 26px; }
+
+  .marker-primary {
+    --cut-height: clamp(18px, 5.2vw, 24px);
+    padding: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* "GREENHOUSE" is the longest label and sets the floor for the
+     whole row at this width, exactly as it did on the old plaques. */
+  .marker-sm {
+    --cut-height: 12px;
+  }
+
+  .marker-sm .marker-face {
+    padding: 9px 8px 10px;
+  }
+
+  .marker-greenhouse { margin-top: 15px; }
+
+  .home-label { font-size: var(--fs-xs); }
+
+  .prop-trowel { display: none; }
+}
+
+/* A short window has no vertical room to spend on the props at the
+   top and bottom, and the menu has to win. */
+@media (max-height: 620px) {
+  .prop-can,
+  .prop-pot-back,
+  .prop-twine,
+  .prop-leaf-a,
+  .prop-leaf-b {
+    display: none;
+  }
+
+  .home-inner { padding-top: 16px; }
+  .marker-primary { margin-top: 18px; }
+  .home-markers   { margin-top: 20px; }
+}
+
 
 /* ========================================
    Community counters on the home page
@@ -1173,15 +1759,17 @@ body {
   align-items: stretch;
   justify-content: center;
   gap: 4px;
-  margin: 26px 0 0;
-  padding: 12px 8px;
+  margin: 22px 0 0;
+  padding: 12px 10px;
   width: 100%;
   max-width: 400px;
-  border-radius: 16px;
-  background: rgba(12, 9, 5, 0.42);
-  border: 1px solid rgba(242, 184, 75, 0.20);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  border-radius: 11px 9px 11px 10px;
+  transform: rotate(-0.6deg);
+  background: linear-gradient(178deg, #F6E9D1 0%, #EADCBB 60%, #D6C199 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.6),
+    0 4px 0 #BBA277,
+    0 11px 15px rgba(38, 20, 6, 0.3);
 }
 
 /* The strip is absent, not blank, until its data arrives - see
@@ -1206,8 +1794,7 @@ body {
   font-size: var(--fs-lg);
   font-weight: 600;
   line-height: 1;
-  color: var(--sun);
-  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55);
+  color: var(--bloom-deep);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1217,7 +1804,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: rgba(233, 224, 200, 0.72);
+  color: var(--ink-soft);
   text-align: center;
   line-height: 1.25;
 }
@@ -1226,7 +1813,7 @@ body {
   width: 1px;
   align-self: center;
   height: 26px;
-  background: rgba(242, 184, 75, 0.22);
+  background: rgba(122, 92, 66, 0.28);
   flex: 0 0 auto;
 }
 
@@ -1234,33 +1821,6 @@ body {
   .home-stats     { gap: 2px; padding: 11px 5px; }
   .home-stat-value { font-size: var(--fs-lg); }
   .home-stat-label { font-size: var(--fs-xs); letter-spacing: 0.05em; }
-}
-
-
-/* Copy card */
-.home-copy {
-  margin: 34px 0 0;
-  width: 100%;
-  background: rgba(251, 247, 238, 0.90);
-  border-radius: 20px;
-  padding: 26px 26px 22px;
-  box-shadow:
-    0 8px 44px rgba(0, 0, 0, 0.32),
-    0 1px 0 rgba(255, 255, 255, 0.60) inset;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-
-.home-copy p {
-  font-family: var(--font-body);
-  font-size: var(--fs-base);
-  line-height: 1.78;
-  color: var(--bark-deep);
-  margin: 0 0 13px;
-}
-
-.home-copy p:last-child {
-  margin-bottom: 0;
 }
 
 
@@ -1855,19 +2415,6 @@ body {
    ======================================== */
 
 @media (max-width: 600px) {
-  .home-inner {
-    padding-top: 52px;
-  }
-
-  .hero-title {
-    font-size: var(--fs-2xl);
-    letter-spacing: 0.10em;
-  }
-
-  .home-copy {
-    padding: 20px 18px 16px;
-  }
-
   .tasks-content {
     padding: 0 12px 52px;
   }
@@ -3911,4 +4458,109 @@ body.nav-open { overflow: hidden; }
 
 .garden-scene.scene-night .garden-sky-extension .sky-dust {
   opacity: 1;
+}
+
+
+/* ============================================================
+   What hangs in the sky above the garden
+   ============================================================
+   Balloons and kites while the sun is up, constellations and small
+   planets once it is down. Built by getSkyDecorMarkup() in
+   04-garden-scene.js and appended into .garden-sky-extension, so it
+   lives INSIDE the scrollable track and pans left and right with the
+   plot - the same choice the fence, the grass and the sky strip
+   itself made.
+
+   Both layers are always in the DOM. .scene-night (put on the scene
+   by updateSky() in 05-stats-app.js) decides which one is visible,
+   and the 3s fade matches the one .sky-dust and .sky-stars already
+   use so the whole sky turns over together rather than in pieces.
+
+   Nothing here is touched by the sky gradient: --sky-top/--sky-high
+   still paint the strip exactly as before, and these sit on top of
+   it.
+   ============================================================ */
+
+.garden-sky-decor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 3s ease;
+}
+
+.garden-scene:not(.scene-night) .garden-sky-decor.sky-decor-day {
+  opacity: 1;
+}
+
+.garden-scene.scene-night .garden-sky-decor.sky-decor-night {
+  opacity: 1;
+}
+
+/* The positioned box. Its transform is the centring one and nothing
+   else ever writes to it - the animations all live on the child,
+   because an animated transform replaces the whole property and
+   would otherwise throw this translate away on the first keyframe. */
+.sky-decor-item {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.sky-decor-item > div {
+  line-height: 0;   /* no descender gap under the inline svg */
+}
+
+.sky-decor-item svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* --- Balloons --- */
+.sky-balloon {
+  animation: skyBalloonDrift 28s ease-in-out infinite;
+  filter: drop-shadow(0 5px 7px rgba(20, 32, 58, 0.13));
+}
+
+@keyframes skyBalloonDrift {
+  0%, 100% { transform: translate(-9px,  7px) rotate(-2deg); }
+  50%      { transform: translate( 9px, -13px) rotate( 2deg); }
+}
+
+/* --- Kites --- */
+/* Pivoting about the bottom of the box, where the string runs off
+   toward whoever is holding it, so the kite swings on its line
+   instead of spinning about its own middle. */
+.sky-kite {
+  transform-origin: 50% 98%;
+  animation: skyKiteSway 10s ease-in-out infinite;
+}
+
+@keyframes skyKiteSway {
+  0%, 100% { transform: rotate(-8deg) translateY( 3px); }
+  50%      { transform: rotate( 7deg) translateY(-7px); }
+}
+
+/* --- Planets --- */
+.sky-planet {
+  animation: skyPlanetDrift 34s ease-in-out infinite;
+}
+
+@keyframes skyPlanetDrift {
+  0%, 100% { transform: translateY( 5px); }
+  50%      { transform: translateY(-7px); }
+}
+
+/* --- Constellations --- */
+/* One slow breath across the whole figure rather than a twinkle per
+   star: dozens of independently animating nodes up here would cost
+   far more than it is worth, and a constellation that shimmers as a
+   single thing reads as distance. */
+.sky-constellation {
+  animation: skyConstellationTwinkle 8s ease-in-out infinite;
+}
+
+@keyframes skyConstellationTwinkle {
+  0%, 100% { opacity: 0.95; }
+  50%      { opacity: 0.58; }
 }

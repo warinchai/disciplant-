@@ -457,6 +457,482 @@ function getStarfieldMarkup() {
   return starfieldCache;
 }
 
+// ============================================
+// What is actually up there - day and night
+// ============================================
+// The strip above the plot held nothing but stars. These are the
+// things you scroll up to find: balloons and kites while the sun is
+// up, constellations and planets once it is down.
+//
+// Every shape here is flat SVG built as a string, for exactly the
+// reasons the plant art is: no <defs>, no gradients, and above all NO
+// id attributes anywhere. Several copies of each shape are on screen
+// at once and ids would collide the moment a second one rendered.
+//
+// Day and night are not two sets of markup swapped in and out - both
+// are always in the DOM, and the .scene-night class that
+// 05-stats-app.js puts on the scene cross-fades between them over the
+// same 3s the starfield already uses, so nightfall arrives on
+// everything at once instead of one layer at a time.
+//
+// Nothing in here knows what time it is, and nothing in here is
+// rebuilt: the whole lot is one cached string (see skyDecorCache
+// below), the same trick the starfield uses, because renderGarden()
+// empties and refills the track on every single render and none of
+// this depends on the tasks.
+
+// --- Hot air balloons ---------------------------------------------
+// A cream envelope with three darker gores painted over it, hung off
+// a burner frame, with a wicker basket underneath.
+//
+// The gores are bands between two vertical arcs that both run from
+// the top apex to the bottom point, which is what gives them the
+// pinched-at-both-ends shape a real balloon's panels have - a plain
+// rectangle striped over a circle reads as a beach ball instead.
+//
+// The basket is not the usual flat brown trapezoid. It is a flared
+// tub with a rounded bottom, an overhanging rim that casts the top
+// edge into shade, and a crossed diagonal weave inside it - wicker is
+// woven on the bias, and drawing it that way is what makes it read as
+// basketwork rather than a crate. Between it and the envelope sits an
+// actual burner frame: two short posts and a bar, with the ropes
+// terminating on the bar rather than vanishing into the rim.
+//
+// The weave lines deliberately stay well inside x 40-60 / y 130-142.
+// There is no clip path anywhere in this file (that would need an id),
+// so anything drawn on the basket has to fit inside the basket by
+// construction or it will hang out over the edge of it.
+var BALLOON_PALETTES = [
+  { light: '#F4E9D8', dark: '#6FB0B5', basket: '#9A7048', rim: '#7C5636', weave: '#C39B6E' },
+  { light: '#F7EEE1', dark: '#E4836A', basket: '#9A7048', rim: '#7C5636', weave: '#C39B6E' },
+  { light: '#EAF1F4', dark: '#EEC069', basket: '#9A7048', rim: '#7C5636', weave: '#C39B6E' },
+  { light: '#F4E9D8', dark: '#9AAEDC', basket: '#9A7048', rim: '#7C5636', weave: '#C39B6E' },
+];
+
+function buildBalloonSVG(paletteIndex) {
+  var p = BALLOON_PALETTES[paletteIndex % BALLOON_PALETTES.length];
+  return (
+    '<svg viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      // Ropes first so the envelope above and the frame below both
+      // paint over their ends and no cut edge shows.
+      '<path d="M22 92 L40 118 M78 92 L60 118 M43 114 L45 118 M57 114 L55 118" ' +
+        'fill="none" stroke="' + p.rim + '" stroke-width="1.5" opacity="0.7"/>' +
+      '<path d="M50 4 C94 4 92 26 92 50 C92 76 76 96 50 118 C24 96 8 76 8 50 C8 26 6 4 50 4 Z" ' +
+        'fill="' + p.light + '"/>' +
+      '<path d="M50 4 C5.9 4 8 26 8 50 C8 76 24 96 50 118 C34.5 96 25 76 25 50 C25 26 23.8 4 50 4 Z" ' +
+        'fill="' + p.dark + '"/>' +
+      '<path d="M50 4 C41.6 4 42 26 42 50 C42 76 45 96 50 118 C55 96 58 76 58 50 C58 26 58.4 4 50 4 Z" ' +
+        'fill="' + p.dark + '"/>' +
+      '<path d="M50 4 C76.3 4 75 26 75 50 C75 76 65.5 96 50 118 C76 96 92 76 92 50 C92 26 94.1 4 50 4 Z" ' +
+        'fill="' + p.dark + '"/>' +
+      // Burner frame: bar, then the two posts dropping to the rim.
+      '<rect x="38.5" y="116.4" width="23" height="3.2" rx="1.6" fill="' + p.rim + '"/>' +
+      '<path d="M42 119.6 L41 126 M58 119.6 L59 126" fill="none" ' +
+        'stroke="' + p.rim + '" stroke-width="2" stroke-linecap="round"/>' +
+      // Basket: flared tub, rounded at the bottom corners.
+      '<path d="M36.5 128.5 L63.5 128.5 L62 141.5 Q61.2 146.4 55 147 L45 147 ' +
+        'Q38.8 146.4 38 141.5 Z" fill="' + p.basket + '"/>' +
+      // Bias weave. Two sets of parallels crossing into a lattice.
+      '<path d="M40 142 L49 130 M46 142 L55 130 M52 142 L60 131 ' +
+        'M60 142 L51 130 M54 142 L45 130 M48 142 L40 131" fill="none" ' +
+        'stroke="' + p.weave + '" stroke-width="1.1" opacity="0.55" stroke-linecap="round"/>' +
+      // Rim last, so it overhangs everything and shades the top edge.
+      '<path d="M34.5 125.4 L65.5 125.4 L64.4 129.8 L35.6 129.8 Z" fill="' + p.rim + '"/>' +
+    '</svg>'
+  );
+}
+
+// --- Kites --------------------------------------------------------
+// Four different kites, not one shape in four colourways: a quartered
+// diamond, a delta, a box kite and a six-sided rokkaku. They share a
+// palette table and a string, and nothing else. The tails are bare
+// line now - no bows.
+//
+// Every stripe, chevron and panel vertex is a point ON the kite's own
+// outline, worked out from its corner points rather than eyeballed,
+// so a panel meets the silhouette exactly instead of poking out of it
+// or falling short. Same reason as the basket weave above: with no
+// clip paths available, everything has to fit by construction.
+var KITE_PALETTES = [
+  { a: '#F6EFE2', b: '#D2825F', c: '#5C9BA6', shade: '#B96F4E', spar: '#4A4266' },
+  { a: '#EFF3F0', b: '#F3C173', c: '#88BFAE', shade: '#D9A64F', spar: '#4A4266' },
+  { a: '#F5EADA', b: '#B3A5D8', c: '#8FC3DE', shade: '#9A8BC4', spar: '#4A4266' },
+  { a: '#F2EFE6', b: '#8FB98A', c: '#E7B96F', shade: '#79A175', spar: '#4A4266' },
+];
+
+// Shape 0 - diamond, quartered, with an inset diamond at the cross.
+function buildKiteDiamond(p) {
+  return (
+    '<polygon points="60,8 108,62 60,132 12,62" fill="' + p.a + '"/>' +
+    '<polygon points="60,8 60,62 12,62" fill="' + p.b + '"/>' +
+    '<polygon points="60,62 108,62 60,132" fill="' + p.b + '"/>' +
+    '<polygon points="60,34 84,62 60,90 36,62" fill="' + p.c + '"/>' +
+    '<path d="M60 8 L60 132 M12 62 L108 62" fill="none" ' +
+      'stroke="' + p.spar + '" stroke-width="1.6" opacity="0.35"/>' +
+    '<path d="M60 132 C50 152 68 166 55 184 C45 198 60 208 52 222" fill="none" ' +
+      'stroke="' + p.spar + '" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/>'
+  );
+}
+
+// Shape 1 - delta. Nose triangle, then a chevron band following the
+// swept trailing edge.
+function buildKiteDelta(p) {
+  return (
+    '<polygon points="60,8 112,88 60,116 8,88" fill="' + p.a + '"/>' +
+    '<polygon points="60,8 82,42 38,42" fill="' + p.b + '"/>' +
+    '<polygon points="8,88 60,116 112,88 100,80.5 60,101 20,80.5" fill="' + p.c + '"/>' +
+    '<path d="M60 8 L60 116" fill="none" ' +
+      'stroke="' + p.spar + '" stroke-width="1.6" opacity="0.35"/>' +
+    '<path d="M60 116 C50 136 68 150 55 168 C45 182 60 194 52 210" fill="none" ' +
+      'stroke="' + p.spar + '" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/>'
+  );
+}
+
+// Shape 2 - box kite. Two cells seen slightly from the side: a front
+// face and a shaded side face each, joined by three struts.
+function buildKiteBox(p) {
+  return (
+    '<polygon points="86,10 104,18 104,52 86,46" fill="' + p.shade + '"/>' +
+    '<polygon points="86,76 104,84 104,118 86,112" fill="' + p.shade + '"/>' +
+    '<polygon points="24,16 86,10 86,46 24,52" fill="' + p.a + '"/>' +
+    '<polygon points="24,82 86,76 86,112 24,118" fill="' + p.a + '"/>' +
+    '<polygon points="24,28 86,22 86,34 24,40" fill="' + p.b + '"/>' +
+    '<polygon points="24,94 86,88 86,100 24,106" fill="' + p.c + '"/>' +
+    '<path d="M24 52 L24 82 M86 46 L86 76 M104 52 L104 84" fill="none" ' +
+      'stroke="' + p.spar + '" stroke-width="2.4" opacity="0.5" stroke-linecap="round"/>' +
+    '<path d="M64 118 C54 138 72 152 59 170 C49 184 64 196 56 212" fill="none" ' +
+      'stroke="' + p.spar + '" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/>'
+  );
+}
+
+// Shape 3 - rokkaku. Six-sided, with the two end caps in one colour
+// and a chevron across the middle in another.
+function buildKiteRokkaku(p) {
+  return (
+    '<polygon points="60,6 104,34 104,96 60,130 16,96 16,34" fill="' + p.a + '"/>' +
+    '<polygon points="16,34 104,34 60,6" fill="' + p.c + '"/>' +
+    '<polygon points="16,96 104,96 60,130" fill="' + p.c + '"/>' +
+    '<polygon points="16,92 60,58 104,92 104,74 60,40 16,74" fill="' + p.b + '"/>' +
+    '<path d="M60 6 L60 130 M16 65 L104 65" fill="none" ' +
+      'stroke="' + p.spar + '" stroke-width="1.6" opacity="0.3"/>' +
+    '<path d="M60 130 C50 150 68 164 55 182 C45 196 60 206 52 220" fill="none" ' +
+      'stroke="' + p.spar + '" stroke-width="1.5" opacity="0.4" stroke-linecap="round"/>'
+  );
+}
+
+var KITE_SHAPE_BUILDERS = [
+  buildKiteDiamond,
+  buildKiteDelta,
+  buildKiteBox,
+  buildKiteRokkaku,
+];
+
+function buildKiteSVG(paletteIndex, shapeIndex) {
+  var p     = KITE_PALETTES[paletteIndex % KITE_PALETTES.length];
+  var build = KITE_SHAPE_BUILDERS[shapeIndex % KITE_SHAPE_BUILDERS.length];
+  // One box for all four so they hang at a consistent scale against
+  // each other; each shape's string is drawn out to about y 220.
+  return (
+    '<svg viewBox="0 0 120 226" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      build(p) +
+    '</svg>'
+  );
+}
+
+// --- Planets ------------------------------------------------------
+// A flat disc marked with spots rather than bands - craters and
+// storms, not layer cake.
+//
+// Nothing is clipped, because a clip path needs an id and ids cannot
+// be repeated. Instead every spot is placed so it CANNOT reach the
+// edge: an angle and a distance are drawn from hashSeed, and the
+// distance is capped at 39 minus the spot's own reach, so the whole
+// blob is inside the disc by arithmetic. The distance is also passed
+// through a square root, which spreads spots evenly over the disc's
+// area - without it they crowd into the middle, because a small
+// central ring of the disc holds far less room than a wide outer one.
+//
+// The spots are quadratic blobs with four jittered radii rather than
+// circles, so no two are the same shape and none of them look
+// stamped.
+//
+// The ring on the one ringed planet is the two-halves trick: the far
+// half is drawn first and the disc paints over its middle, then the
+// near half is drawn on top and crosses the face.
+var PLANET_STYLES = [
+  { body: '#5E96BE', spot: '#47799F', spotLight: '#8CB8D8', ring: null      },
+  { body: '#DDA45C', spot: '#BE8340', spotLight: '#F0C589', ring: '#6FA9A6' },
+  { body: '#9080C0', spot: '#7365A8', spotLight: '#B7ABDD', ring: null      },
+  { body: '#6FB89E', spot: '#54977E', spotLight: '#98D3BD', ring: null      },
+  { body: '#D9CDB4', spot: '#B4A68B', spotLight: '#EFE7D6', ring: null      },
+];
+
+// One spot. Four radii around a centre, joined by quadratics whose
+// control points sit at 0.75 of the neighbouring radii - close enough
+// to round to read as a crater, uneven enough not to read as a circle.
+function buildPlanetSpot(cx, cy, r, seed, color) {
+  var rN = r * (0.80 + hashSeed(seed) * 0.40);
+  var rE = r * (0.80 + hashSeed(seed + 0.41) * 0.40);
+  var rS = r * (0.80 + hashSeed(seed + 0.82) * 0.40);
+  var rW = r * (0.80 + hashSeed(seed + 1.23) * 0.40);
+  function pt(x, y) { return x.toFixed(2) + ' ' + y.toFixed(2); }
+  return (
+    '<path d="M' + pt(cx, cy - rN) +
+      ' Q' + pt(cx + rE * 0.75, cy - rN * 0.75) + ' ' + pt(cx + rE, cy) +
+      ' Q' + pt(cx + rE * 0.75, cy + rS * 0.75) + ' ' + pt(cx, cy + rS) +
+      ' Q' + pt(cx - rW * 0.75, cy + rS * 0.75) + ' ' + pt(cx - rW, cy) +
+      ' Q' + pt(cx - rW * 0.75, cy - rN * 0.75) + ' ' + pt(cx, cy - rN) +
+      ' Z" fill="' + color + '"/>'
+  );
+}
+
+// sizeMin/sizeMax are the spot radii; 1.2 is the most any jittered
+// radius can exceed r, so that is the reach a spot actually occupies
+// and the number both the containment cap and the spacing test use.
+//
+// Placement is rejection sampling, not one blind draw. The first
+// version drew an angle and a distance once per spot and lived with
+// the result, and the result was spots landing almost on top of each
+// other - random points do not spread themselves out, they clump.
+// Each spot now gets up to two dozen candidate positions and takes
+// the first that clears everything already down. `placed` is shared
+// across both passes so the small pale spots dodge the big dark ones
+// as well as each other.
+function buildPlanetSpotField(count, seedBase, sizeMin, sizeMax, color, placed) {
+  var out = '';
+
+  for (var i = 0; i < count; i++) {
+    var chosen = null;
+
+    for (var attempt = 0; attempt < 24 && !chosen; attempt++) {
+      var s     = seedBase + i * 5.37 + attempt * 1.913;
+      var angle = hashSeed(s) * Math.PI * 2;
+      var size  = sizeMin + hashSeed(s + 0.7) * (sizeMax - sizeMin);
+      var reach = size * 1.2;
+      var dist  = Math.sqrt(hashSeed(s + 0.31)) * (39 - reach);
+      var cx    = 50 + Math.cos(angle) * dist;
+      var cy    = 50 + Math.sin(angle) * dist;
+
+      var clear = true;
+      for (var k = 0; k < placed.length; k++) {
+        var dx = cx - placed[k][0];
+        var dy = cy - placed[k][1];
+        if (Math.sqrt(dx * dx + dy * dy) < reach + placed[k][2] + 0.8) {
+          clear = false;
+          break;
+        }
+      }
+      if (clear) chosen = [cx, cy, reach, size, s];
+    }
+
+    // No room left on this face. One spot fewer is a better outcome
+    // than a spot sitting on another one.
+    if (!chosen) continue;
+
+    placed.push(chosen);
+    out += buildPlanetSpot(chosen[0], chosen[1], chosen[3], chosen[4] + 2.1, color);
+  }
+
+  return out;
+}
+
+function buildPlanetSVG(styleIndex) {
+  var p    = PLANET_STYLES[styleIndex % PLANET_STYLES.length];
+  var seed = 11.3 + styleIndex * 17.77;
+
+  var placed = [];
+  var spots =
+    buildPlanetSpotField(6, seed,        4.5, 9.5, p.spot,      placed) +
+    buildPlanetSpotField(5, seed + 3.19, 2.0, 4.0, p.spotLight, placed);
+
+  var backRing  = '';
+  var frontRing = '';
+  if (p.ring) {
+    backRing =
+      '<g transform="translate(50 52) rotate(-18)">' +
+        '<path d="M-62 0 A62 17 0 0 1 62 0" fill="none" stroke="' + p.ring +
+        '" stroke-width="7" stroke-linecap="round"/></g>';
+    frontRing =
+      '<g transform="translate(50 52) rotate(-18)">' +
+        '<path d="M-62 0 A62 17 0 0 0 62 0" fill="none" stroke="' + p.ring +
+        '" stroke-width="7" stroke-linecap="round"/></g>';
+  }
+
+  // A ringed planet needs room either side for the ring; a bare one
+  // would just render small inside that same box, so it gets a box
+  // cropped to the disc.
+  var box = p.ring ? '-16 -8 132 120' : '4 4 92 92';
+
+  return (
+    '<svg viewBox="' + box + '" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      backRing +
+      '<circle cx="50" cy="50" r="40" fill="' + p.body + '"/>' +
+      spots +
+      frontRing +
+    '</svg>'
+  );
+}
+
+// --- Constellations -----------------------------------------------
+// Deliberately nameless. These are not Orion or the Plough and no
+// label goes anywhere near them: they are shapes in the sky, and half
+// the pleasure of finding one is that it is yours to read however you
+// like.
+//
+// Each is one polyline through a handful of points, four-pointed
+// sparkles at every joint (bigger on alternate points so the figure
+// has some rhythm), and a few loose stars around it drawn from the
+// same hashSeed the grass field uses - so a constellation sits in a
+// sky rather than on an empty page, and comes back identical on every
+// render.
+var CONSTELLATION_SHAPES = [
+  [[10, 70], [30, 58], [52, 62], [74, 46], [96, 50], [112, 32]],
+  [[14, 30], [34, 44], [56, 36], [80, 44], [100, 28], [110, 50]],
+  [[12, 52], [36, 28], [58, 44], [82, 22], [104, 46], [86, 66]],
+  [[18, 22], [40, 42], [64, 32], [86, 54], [108, 34]],
+  [[8, 44], [28, 66], [52, 54], [74, 70], [98, 52], [114, 66]],
+];
+
+function buildStarPoint(x, y, size, color) {
+  var cx = Number(x);
+  var cy = Number(y);
+  var s  = Number(size);
+  var q  = s * 0.24;
+  return (
+    '<path d="M' + cx + ' ' + (cy - s) +
+      ' Q' + (cx + q).toFixed(2) + ' ' + (cy - q).toFixed(2) + ' ' + (cx + s) + ' ' + cy +
+      ' Q' + (cx + q).toFixed(2) + ' ' + (cy + q).toFixed(2) + ' ' + cx + ' ' + (cy + s) +
+      ' Q' + (cx - q).toFixed(2) + ' ' + (cy + q).toFixed(2) + ' ' + (cx - s) + ' ' + cy +
+      ' Q' + (cx - q).toFixed(2) + ' ' + (cy - q).toFixed(2) + ' ' + cx + ' ' + (cy - s) +
+      ' Z" fill="' + color + '"/>'
+  );
+}
+
+function buildConstellationSVG(shapeIndex) {
+  var pts   = CONSTELLATION_SHAPES[shapeIndex % CONSTELLATION_SHAPES.length];
+  var line  = '';
+  var stars = '';
+  for (var i = 0; i < pts.length; i++) {
+    line += (i === 0 ? 'M' : ' L') + pts[i][0] + ' ' + pts[i][1];
+    var big = (i % 2 === 0);
+    stars += buildStarPoint(pts[i][0], pts[i][1], big ? 4.2 : 2.8, big ? '#F4F8FF' : '#D8E4FA');
+  }
+
+  var loose = '';
+  for (var j = 0; j < 6; j++) {
+    var s = shapeIndex * 7.31 + j * 3.77;
+    loose += buildStarPoint(
+      (5 + hashSeed(s) * 110).toFixed(1),
+      (6 + hashSeed(s + 0.9) * 80).toFixed(1),
+      1.5,
+      'rgba(226,238,255,0.62)'
+    );
+  }
+
+  return (
+    '<svg viewBox="0 0 120 92" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<path d="' + line + '" fill="none" stroke="rgba(198,216,255,0.32)" ' +
+        'stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>' +
+      loose +
+      stars +
+    '</svg>'
+  );
+}
+
+// --- Where everything hangs ---------------------------------------
+// left is a percentage of the TRACK, which is three screens wide, so
+// 33-67 is what you see before panning anywhere. top is a percentage
+// of the 150vh sky strip, and the bottom third of that strip is the
+// band already visible without scrolling up at all - which is why a
+// few rows sit down at 70-85%. Those are the ones that tell you there
+// is something up there worth scrolling for; the rest are the reward.
+//
+// phase is fed in as a NEGATIVE animation-delay, which starts an
+// animation already part-way through rather than holding it still for
+// that long first. Without it every balloon in the sky would rise and
+// fall in perfect unison.
+var SKY_BALLOONS = [
+  { art: 0, left: 46, top: 76, size: 98, secs: 26, phase:  0 },
+  { art: 1, left: 61, top: 41, size: 70, secs: 31, phase:  7 },
+  { art: 2, left: 25, top: 21, size: 52, secs: 35, phase: 14 },
+  { art: 3, left: 83, top: 57, size: 58, secs: 29, phase: 20 },
+  { art: 1, left: 12, top: 47, size: 46, secs: 33, phase:  4 },
+];
+
+// One of each shape, so no two kites in the sky are the same kite.
+var SKY_KITES = [
+  { art: 0, shape: 0, left: 38, top: 85, size: 78, secs:  9, phase: 0 },
+  { art: 1, shape: 1, left: 71, top: 66, size: 64, secs: 11, phase: 3 },
+  { art: 2, shape: 2, left: 15, top: 74, size: 56, secs: 10, phase: 6 },
+  { art: 3, shape: 3, left: 57, top: 52, size: 60, secs: 12, phase: 2 },
+];
+
+var SKY_CONSTELLATIONS = [
+  { art: 0, left: 42, top: 71, size: 210, secs:  7, phase: 0 },
+  { art: 1, left: 29, top: 33, size: 236, secs:  9, phase: 2 },
+  { art: 2, left: 63, top: 17, size: 194, secs:  8, phase: 4 },
+  { art: 3, left: 79, top: 52, size: 214, secs: 10, phase: 6 },
+  { art: 4, left: 12, top: 61, size: 182, secs:  8, phase: 1 },
+];
+
+var SKY_PLANETS = [
+  { art: 1, left: 55, top: 29, size: 96, secs: 34, phase:  0 },
+  { art: 0, left: 36, top: 14, size: 58, secs: 38, phase:  9 },
+  { art: 2, left: 68, top: 61, size: 46, secs: 30, phase: 15 },
+  { art: 3, left: 50, top: 80, size: 38, secs: 36, phase:  5 },
+  { art: 4, left: 21, top: 44, size: 52, secs: 32, phase: 21 },
+];
+
+// The wrapper carries the position and the centring translate; the
+// inner element carries the animation. They have to be two elements:
+// an animated transform completely replaces any transform already on
+// the box, so one element doing both would drop the -50%/-50% the
+// moment the first keyframe landed and every balloon would jump.
+function buildSkyDecorItem(className, spot, inner) {
+  return (
+    '<div class="sky-decor-item" style="left:' + spot.left + '%;top:' + spot.top + '%">' +
+      '<div class="' + className + '" style="width:' + spot.size + 'px;' +
+        'animation-duration:' + spot.secs + 's;animation-delay:-' + spot.phase + 's">' +
+        inner +
+      '</div>' +
+    '</div>'
+  );
+}
+
+var skyDecorCache = null;
+
+function getSkyDecorMarkup() {
+  if (skyDecorCache !== null) return skyDecorCache;
+
+  var i;
+  var day = '';
+  for (i = 0; i < SKY_BALLOONS.length; i++) {
+    day += buildSkyDecorItem('sky-balloon', SKY_BALLOONS[i], buildBalloonSVG(SKY_BALLOONS[i].art));
+  }
+  for (i = 0; i < SKY_KITES.length; i++) {
+    day += buildSkyDecorItem(
+      'sky-kite', SKY_KITES[i], buildKiteSVG(SKY_KITES[i].art, SKY_KITES[i].shape)
+    );
+  }
+
+  var night = '';
+  for (i = 0; i < SKY_CONSTELLATIONS.length; i++) {
+    night += buildSkyDecorItem(
+      'sky-constellation', SKY_CONSTELLATIONS[i], buildConstellationSVG(SKY_CONSTELLATIONS[i].art)
+    );
+  }
+  for (i = 0; i < SKY_PLANETS.length; i++) {
+    night += buildSkyDecorItem('sky-planet', SKY_PLANETS[i], buildPlanetSVG(SKY_PLANETS[i].art));
+  }
+
+  skyDecorCache =
+    '<div class="garden-sky-decor sky-decor-day">'   + day   + '</div>' +
+    '<div class="garden-sky-decor sky-decor-night">' + night + '</div>';
+
+  return skyDecorCache;
+}
+
+
 // Takes the track as an argument for the same reason renderGrassField
 // and renderFence do: 07-friend-garden.js renders into a different
 // track and gets the same sky for free.
@@ -465,7 +941,10 @@ function renderSky(track) {
   strip.className = 'garden-sky-extension';
   // Scenery, with nothing in it a screen reader could use.
   strip.setAttribute('aria-hidden', 'true');
-  strip.innerHTML = getStarfieldMarkup();
+  // Stars, then the balloons/kites/constellations/planets layer.
+  // Both are cached strings, so this is a concatenation and an
+  // innerHTML assignment, not a rebuild.
+  strip.innerHTML = getStarfieldMarkup() + getSkyDecorMarkup();
   track.appendChild(strip);
 }
 

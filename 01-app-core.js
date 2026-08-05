@@ -502,8 +502,16 @@ function navigateTo(page) {
   // (renderLawn in 04). Nothing about the unscrolled view changes:
   // all of it sits below the 50vh line, where the lawn covered it
   // anyway.
+  //
+  // Home is the exception to all of that: it is a close-up of a
+  // potting bench with no sky in it at all, and the bench is opaque,
+  // so the whole #sky element comes off rather than being covered up.
+  // Nothing about updateSky() cares - it keeps setting classes on a
+  // hidden element, and they are all correct again the moment you
+  // leave.
   if (skyEl) {
     skyEl.classList.toggle('sky-on-garden', page === 'garden' || page === 'friend-garden');
+    skyEl.classList.toggle('sky-off', page === 'home');
   }
 
   if (page === 'garden') {
@@ -737,6 +745,729 @@ if (plotGateEl) plotGateEl.addEventListener('click', function () { navigateTo('g
 // Garden sub-nav
 document.getElementById('garden-tab-daily').addEventListener('click',    function () { switchGardenTab('daily');    });
 document.getElementById('garden-tab-longterm').addEventListener('click',  function () { switchGardenTab('longterm'); });
+
+
+// ============================================
+// Home scene: the potting bench
+// ============================================
+// The home page is a close-up of a potting bench, seen from above.
+// There is no sky and no horizon on this page at all - the wood IS
+// the background - which is why navigateTo() hides #sky while we are
+// here (see the sky-off toggle further down this file).
+//
+// Division of labour, and it is worth keeping to it:
+//
+//   style.css    owns the table itself (planks, grain, seams, the
+//                warm pool of light and the vignette) and where every
+//                object sits. Layout is CSS, because only CSS knows
+//                how wide the window is.
+//   this file    owns what each object LOOKS like. Every prop is one
+//                self-contained SVG string dropped into a host span
+//                that style.css has already positioned and sized.
+//
+// So: to move a pot, edit style.css. To redraw it, edit here.
+//
+// Two rules the art follows throughout, both of them lessons from the
+// version of this page that did not work:
+//
+//   1. No flat fills. Every surface carries a gradient or a painted
+//      shading pass. A single-tone shape on a lit table reads as a
+//      sticker.
+//   2. No bare circles or plain ellipses, including for shadows. Every
+//      contact shadow is an irregular blob with a soft radial falloff,
+//      offset down and slightly right, because the light pools above
+//      and a little left of centre. Consistent shadow direction is
+//      most of what makes separate drawings feel like one scene.
+//
+// Gradient ids are prefixed 'hb' and are unique per prop. That is safe
+// here in a way it is not in 04-garden-scene.js: this scene is built
+// exactly once, so no id is ever duplicated in the document.
+//
+// Costs nothing at runtime beyond one string build per prop: no
+// Firestore read, no auth, no account. A visitor who never leaves the
+// home page is still free (see ensureSignedIn in 02-auth-tasks.js).
+
+// Palette. Deliberately NOT the :root tokens - those are interface
+// colours with a job each, and this is scenery, the same exception
+// the garden's lawn and sky already take.
+var HB = {
+  potLight:  '#DE9765',
+  potMid:    '#C4713F',
+  potDeep:   '#9E4E27',
+  potShade:  '#7C3A1C',
+  soil:      '#4B3423',
+  soilLight: '#66472F',
+  leaf:      '#4E7A3C',
+  leafLight: '#7CAE5C',
+  leafDeep:  '#3B5F2C',
+  stem:      '#5E8A45',
+  bloom:     '#D89A8E',   // the accent, used in exactly four places
+  bloomDeep: '#BC6F62',
+  sun:       '#E8B75C',
+  sunDeep:   '#C4913A',
+  paper:     '#F4E7CD',
+  paperEdge: '#DCC9A4',
+  metal:     '#AFB9BA',
+  metalMid:  '#889294',
+  metalDeep: '#5E6A6D',
+  twine:     '#D8BE8B',
+  twineDeep: '#B0925F',
+  wood:      '#B98A57',
+  woodDeep:  '#7C5533',
+  ink:       '#42301F'
+};
+
+
+// --- Shared drawing helpers ---------------------------------------
+
+// A contact shadow: irregular outline, soft radial falloff, always
+// offset down-right. `id` must be unique within its own prop.
+function hbShadow(id, cx, cy, rx, ry, alpha) {
+  var l = cx - rx, r = cx + rx, t = cy - ry, b = cy + ry;
+  return '' +
+    '<radialGradient id="' + id + '">' +
+      '<stop offset="42%" stop-color="#2E1A0A" stop-opacity="' + alpha + '"/>' +
+      '<stop offset="100%" stop-color="#2E1A0A" stop-opacity="0"/>' +
+    '</radialGradient>' +
+    '<path d="M' + l + ',' + (cy + ry * 0.1) +
+      ' C' + (l + rx * 0.1) + ',' + (t + ry * 0.1) + ' ' + (cx - rx * 0.3) + ',' + (t - ry * 0.15) + ' ' + (cx + rx * 0.08) + ',' + t +
+      ' C' + (cx + rx * 0.6) + ',' + (t + ry * 0.05) + ' ' + (r - rx * 0.05) + ',' + (cy - ry * 0.5) + ' ' + r + ',' + (cy + ry * 0.15) +
+      ' C' + (r - rx * 0.06) + ',' + (b - ry * 0.1) + ' ' + (cx + rx * 0.4) + ',' + (b + ry * 0.12) + ' ' + (cx - rx * 0.05) + ',' + b +
+      ' C' + (cx - rx * 0.55) + ',' + (b - ry * 0.02) + ' ' + (l + rx * 0.04) + ',' + (b - ry * 0.5) + ' ' + l + ',' + (cy + ry * 0.1) + 'Z"' +
+    ' fill="url(#' + id + ')"/>';
+}
+
+// A leaf. Two-tone: the full blade, then a lighter wedge along the
+// top edge so it turns towards the light instead of lying flat.
+function hbLeaf(x, y, rot, scale, dark, light) {
+  return '<g transform="translate(' + x + ',' + y + ') rotate(' + rot + ') scale(' + scale + ')">' +
+    '<path d="M0,0 C7,-10 21,-12 28,-2 C21,9 7,10 0,0Z" fill="' + dark + '"/>' +
+    '<path d="M0,0 C7,-10 21,-12 28,-2 C21,-5 10,-4 0,0Z" fill="' + light + '"/>' +
+    '<path d="M1.5,0 C10,-1.5 19,-2.5 26,-2.4" stroke="' + HB.leafDeep +
+      '" stroke-width="1.3" fill="none" stroke-linecap="round" opacity="0.55"/>' +
+    '</g>';
+}
+
+// Five sparse petals. Sparse on purpose - overlapping petal stacks
+// turn to mush at this size.
+function hbFlower(x, y, scale, petal, petalDeep, heart) {
+  var out = '<g transform="translate(' + x + ',' + y + ') scale(' + scale + ')">';
+  var a;
+  for (a = 0; a < 5; a++) {
+    out += '<g transform="rotate(' + (a * 72 - 90) + ')">' +
+      '<path d="M0,0 C5,-8 14,-10 17,-2 C14,6 5,7 0,0Z" fill="' + petal + '"/>' +
+      '<path d="M0,0 C5,-8 14,-10 17,-2 C13,-3 6,-2 0,0Z" fill="' + petalDeep + '" opacity="0.42"/>' +
+      '</g>';
+  }
+  out += '<path d="M0,-5 C3.4,-4 4.8,-1.6 4.2,1.8 C1.6,4.6 -2,4.4 -4,2 C-5,-1.4 -3,-4.2 0,-5Z" fill="' + heart + '"/>';
+  return out + '</g>';
+}
+
+
+// ============================================
+// The wordmark
+// ============================================
+// DISCIPLANT, grown rather than typed. Each letter is a skeleton
+// stroke - no font is involved - drawn three times:
+//
+//   1. a dark pass, nudged down, which is the vine's own shadow
+//      falling onto the plank underneath it
+//   2. the main stem
+//   3. a thin light pass, nudged up-left, which is the highlight that
+//      makes a flat stroke read as a round stem
+//
+// Leaves and the one flower are added afterwards at hand-picked
+// anchor points, kept sparse: a leaf on every curve buries the word.
+// The flower is the accent colour's first of four appearances.
+var HB_LETTERS = [
+  'M28,30 C26,60 29,92 28,122',                                  // D stem
+  'M28,31 C58,28 70,50 69,76 C68,101 56,124 28,121',             // D bowl
+  'M94,30 C92,60 96,92 94,122',                                  // I
+  'M154,46 C148,31 123,30 121,50 C119,70 153,68 154,90 C155,112 129,124 119,108', // S
+  'M212,50 C203,30 177,32 176,76 C175,118 203,122 212,104',      // C
+  'M237,30 C235,60 239,92 237,122',                              // I
+  'M266,30 C264,60 268,92 266,122',                              // P stem
+  'M266,31 C291,29 302,38 301,54 C300,70 289,78 266,77',         // P bowl
+  'M323,30 C321,60 325,94 323,121 C336,123 346,122 352,120',     // L
+  'M371,122 C379,92 387,58 392,30',                              // A left
+  'M392,30 C398,58 406,92 413,122',                              // A right
+  'M379,90 C389,87 397,87 406,90',                               // A bar
+  'M436,122 C435,92 437,58 436,30',                              // N left
+  'M436,32 C448,60 460,90 473,120',                              // N diagonal
+  'M473,120 C472,90 474,58 473,30',                              // N right
+  'M495,32 C509,29 523,31 535,31',                               // T bar
+  'M515,31 C513,60 517,94 515,122'                               // T stem
+];
+
+function hbWordmark() {
+  var i, pass = '';
+
+  // Pass 1: shadow onto the wood.
+  pass += '<g transform="translate(2,6)" opacity="0.34">';
+  for (i = 0; i < HB_LETTERS.length; i++) {
+    pass += '<path d="' + HB_LETTERS[i] + '" stroke="#2B1A0C" stroke-width="19" fill="none"' +
+            ' stroke-linecap="round" stroke-linejoin="round"/>';
+  }
+  pass += '</g>';
+
+  // Pass 2: the stem itself.
+  pass += '<g>';
+  for (i = 0; i < HB_LETTERS.length; i++) {
+    pass += '<path d="' + HB_LETTERS[i] + '" stroke="' + HB.leaf + '" stroke-width="17" fill="none"' +
+            ' stroke-linecap="round" stroke-linejoin="round"/>';
+  }
+  pass += '</g>';
+
+  // Pass 3: the roll of light along the top of each stem.
+  pass += '<g transform="translate(-1.5,-3.6)" opacity="0.85">';
+  for (i = 0; i < HB_LETTERS.length; i++) {
+    pass += '<path d="' + HB_LETTERS[i] + '" stroke="' + HB.leafLight + '" stroke-width="5.5" fill="none"' +
+            ' stroke-linecap="round" stroke-linejoin="round"/>';
+  }
+  pass += '</g>';
+
+  // Two tendrils, curling off where a real vine would run out of
+  // letter to follow.
+  pass += '<path d="M94,30 C92,20 84,15 78,19 C73,22 74,30 80,30 C85,30 86,25 84,22"' +
+          ' stroke="' + HB.stem + '" stroke-width="5" fill="none" stroke-linecap="round"/>';
+  pass += '<path d="M473,122 C476,132 486,136 492,132 C497,128 494,120 488,121"' +
+          ' stroke="' + HB.stem + '" stroke-width="5" fill="none" stroke-linecap="round"/>';
+
+  // Seven leaves. Counted, not sprinkled.
+  pass += hbLeaf(70, 56, -34, 0.85, HB.leaf, HB.leafLight);
+  pass += hbLeaf(120, 44, 196, 0.72, HB.leaf, HB.leafLight);
+  pass += hbLeaf(177, 104, 148, 0.78, HB.leaf, HB.leafLight);
+  pass += hbLeaf(302, 48, -22, 0.82, HB.leaf, HB.leafLight);
+  pass += hbLeaf(353, 119, -14, 0.74, HB.leaf, HB.leafLight);
+  pass += hbLeaf(393, 34, 202, 0.66, HB.leaf, HB.leafLight);
+  pass += hbLeaf(537, 29, -30, 0.8, HB.leaf, HB.leafLight);
+
+  // Accent 1 of 4.
+  pass += hbFlower(27, 24, 0.92, HB.bloom, HB.bloomDeep, HB.sun);
+
+  return '<svg viewBox="0 0 566 152" xmlns="http://www.w3.org/2000/svg" role="img" ' +
+         'aria-label="Disciplant">' + pass + '</svg>';
+}
+
+
+// ============================================
+// Carved lettering
+// ============================================
+// The four sign faces do not use a font. Every letter below is a
+// skeleton drawn by hand as one or more stroked paths on a 101-unit
+// cap height, and hbCutText() walks a string, lays the glyphs out and
+// stamps them three times to make them look cut into the wood rather
+// than printed on it.
+//
+// Why not a font: an inscription is not ink, it is a groove, and a
+// groove is defined by which of its walls the light hits. That needs
+// three offset copies of the same shape, which you cannot get from
+// text-shadow on a real font without the copies being letterforms in
+// their own right - they end up looking like a bad emboss. Drawing
+// the skeleton once and stroking it three times is both cheaper and
+// correct.
+//
+// The three passes, in paint order:
+//
+//   1. LIT WALL     nudged down-right, in a tint of the paint. This
+//                   is the lower wall of the groove, the only part
+//                   of a cut that faces the lamp.
+//   2. SHADOW WALL  nudged up-left, very dark. The upper wall, which
+//                   the light never reaches.
+//   3. FLOOR        centred and slightly narrower, mid-dark. What is
+//                   left is the bottom of the cut.
+//
+// The offsets are down-right and up-left because the bench's light
+// pools above and a little left of centre - the same direction every
+// prop shadow in the scene above already uses. Change one, change
+// both, or the signs will be lit from a different lamp than the pots.
+//
+// Round caps and joins throughout: a router bit has a radius, so a
+// cut letter cannot have a sharp corner.
+//
+// Letters are stored with a small amount of wobble in the control
+// points. Perfectly straight stems are what make hand-drawn
+// lettering read as a font again.
+
+// Advance width per glyph, then its strokes. Only the letters the
+// four signs actually need are here - adding a word means adding its
+// missing letters, and hbCutText will warn in the console rather than
+// silently dropping one.
+var HB_GLYPHS = {
+  ' ': { w: 30, d: [] },
+  'A': { w: 72, d: ['M7,101 C16,72 27,38 36,3',
+                    'M36,3 C45,38 56,72 65,101',
+                    'M18,67 C29,64 43,64 54,67'] },
+  'D': { w: 70, d: ['M11,3 C9,36 12,70 11,101',
+                    'M11,4 C38,1 63,14 62,52 C61,90 38,103 11,100'] },
+  'E': { w: 58, d: ['M13,3 C11,36 14,70 13,101',
+                    'M13,4 C27,1 43,3 54,2',
+                    'M13,51 C25,48 37,49 46,50',
+                    'M13,100 C27,103 43,100 55,99'] },
+  'F': { w: 56, d: ['M13,3 C11,36 14,70 13,101',
+                    'M13,4 C27,1 43,3 53,2',
+                    'M13,51 C25,48 37,49 45,50'] },
+  'G': { w: 76, d: ['M64,22 C55,3 32,-1 18,14 C3,31 3,73 18,89 C33,104 60,99 65,82 L65,58 L44,58'] },
+  'H': { w: 70, d: ['M11,3 C9,36 12,70 11,101',
+                    'M60,3 C58,36 61,70 60,101',
+                    'M11,52 C25,49 46,49 60,52'] },
+  'I': { w: 26, d: ['M13,3 C11,36 15,70 13,101'] },
+  'K': { w: 68, d: ['M11,3 C9,36 12,70 11,101',
+                    'M62,3 C48,20 33,38 22,53',
+                    'M29,45 C42,63 54,82 64,101'] },
+  'N': { w: 72, d: ['M10,101 C8,70 11,36 10,3',
+                    'M10,4 C24,36 47,72 62,100',
+                    'M62,100 C60,70 63,36 62,3'] },
+  'O': { w: 76, d: ['M38,2 C15,2 4,23 4,52 C4,81 15,101 38,101 C61,101 72,81 72,52 C72,23 61,2 38,2Z'] },
+  'R': { w: 68, d: ['M11,3 C9,36 12,70 11,101',
+                    'M11,4 C34,1 62,6 62,29 C62,48 44,54 11,52',
+                    'M35,52 C45,68 56,85 64,101'] },
+  'S': { w: 64, d: ['M56,20 C48,4 20,0 12,18 C4,36 27,45 41,54 C57,63 60,84 45,94 C31,103 12,97 6,83'] },
+  'T': { w: 62, d: ['M4,5 C20,2 43,3 58,3',
+                    'M31,4 C29,36 33,70 31,101'] },
+  'U': { w: 70, d: ['M11,3 C9,28 10,52 11,68 C12,90 23,101 37,101 C51,101 61,90 62,68 C63,52 64,28 62,3'] }
+};
+
+var HB_TRACKING = 12;   // space between glyph boxes, in glyph units
+var HB_CUT_W     = 15;  // width of the cut
+var HB_CUT_DX    = 1.9; // how far the lit wall sits down and right
+var HB_CUT_DY    = 2.2;
+
+// One pass over the whole string: every glyph's strokes, translated
+// into place, at one stroke width and one colour.
+function hbCutPass(chars, width, colour, dx, dy, opacity) {
+  var out = '<g transform="translate(' + dx + ',' + dy + ')"' +
+            (opacity === 1 ? '' : ' opacity="' + opacity + '"') + '>';
+  var x = 0, i, j, g;
+
+  for (i = 0; i < chars.length; i++) {
+    g = HB_GLYPHS[chars[i]];
+    if (g.d.length) {
+      out += '<g transform="translate(' + x + ',0)">';
+      for (j = 0; j < g.d.length; j++) {
+        out += '<path d="' + g.d[j] + '" fill="none" stroke="' + colour +
+               '" stroke-width="' + width + '" stroke-linecap="round" stroke-linejoin="round"/>';
+      }
+      out += '</g>';
+    }
+    x += g.w + HB_TRACKING;
+  }
+
+  return out + '</g>';
+}
+
+// sign = { text, lit, shadow, floor }
+function hbCutText(sign) {
+  var raw = String(sign.text).toUpperCase();
+  var chars = [];
+  var total = 0;
+  var i;
+
+  for (i = 0; i < raw.length; i++) {
+    if (!HB_GLYPHS[raw[i]]) {
+      console.warn('DISCIPLANT: no carved glyph for "' + raw[i] +
+                   '" - add it to HB_GLYPHS in 01-app-core.js.');
+      continue;
+    }
+    chars.push(raw[i]);
+    total += HB_GLYPHS[raw[i]].w + HB_TRACKING;
+  }
+  total -= HB_TRACKING;   // no tracking after the last glyph
+
+  // Room for the stroke and for both offsets, on all four sides.
+  var pad = HB_CUT_W / 2 + 6;
+
+  return '<svg viewBox="' + (-pad) + ' ' + (-pad) + ' ' + (total + pad * 2) +
+         ' ' + (101 + pad * 2) + '" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+    hbCutPass(chars, HB_CUT_W,       sign.lit,     HB_CUT_DX,  HB_CUT_DY,  0.95) +
+    hbCutPass(chars, HB_CUT_W,       sign.shadow, -HB_CUT_DX * 0.7, -HB_CUT_DY * 0.7, 0.9) +
+    hbCutPass(chars, HB_CUT_W - 2.2, sign.floor,   0,          0,          1) +
+  '</svg>';
+}
+
+// One entry per sign. The three colours are always derived from the
+// same paint as the block it is cut into (see the four .marker-*
+// paint classes in style.css): a light tint for the lit wall, a very
+// dark shade for the shadowed wall, and a mid-dark for the floor.
+// Keeping them here rather than in CSS avoids relying on custom
+// properties resolving inside injected SVG.
+var HB_SIGNS = [
+  { hostId: 'cutGarden',     text: 'ENTER GARDEN',
+    lit: '#B9DE9B', shadow: '#20401A', floor: '#3B6629' },
+  { hostId: 'cutTasks',      text: 'TASKS',
+    lit: '#ADD5E8', shadow: '#17323F', floor: '#305A72' },
+  { hostId: 'cutGreenhouse', text: 'GREENHOUSE',
+    lit: '#FBE4AF', shadow: '#563608', floor: '#8C6019' },
+  { hostId: 'cutFriends',    text: 'FRIENDS',
+    lit: '#F4BAA9', shadow: '#4A1C12', floor: '#7C3B29' }
+];
+
+
+// ============================================
+// The props
+// ============================================
+
+// Big terracotta pot, front left. Carries the mascot and accent 2 of 4.
+function hbPotMain() {
+  return '<svg viewBox="0 0 164 208" xmlns="http://www.w3.org/2000/svg">' +
+    '<defs>' +
+      '<linearGradient id="hbPmBody" x1="0" y1="0" x2="1" y2="0.35">' +
+        '<stop offset="0%" stop-color="' + HB.potLight + '"/>' +
+        '<stop offset="46%" stop-color="' + HB.potMid + '"/>' +
+        '<stop offset="100%" stop-color="' + HB.potShade + '"/>' +
+      '</linearGradient>' +
+      '<linearGradient id="hbPmRim" x1="0" y1="0" x2="1" y2="0.6">' +
+        '<stop offset="0%" stop-color="#EAA773"/>' +
+        '<stop offset="55%" stop-color="' + HB.potMid + '"/>' +
+        '<stop offset="100%" stop-color="' + HB.potDeep + '"/>' +
+      '</linearGradient>' +
+    '</defs>' +
+    hbShadow('hbPmSh', 88, 190, 68, 15, 0.5) +
+
+    // Body: tapered, with the bottom corners rolled.
+    '<path d="M36,74 L128,74 L116,172 C115,180 104,184 82,184 C60,184 49,180 48,172 Z" fill="url(#hbPmBody)"/>' +
+    // The turn of the clay on the left, where the light lands.
+    '<path d="M42,78 C46,116 52,152 58,178 C52,177 49,175 48,171 L38,80Z" fill="#F0B183" opacity="0.5"/>' +
+    // ...and the far side falling away.
+    '<path d="M112,78 L122,80 L112,171 C111,177 104,181 92,183 C104,150 110,114 112,78Z" fill="' + HB.potShade + '" opacity="0.45"/>' +
+
+    // Rim, overhanging on both sides so the pot has a lip to catch light.
+    '<path d="M26,50 L138,50 C142,50 143,53 142,57 L138,74 C137,78 134,80 130,80 L34,80 C30,80 27,78 26,74 L22,57 C21,53 22,50 26,50Z" fill="url(#hbPmRim)"/>' +
+    '<path d="M28,54 C60,49 106,49 136,54 C106,58 58,58 28,54Z" fill="#F3B98C" opacity="0.55"/>' +
+
+    // Soil, sitting below the rim line.
+    '<path d="M34,55 C58,48 108,48 132,55 C126,63 100,66 82,66 C62,66 40,62 34,55Z" fill="' + HB.soil + '"/>' +
+    '<path d="M46,56 C62,52 100,52 118,56 C104,60 62,61 46,56Z" fill="' + HB.soilLight + '" opacity="0.65"/>' +
+
+    // The plant: one stem, two leaves, one bloom. Accent 2 of 4.
+    '<path d="M84,58 C80,42 84,26 94,16" stroke="' + HB.stem + '" stroke-width="6" fill="none" stroke-linecap="round"/>' +
+    hbLeaf(83, 44, -152, 1.05, HB.leaf, HB.leafLight) +
+    hbLeaf(86, 32, -18, 0.95, HB.leaf, HB.leafLight) +
+    hbFlower(97, 14, 1.05, HB.bloom, HB.bloomDeep, HB.sun) +
+
+    // Mascot: a sprout that has decided this pot is its house. Peeks
+    // over the near rim, small enough to lose an argument with the
+    // wordmark. Its cheek mark is accent 3 of 4.
+    '<g transform="translate(44,30)">' +
+      '<path d="M0,30 C-3,16 2,4 12,2 C22,0 29,9 28,22 C27,31 22,36 14,36 C6,36 1,34 0,30Z" fill="#79AE5A"/>' +
+      '<path d="M4,30 C1,17 5,7 13,4 C9,14 8,24 11,35 C7,35 5,33 4,30Z" fill="#96C776" opacity="0.75"/>' +
+      hbLeaf(11, 2, -108, 0.6, HB.leaf, HB.leafLight) +
+      hbLeaf(19, 3, -46, 0.55, HB.leaf, HB.leafLight) +
+      '<path d="M8,18 C10,16 12,17 12,20 C12,23 10,24 8,22Z" fill="' + HB.ink + '"/>' +
+      '<path d="M19,18 C21,16 23,17 23,20 C23,23 21,24 19,22Z" fill="' + HB.ink + '"/>' +
+      '<path d="M12,27 C14,29 17,29 19,27" stroke="' + HB.ink + '" stroke-width="1.8" fill="none" stroke-linecap="round"/>' +
+      '<path d="M2,23 C4,22 6,23 6,25 C6,27 3,27 2,25Z" fill="' + HB.bloom + '" opacity="0.8"/>' +
+    '</g>' +
+  '</svg>';
+}
+
+// Medium pot with two seedling leaves, front left, sitting behind the
+// big one so the two overlap rather than line up.
+function hbPotSmall() {
+  return '<svg viewBox="0 0 120 148" xmlns="http://www.w3.org/2000/svg">' +
+    '<defs>' +
+      '<linearGradient id="hbPsBody" x1="0" y1="0" x2="1" y2="0.3">' +
+        '<stop offset="0%" stop-color="' + HB.potLight + '"/>' +
+        '<stop offset="52%" stop-color="' + HB.potMid + '"/>' +
+        '<stop offset="100%" stop-color="' + HB.potShade + '"/>' +
+      '</linearGradient>' +
+    '</defs>' +
+    hbShadow('hbPsSh', 62, 134, 47, 11, 0.46) +
+    '<path d="M28,60 L94,60 L85,124 C84,131 76,134 61,134 C46,134 38,131 37,124 Z" fill="url(#hbPsBody)"/>' +
+    '<path d="M33,63 C36,90 40,112 44,130 C40,129 38,127 37,123 L30,65Z" fill="#F0B183" opacity="0.45"/>' +
+    '<path d="M20,42 L102,42 C105,42 106,45 105,48 L102,60 C101,63 99,65 96,65 L26,65 C23,65 21,63 20,60 L17,48 C16,45 17,42 20,42Z" fill="url(#hbPsBody)"/>' +
+    '<path d="M22,45 C46,41 78,41 100,45 C78,49 44,49 22,45Z" fill="#F3B98C" opacity="0.5"/>' +
+    '<path d="M26,46 C44,41 78,41 96,46 C90,53 74,56 61,56 C46,56 30,52 26,46Z" fill="' + HB.soil + '"/>' +
+    '<path d="M60,48 C57,36 58,26 63,18" stroke="' + HB.stem + '" stroke-width="5" fill="none" stroke-linecap="round"/>' +
+    hbLeaf(59, 34, -158, 0.9, HB.leaf, HB.leafLight) +
+    hbLeaf(61, 22, -24, 0.85, HB.leaf, HB.leafLight) +
+    hbLeaf(62, 12, -96, 0.62, HB.leaf, HB.leafLight) +
+  '</svg>';
+}
+
+// Small pot, back right. Smaller and lower-contrast than the front
+// two - that is the whole depth cue.
+function hbPotBack() {
+  return '<svg viewBox="0 0 104 126" xmlns="http://www.w3.org/2000/svg">' +
+    '<defs>' +
+      '<linearGradient id="hbPbBody" x1="0" y1="0" x2="1" y2="0.3">' +
+        '<stop offset="0%" stop-color="#D68F62"/>' +
+        '<stop offset="55%" stop-color="' + HB.potMid + '"/>' +
+        '<stop offset="100%" stop-color="' + HB.potDeep + '"/>' +
+      '</linearGradient>' +
+    '</defs>' +
+    hbShadow('hbPbSh', 53, 112, 40, 10, 0.4) +
+    '<path d="M24,54 L82,54 L74,104 C73,110 66,113 53,113 C40,113 33,110 32,104 Z" fill="url(#hbPbBody)"/>' +
+    '<path d="M28,57 C31,79 34,96 37,110 C34,109 33,107 32,104 L26,58Z" fill="#EDAC7E" opacity="0.42"/>' +
+    '<path d="M17,38 L89,38 C92,38 93,41 92,44 L89,54 C88,57 86,58 83,58 L23,58 C20,58 18,57 17,54 L14,44 C13,41 14,38 17,38Z" fill="url(#hbPbBody)"/>' +
+    '<path d="M19,41 C40,37 66,37 87,41 C66,45 40,45 19,41Z" fill="#F1B589" opacity="0.45"/>' +
+    '<path d="M22,42 C40,38 66,38 84,42 C78,48 64,50 53,50 C40,50 26,47 22,42Z" fill="' + HB.soil + '"/>' +
+    // Three sprigs, staggered heights so the silhouette is not a fan.
+    '<path d="M46,44 C42,32 44,22 50,16" stroke="' + HB.stem + '" stroke-width="4.4" fill="none" stroke-linecap="round"/>' +
+    '<path d="M56,44 C57,33 62,25 69,21" stroke="' + HB.stem + '" stroke-width="4.4" fill="none" stroke-linecap="round"/>' +
+    '<path d="M51,45 C51,37 53,31 56,27" stroke="' + HB.stem + '" stroke-width="4" fill="none" stroke-linecap="round"/>' +
+    hbLeaf(50, 15, -122, 0.72, HB.leaf, HB.leafLight) +
+    hbLeaf(69, 20, -34, 0.7, HB.leaf, HB.leafLight) +
+    hbLeaf(56, 26, -78, 0.6, HB.leaf, HB.leafLight) +
+  '</svg>';
+}
+
+// Watering can, back left. Handle, spout, rose, and a dented body -
+// a perfectly smooth can looks like a rendering, not a tool.
+function hbWateringCan() {
+  return '<svg viewBox="0 0 196 142" xmlns="http://www.w3.org/2000/svg">' +
+    '<defs>' +
+      '<linearGradient id="hbWcBody" x1="0" y1="0" x2="0.25" y2="1">' +
+        '<stop offset="0%" stop-color="#C9D2D3"/>' +
+        '<stop offset="38%" stop-color="' + HB.metal + '"/>' +
+        '<stop offset="100%" stop-color="' + HB.metalDeep + '"/>' +
+      '</linearGradient>' +
+      '<linearGradient id="hbWcSpout" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0%" stop-color="#BEC8C9"/>' +
+        '<stop offset="100%" stop-color="#6C7679"/>' +
+      '</linearGradient>' +
+    '</defs>' +
+    hbShadow('hbWcSh', 106, 124, 66, 12, 0.44) +
+    // Spout, running out to the left and down to the rose.
+    '<path d="M74,66 C56,68 38,78 26,94 C22,100 24,106 30,106 C36,106 40,100 46,94 C56,84 68,80 80,80Z" fill="url(#hbWcSpout)"/>' +
+    '<path d="M14,88 L38,80 C42,86 42,96 38,102 L14,108 C10,102 10,94 14,88Z" fill="' + HB.metalDeep + '"/>' +
+    '<path d="M16,91 L34,85 C36,89 36,95 34,99 L16,105 C14,100 14,96 16,91Z" fill="#8E9A9C"/>' +
+    // Body.
+    '<path d="M72,56 C68,56 66,60 67,66 L76,110 C77,118 84,122 104,122 C124,122 132,118 133,110 L142,66 C143,60 141,56 137,56Z" fill="url(#hbWcBody)"/>' +
+    '<path d="M78,60 C80,80 84,102 90,120 C84,119 80,116 79,111 L72,62Z" fill="#DCE4E5" opacity="0.55"/>' +
+    '<path d="M128,60 L138,61 L128,111 C127,116 121,119 114,120 C122,102 126,80 128,60Z" fill="#576265" opacity="0.4"/>' +
+    // Collar and handle.
+    '<path d="M66,48 L144,48 C147,48 148,51 147,55 L146,60 C145,63 143,64 140,64 L70,64 C67,64 65,63 64,60 L63,55 C62,51 63,48 66,48Z" fill="#BCC6C7"/>' +
+    '<path d="M84,50 C88,26 122,24 128,48" stroke="#7D888B" stroke-width="9" fill="none" stroke-linecap="round"/>' +
+    '<path d="M86,47 C90,29 118,27 125,45" stroke="#B7C1C2" stroke-width="3.4" fill="none" stroke-linecap="round"/>' +
+  '</svg>';
+}
+
+// Trowel, front right, lying at an angle across the boards.
+function hbTrowel() {
+  return '<svg viewBox="0 0 208 96" xmlns="http://www.w3.org/2000/svg">' +
+    '<defs>' +
+      '<linearGradient id="hbTrBlade" x1="0" y1="0" x2="0.3" y2="1">' +
+        '<stop offset="0%" stop-color="#CBD4D5"/>' +
+        '<stop offset="44%" stop-color="' + HB.metal + '"/>' +
+        '<stop offset="100%" stop-color="#606B6E"/>' +
+      '</linearGradient>' +
+      '<linearGradient id="hbTrGrip" x1="0" y1="0" x2="0.2" y2="1">' +
+        '<stop offset="0%" stop-color="#C98A57"/>' +
+        '<stop offset="50%" stop-color="#A96C3C"/>' +
+        '<stop offset="100%" stop-color="#784823"/>' +
+      '</linearGradient>' +
+    '</defs>' +
+    hbShadow('hbTrSh', 104, 74, 88, 11, 0.42) +
+    // Blade: scooped, asymmetric, with a worn tip.
+    '<path d="M14,44 C22,26 44,18 68,20 C86,22 96,32 96,44 C96,56 86,64 68,66 C44,68 22,60 14,44Z" fill="url(#hbTrBlade)"/>' +
+    '<path d="M22,44 C30,30 48,24 68,26 C56,32 44,40 38,52 C30,50 25,48 22,44Z" fill="#DDE5E6" opacity="0.5"/>' +
+    '<path d="M60,62 C80,60 92,54 95,44 C97,56 87,64 68,66Z" fill="#4E585B" opacity="0.5"/>' +
+    // Shaft and ferrule.
+    '<path d="M94,38 L122,36 L124,52 L94,50Z" fill="#8B9698"/>' +
+    '<path d="M120,34 L136,33 C140,33 142,36 142,42 C142,49 140,53 136,53 L120,52Z" fill="#6E797C"/>' +
+    // Wooden grip with a grain line and a light top edge.
+    '<path d="M138,32 L186,30 C194,30 199,35 199,43 C199,51 194,56 186,56 L138,54Z" fill="url(#hbTrGrip)"/>' +
+    '<path d="M142,35 L184,34 C189,34 192,37 192,40 C186,38 160,38 142,39Z" fill="#DDA470" opacity="0.55"/>' +
+    '<path d="M146,48 C162,47 180,47 192,48" stroke="#7A4A24" stroke-width="1.6" fill="none" opacity="0.5"/>' +
+  '</svg>';
+}
+
+// Two seed packets, front right, overlapping and tossed at different
+// angles. The upper one's illustration is accent 4 of 4.
+function hbPackets() {
+  return '<svg viewBox="0 0 216 174" xmlns="http://www.w3.org/2000/svg">' +
+    '<defs>' +
+      '<linearGradient id="hbPkA" x1="0" y1="0" x2="0.3" y2="1">' +
+        '<stop offset="0%" stop-color="#FBF1DC"/>' +
+        '<stop offset="62%" stop-color="' + HB.paper + '"/>' +
+        '<stop offset="100%" stop-color="#D8C29A"/>' +
+      '</linearGradient>' +
+      '<linearGradient id="hbPkB" x1="0" y1="0" x2="0.3" y2="1">' +
+        '<stop offset="0%" stop-color="#F3E4C4"/>' +
+        '<stop offset="62%" stop-color="#E7D5B0"/>' +
+        '<stop offset="100%" stop-color="#C9B084"/>' +
+      '</linearGradient>' +
+    '</defs>' +
+    hbShadow('hbPkSh', 108, 148, 88, 13, 0.42) +
+
+    // Lower packet, rotated the other way.
+    '<g transform="rotate(-9 60 100)">' +
+      '<path d="M12,64 L108,52 C112,52 114,54 114,58 L124,140 C124,144 122,146 118,147 L22,158 C18,158 16,156 16,152Z" fill="url(#hbPkB)"/>' +
+      '<path d="M14,70 L112,58 L114,72 L16,84Z" fill="#B58F5C" opacity="0.32"/>' +
+      // A carrot-ish root, drawn not photographed.
+      '<path d="M52,96 C60,92 70,94 74,102 C78,112 70,128 58,132 C48,128 46,110 52,96Z" fill="#D9873F"/>' +
+      '<path d="M55,99 C60,97 66,98 69,103 C64,105 58,110 55,118 C52,111 52,103 55,99Z" fill="#EFA362" opacity="0.6"/>' +
+      hbLeaf(66, 92, -128, 0.62, HB.leaf, HB.leafLight) +
+      hbLeaf(74, 96, -66, 0.58, HB.leaf, HB.leafLight) +
+      '<path d="M30,140 L96,132" stroke="#9C7C4E" stroke-width="3" stroke-linecap="round" opacity="0.4"/>' +
+      '<path d="M30,148 L74,143" stroke="#9C7C4E" stroke-width="3" stroke-linecap="round" opacity="0.28"/>' +
+    '</g>' +
+
+    // Upper packet, lying across the first.
+    '<g transform="rotate(7 150 84)">' +
+      '<path d="M92,26 L188,20 C192,20 194,22 194,26 L200,112 C200,116 198,118 194,118 L98,126 C94,126 92,124 92,120Z" fill="url(#hbPkA)"/>' +
+      '<path d="M92,32 L194,26 L195,42 L93,48Z" fill="#C39A62" opacity="0.3"/>' +
+      hbFlower(140, 72, 1.28, HB.bloom, HB.bloomDeep, HB.sun) +
+      hbLeaf(150, 88, -22, 0.72, HB.leaf, HB.leafLight) +
+      hbLeaf(130, 90, 202, 0.68, HB.leaf, HB.leafLight) +
+      '<path d="M106,104 L180,99" stroke="#9C7C4E" stroke-width="3" stroke-linecap="round" opacity="0.4"/>' +
+      '<path d="M106,112 L152,108" stroke="#9C7C4E" stroke-width="3" stroke-linecap="round" opacity="0.28"/>' +
+      // Torn corner, so it reads as used.
+      '<path d="M182,20 L194,26 L194,34 C188,30 184,25 182,20Z" fill="#C7AF86"/>' +
+    '</g>' +
+  '</svg>';
+}
+
+// Ball of twine, back right, with a loose end trailing off.
+function hbTwine() {
+  return '<svg viewBox="0 0 128 118" xmlns="http://www.w3.org/2000/svg">' +
+    '<defs>' +
+      '<radialGradient id="hbTwBall" cx="0.36" cy="0.3" r="0.78">' +
+        '<stop offset="0%" stop-color="#EBD7A9"/>' +
+        '<stop offset="55%" stop-color="' + HB.twine + '"/>' +
+        '<stop offset="100%" stop-color="#9C7C4B"/>' +
+      '</radialGradient>' +
+    '</defs>' +
+    hbShadow('hbTwSh', 60, 104, 44, 10, 0.42) +
+    '<path d="M12,58 C12,30 32,14 60,14 C88,14 106,32 106,58 C106,84 88,100 60,100 C32,100 12,84 12,58Z" fill="url(#hbTwBall)"/>' +
+    // Wound strands: arcs following the ball, not concentric rings.
+    '<path d="M18,44 C34,28 66,22 94,34" stroke="' + HB.twineDeep + '" stroke-width="2.6" fill="none" opacity="0.5"/>' +
+    '<path d="M14,62 C32,44 70,38 102,52" stroke="' + HB.twineDeep + '" stroke-width="2.6" fill="none" opacity="0.45"/>' +
+    '<path d="M18,78 C36,62 74,58 104,70" stroke="' + HB.twineDeep + '" stroke-width="2.6" fill="none" opacity="0.4"/>' +
+    '<path d="M30,92 C48,80 82,78 100,86" stroke="' + HB.twineDeep + '" stroke-width="2.4" fill="none" opacity="0.34"/>' +
+    '<path d="M24,36 C38,52 44,76 42,98" stroke="#F0DDB4" stroke-width="2.2" fill="none" opacity="0.4"/>' +
+    // Loose end.
+    '<path d="M100,74 C114,80 122,92 118,104 C116,110 110,112 106,108" stroke="' + HB.twine +
+      '" stroke-width="4" fill="none" stroke-linecap="round"/>' +
+  '</svg>';
+}
+
+// Spilled soil with stray seeds. Sits low and wide under the buttons,
+// which is what stops the bottom of the frame going empty.
+function hbSoil() {
+  return '<svg viewBox="0 0 260 96" xmlns="http://www.w3.org/2000/svg">' +
+    '<defs>' +
+      '<linearGradient id="hbSoHeap" x1="0.2" y1="0" x2="0.7" y2="1">' +
+        '<stop offset="0%" stop-color="#6B4A30"/>' +
+        '<stop offset="55%" stop-color="#503725"/>' +
+        '<stop offset="100%" stop-color="#382517"/>' +
+      '</linearGradient>' +
+    '</defs>' +
+    '<path d="M18,64 C34,44 66,36 106,38 C150,40 186,34 214,42 C238,49 246,64 236,74 C222,88 170,88 122,84 C74,80 30,84 18,74 C12,70 13,68 18,64Z" fill="url(#hbSoHeap)" opacity="0.92"/>' +
+    '<path d="M40,58 C64,46 100,44 130,48 C112,52 78,54 56,62 C46,62 42,60 40,58Z" fill="#7A563A" opacity="0.55"/>' +
+    // Crumbs walking away from the heap - the reason it reads as spilt.
+    '<path d="M244,52 C248,50 252,52 251,56 C249,60 244,59 243,56Z" fill="#4E3524"/>' +
+    '<path d="M12,52 C16,50 20,52 19,56 C17,59 12,58 11,55Z" fill="#4E3524"/>' +
+    '<path d="M204,26 C208,24 211,26 210,30 C208,33 204,32 203,29Z" fill="#5A3E29"/>' +
+    '<path d="M62,28 C66,26 69,28 68,32 C66,35 62,34 61,31Z" fill="#5A3E29"/>' +
+    // Seeds: teardrops, pale, catching the light.
+    '<path d="M92,26 C97,22 104,24 104,30 C104,36 96,38 92,33Z" fill="#D9C193"/>' +
+    '<path d="M96,29 C99,26 102,27 103,30 C100,31 98,31 96,29Z" fill="#F0DDB4"/>' +
+    '<path d="M162,20 C167,16 174,18 174,24 C174,30 166,32 162,27Z" fill="#D9C193"/>' +
+    '<path d="M166,23 C169,20 172,21 173,24 C170,25 168,25 166,23Z" fill="#F0DDB4"/>' +
+    '<path d="M228,86 C233,82 240,84 240,90 C240,96 232,97 228,92Z" fill="#D9C193"/>' +
+    '<path d="M34,84 C39,80 46,82 46,88 C46,94 38,95 34,90Z" fill="#D9C193"/>' +
+  '</svg>';
+}
+
+// Two stray leaves, blown off something. One per host.
+function hbStrayLeafA() {
+  return '<svg viewBox="0 0 96 68" xmlns="http://www.w3.org/2000/svg">' +
+    hbShadow('hbLaSh', 50, 50, 32, 7, 0.34) +
+    '<g transform="translate(10,40) rotate(-16) scale(2.5)">' +
+      '<path d="M0,0 C7,-10 21,-12 28,-2 C21,9 7,10 0,0Z" fill="#5C8B44"/>' +
+      '<path d="M0,0 C7,-10 21,-12 28,-2 C21,-5 10,-4 0,0Z" fill="#84B865"/>' +
+      '<path d="M1.5,0 C10,-1.5 19,-2.5 26,-2.4" stroke="#3B5F2C" stroke-width="1.2" fill="none" stroke-linecap="round" opacity="0.5"/>' +
+      '<path d="M8,-1 C9,-4 10,-5 12,-6" stroke="#3B5F2C" stroke-width="0.9" fill="none" opacity="0.35"/>' +
+      '<path d="M15,-2 C16,-5 17,-6 19,-7" stroke="#3B5F2C" stroke-width="0.9" fill="none" opacity="0.35"/>' +
+    '</g>' +
+  '</svg>';
+}
+
+function hbStrayLeafB() {
+  return '<svg viewBox="0 0 86 62" xmlns="http://www.w3.org/2000/svg">' +
+    hbShadow('hbLbSh', 44, 46, 28, 6, 0.3) +
+    '<g transform="translate(72,26) rotate(154) scale(2.2)">' +
+      '<path d="M0,0 C7,-10 21,-12 28,-2 C21,9 7,10 0,0Z" fill="#6E9A50"/>' +
+      '<path d="M0,0 C7,-10 21,-12 28,-2 C21,-5 10,-4 0,0Z" fill="#93C271"/>' +
+      '<path d="M1.5,0 C10,-1.5 19,-2.5 26,-2.4" stroke="#41682F" stroke-width="1.2" fill="none" stroke-linecap="round" opacity="0.45"/>' +
+    '</g>' +
+  '</svg>';
+}
+
+// Marks in the wood itself: knots and a split. These go in their own
+// layer UNDER every prop, because they are part of the table, not
+// objects on it - a knot with a drop shadow would look like a stain
+// floating above the bench.
+function hbKnot(rx, ry) {
+  return '<svg viewBox="0 0 ' + (rx * 2) + ' ' + (ry * 2) + '" xmlns="http://www.w3.org/2000/svg">' +
+    '<g transform="translate(' + rx + ',' + ry + ')" opacity="0.5">' +
+      '<path d="M' + (-rx * 0.94) + ',0 C' + (-rx * 0.8) + ',' + (-ry * 0.86) + ' ' + (rx * 0.5) + ',' + (-ry * 0.98) + ' ' + (rx * 0.9) + ',' + (-ry * 0.16) +
+        ' C' + (rx * 0.96) + ',' + (ry * 0.6) + ' ' + (-rx * 0.3) + ',' + (ry * 0.96) + ' ' + (-rx * 0.94) + ',0Z" fill="none" stroke="#6A4728" stroke-width="2.4"/>' +
+      '<path d="M' + (-rx * 0.6) + ',0 C' + (-rx * 0.5) + ',' + (-ry * 0.55) + ' ' + (rx * 0.34) + ',' + (-ry * 0.62) + ' ' + (rx * 0.56) + ',' + (-ry * 0.1) +
+        ' C' + (rx * 0.6) + ',' + (ry * 0.4) + ' ' + (-rx * 0.2) + ',' + (ry * 0.6) + ' ' + (-rx * 0.6) + ',0Z" fill="none" stroke="#6A4728" stroke-width="2"/>' +
+      '<path d="M' + (-rx * 0.24) + ',' + (ry * 0.05) + ' C' + (-rx * 0.16) + ',' + (-ry * 0.26) + ' ' + (rx * 0.16) + ',' + (-ry * 0.28) + ' ' + (rx * 0.22) + ',0' +
+        ' C' + (rx * 0.2) + ',' + (ry * 0.24) + ' ' + (-rx * 0.14) + ',' + (ry * 0.26) + ' ' + (-rx * 0.24) + ',' + (ry * 0.05) + 'Z" fill="#5C3D22"/>' +
+    '</g>' +
+  '</svg>';
+}
+
+function hbSplit() {
+  return '<svg viewBox="0 0 40 220" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">' +
+    '<path d="M20,4 C16,44 24,86 19,128 C15,166 22,196 18,216" stroke="#5E3F23" stroke-width="2.6" fill="none" opacity="0.42" stroke-linecap="round"/>' +
+    '<path d="M22,10 C18,48 26,88 21,130" stroke="#C79A66" stroke-width="1.4" fill="none" opacity="0.3" stroke-linecap="round"/>' +
+  '</svg>';
+}
+
+
+// ============================================
+// Painting it
+// ============================================
+// Host id -> builder. style.css has already decided where each host
+// sits and how big it is; all that happens here is that the drawing
+// goes in. Nothing repaints: the bench does not change.
+var HOME_BENCH_ART = [
+  { hostId: 'homeWordmark',   build: hbWordmark    },
+  { hostId: 'benchPotMain',   build: hbPotMain     },
+  { hostId: 'benchPotSmall',  build: hbPotSmall    },
+  { hostId: 'benchPotBack',   build: hbPotBack     },
+  { hostId: 'benchCan',       build: hbWateringCan },
+  { hostId: 'benchTrowel',    build: hbTrowel      },
+  { hostId: 'benchPackets',   build: hbPackets     },
+  { hostId: 'benchTwine',     build: hbTwine       },
+  { hostId: 'benchSoil',      build: hbSoil        },
+  { hostId: 'benchLeafA',     build: hbStrayLeafA  },
+  { hostId: 'benchLeafB',     build: hbStrayLeafB  },
+  { hostId: 'benchKnotA',     build: function () { return hbKnot(34, 22); } },
+  { hostId: 'benchKnotB',     build: function () { return hbKnot(26, 17); } },
+  { hostId: 'benchKnotC',     build: function () { return hbKnot(20, 14); } },
+  { hostId: 'benchSplit',     build: hbSplit       }
+];
+
+function renderHomeScene() {
+  HOME_BENCH_ART.forEach(function (entry) {
+    var host = document.getElementById(entry.hostId);
+    if (!host || host.dataset.painted === '1') return;
+    host.innerHTML = entry.build();
+    host.dataset.painted = '1';
+  });
+
+  // The four sign faces. Same one-shot treatment as the props: the
+  // labels never change, so this runs once and never again.
+  HB_SIGNS.forEach(function (sign) {
+    var host = document.getElementById(sign.hostId);
+    if (!host || host.dataset.painted === '1') return;
+    host.innerHTML = hbCutText(sign);
+    host.dataset.painted = '1';
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderHomeScene);
+} else {
+  renderHomeScene();
+}
 
 
 // ============================================
