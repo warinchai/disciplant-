@@ -574,9 +574,14 @@ auth.onIdTokenChanged(function (user) {
             };
           });
           lastResetDate = data.lastResetDate || null;
+          // Which landscape the plot is wearing. An id that no longer
+          // exists resolves to the default at render time rather than
+          // here, so a skin that comes back later comes back worn.
+          gardenSkinId  = data.gardenSkinId || null;
         } else {
           tasks         = [];
           lastResetDate = null;
+          gardenSkinId  = null;
         }
 
         nextId = getNextId(tasks);
@@ -706,6 +711,10 @@ function saveData() {
   db.collection('gardens').doc(currentUserId).set({
     tasks:         cleanTasks,
     lastResetDate: lastResetDate,
+    // One string on a document that was already being written. The
+    // landscape skin therefore costs no extra write of its own, and
+    // no extra read: it arrives in the same snapshot as the tasks.
+    gardenSkinId:  gardenSkinId || GARDEN_SKIN_DEFAULT_ID,
   }).catch(function (error) {
     console.error('Error saving data:', error);
   });
@@ -758,6 +767,13 @@ function buildGardenSummary(cleanTasks) {
     // tell whether this snapshot is from ten seconds or ten days ago,
     // so `completed` below can't be pinned to a specific day either -
     // the friend view says so in plain words instead of guessing.
+
+    // Which landscape a friend sees the plot standing in. Safe to
+    // share by inspection: it is one id out of a fixed list of looks,
+    // chosen deliberately to be shown off, and it says nothing about
+    // what any habit is or when it was done. The skin actually WORN
+    // rather than the one stored, same rule as skinId per plant.
+    gardenSkinId: getActiveGardenSkinId(),
 
     plants: cleanTasks.map(function (t) {
       return {

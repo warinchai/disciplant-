@@ -306,15 +306,37 @@ function computeCustomLayout(task) {
 // toward the horizon - reinforcing the same depth cue the plants use.
 // ============================================
 
+// Meadow's blades, kept here as the fallback rather than only inside
+// the skin: this file has to be able to draw a lawn before any skin
+// is resolved, and a garden with no grass is a worse failure than a
+// garden in the wrong green.
 var GRASS_PALETTE = ['#3a6020', '#4a7a30', '#537d33', '#5a9035', '#487526', '#6aab45', '#436b2c'];
 var GRASS_TIP_LIGHT = '#cfe8a0';
+
+// Grass is the one part of the landscape a CSS variable can't reach.
+// Every blade's gradient is written as an inline style on the blade
+// itself (see buildGrassClump below), so the palette has to arrive as
+// data rather than as a token - which is why skins carry .grass and
+// .grassTip alongside their .vars.
+function getGrassPalette(skin) {
+  var palette = (skin && Array.isArray(skin.grass) && skin.grass.length)
+    ? skin.grass
+    : GRASS_PALETTE;
+  return {
+    palette: palette,
+    tip:     (skin && skin.grassTip) || GRASS_TIP_LIGHT,
+  };
+}
 // The track is 3x the viewport width, so this total is split evenly
 // across those 3 "screens" - 45 total works out to ~15 clumps visible
 // in any single field of view at a time, matching GRASS_PER_SCREEN.
 var GRASS_PER_SCREEN  = 15;
 var GRASS_CLUMP_COUNT = GRASS_PER_SCREEN * 3;
 
-function buildGrassClump(xPct, yPct, seedBase) {
+function buildGrassClump(xPct, yPct, seedBase, grass) {
+  // Resolved by the caller once per field rather than once per clump,
+  // but defaulted here too so a stray call can't throw.
+  grass = grass || getGrassPalette(null);
   var wrap = document.createElement('div');
   wrap.className = 'grass-clump';
   wrap.style.left = xPct + '%';
@@ -331,9 +353,9 @@ function buildGrassClump(xPct, yPct, seedBase) {
     var widthPx   = 3 + hashSeed(s + 0.7) * 2.5;
     var rotDeg    = (hashSeed(s + 1.3) - 0.5) * 46;
     var offsetX   = (hashSeed(s + 2.1) - 0.5) * 14;
-    var colorIdx  = Math.floor(hashSeed(s + 3.4) * GRASS_PALETTE.length);
-    var baseColor = GRASS_PALETTE[colorIdx];
-    var tipColor  = lerpColor(baseColor, GRASS_TIP_LIGHT, 0.35);
+    var colorIdx  = Math.floor(hashSeed(s + 3.4) * grass.palette.length);
+    var baseColor = grass.palette[colorIdx];
+    var tipColor  = lerpColor(baseColor, grass.tip, 0.35);
 
     var blade = document.createElement('div');
     blade.className = 'grass-blade';
@@ -368,7 +390,9 @@ function renderFence(track) {
   track.appendChild(shadow);
 }
 
-function renderGrassField(track) {
+function renderGrassField(track, skin) {
+  var grass = getGrassPalette(skin || getActiveGardenSkin());
+
   var field = document.createElement('div');
   field.className = 'grass-tuft-field';
 
@@ -384,7 +408,7 @@ function renderGrassField(track) {
     var seed = i * 9.173;
     var xPct = i * cellWidth + hashSeed(seed) * cellWidth;
     var yPct = 6 + hashSeed(seed + 0.5) * 76; // keep off the very top/bottom edges of the plot
-    field.appendChild(buildGrassClump(xPct, yPct, seed * 3.7));
+    field.appendChild(buildGrassClump(xPct, yPct, seed * 3.7, grass));
   }
 
   track.appendChild(field);
@@ -948,6 +972,133 @@ function renderSky(track) {
   track.appendChild(strip);
 }
 
+// ============================================
+// Landscape props
+// ============================================
+// The small things lying about in the plot - a lollipop in the candy
+// grass, a sandcastle, a lava smear, a crater. They come off the
+// active landscape skin (skin.props, built in 03-plant-art.js), so a
+// skin with none renders none and this whole function costs nothing.
+//
+// Placed exactly the way plants are, not the way grass is, and that
+// is the point. Each prop gets:
+//
+//   a depth SCALE from computeDepthScale(bottomPct), so one further
+//   up the plot is smaller;
+//   a depth Z from computeDepthZ(bottomPct), the same painter's
+//   algorithm the plants use - which is what lets a crater in the
+//   foreground correctly sit IN FRONT of a plant standing further
+//   back, instead of every prop being flatly behind every plant.
+//
+// That second one is why props are NOT wrapped in a z-indexed layer
+// the way the grass field is. A layer with its own z-index (or its
+// own filter) would be a stacking context, and every prop inside it
+// would be trapped at the layer's depth no matter what z-index it
+// carried. The field element is deliberately plain, and the night
+// dimming in style.css is applied to each prop individually for the
+// same reason.
+//
+// Placement is stratified across the track and round-robined between
+// prop types, so three lava smears and three rocks come out
+// interleaved and spread rather than as two clumps. Seeds are fixed,
+// so the scatter is the same arrangement every render - a prop that
+// jumped to a new spot every time the garden repainted would read as
+// a bug even though nothing was wrong.
+// Nearly the plot's full depth. Props sitting in a narrow band across
+// the middle read as a row of ornaments; running them from the very
+// front edge to just under the fence is what makes the ground look
+// like it is made of them.
+var PROP_BOTTOM_MIN = 5;
+var PROP_BOTTOM_MAX = 84;
+
+function renderSkinProps(track, skin) {
+  if (!skin || !Array.isArray(skin.props) || !skin.props.length) return;
+
+  // Round-robin rather than type-by-type: filling the array in type
+  // order would put every lollipop in the left third of the plot,
+  // because the stratified placement below walks it left to right.
+  var slots = [];
+  var placed = 0;
+  var remaining = skin.props.map(function (prop) { return prop.count || 1; });
+  var anyLeft = true;
+  while (anyLeft) {
+    anyLeft = false;
+    for (var p = 0; p < skin.props.length; p++) {
+      if (remaining[p] <= 0) continue;
+      remaining[p]--;
+      anyLeft = true;
+      slots.push({ prop: skin.props[p], seed: (p + 1) * 31.77 + placed * 12.91 });
+      placed++;
+    }
+  }
+
+  var field = document.createElement('div');
+  field.className = 'garden-prop-field';
+  field.setAttribute('aria-hidden', 'true');
+
+  var cell = 100 / slots.length;
+
+  slots.forEach(function (slot, i) {
+    var s         = slot.seed;
+    var xPct      = i * cell + hashSeed(s) * cell;
+    var bottomPct = PROP_BOTTOM_MIN +
+      hashSeed(s + 0.53) * (PROP_BOTTOM_MAX - PROP_BOTTOM_MIN);
+    var width     = (slot.prop.width || 24) * computeDepthScale(bottomPct);
+
+    var el = document.createElement('div');
+    el.className     = 'garden-prop';
+    el.style.left    = xPct.toFixed(2) + '%';
+    el.style.bottom  = bottomPct.toFixed(2) + '%';
+    el.style.zIndex  = computeDepthZ(bottomPct);
+    el.innerHTML     = slot.prop.build(s * 3.11, width);
+    field.appendChild(el);
+  });
+
+  track.appendChild(field);
+}
+
+
+// ============================================
+// Applying a landscape skin
+// ============================================
+// One call, before anything is drawn: set the skin's custom
+// properties on the SCENE element, which is the ancestor of every
+// layer inside the track. The lawn gradient, the fence pickets, the
+// signpost and the night filter all read them from there, so none of
+// those has to know a skin system exists.
+//
+// Set on the scene rather than on the track because the track is torn
+// down and rebuilt by innerHTML on every render, which would throw an
+// inline style away; the scene element survives.
+//
+// Tokens are CLEARED before they're set, and cleared from the full
+// token list rather than from the incoming skin's own keys. Skins are
+// supposed to declare the whole set, but if one ever doesn't, the
+// alternative is the previous skin's value staying stuck on the
+// element - a candy fence around a meadow lawn, and no obvious reason
+// why. removeProperty falls the token back to style.css, which is the
+// meadow value.
+//
+// Takes the skin as an argument because 07-friend-garden.js calls
+// this for a FRIEND's scene with the skin off their summary document,
+// which is not the one the local user is wearing.
+function applyGardenSkin(sceneEl, skin) {
+  var resolved = skin || getActiveGardenSkin();
+  if (!sceneEl) return resolved;
+
+  var style = sceneEl.style;
+  getGardenSkinTokens().forEach(function (token) {
+    var value = resolved.vars ? resolved.vars[token] : null;
+    style.removeProperty(token);
+    if (value !== undefined && value !== null && value !== '') {
+      style.setProperty(token, value);
+    }
+  });
+
+  return resolved;
+}
+
+
 // The ground the whole plot stands on. First thing into the track, so
 // the grass clumps, the fence and every plant paint over it.
 function renderLawn(track) {
@@ -1172,13 +1323,19 @@ function renderGarden() {
   var shouldCenterScroll = pendingGardenScrollCenter;
   pendingGardenScrollCenter = false;
 
+  // The landscape skin goes on before anything is drawn, so the first
+  // painted frame is already in the right palette rather than
+  // flashing meadow green and then correcting itself.
+  var gardenSkin = applyGardenSkin(gardenSceneEl);
+
   // Sky, lawn, ground texture and fence first, so they sit behind
   // every plant appended below. All four live inside the scrollable
   // track, which is what makes them move with the plants instead of
   // staying pinned to the window - see renderLawn() above.
   renderSky(gardenTrackEl);
   renderLawn(gardenTrackEl);
-  renderGrassField(gardenTrackEl);
+  renderGrassField(gardenTrackEl, gardenSkin);
+  renderSkinProps(gardenTrackEl, gardenSkin);
   renderFence(gardenTrackEl);
   renderSignpost(gardenTrackEl);
 

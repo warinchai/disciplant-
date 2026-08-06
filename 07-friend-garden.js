@@ -295,13 +295,31 @@ function renderFriendGarden() {
   if (!friendGardenSceneEl || !friendGardenTrackEl) return;
   friendGardenTrackEl.innerHTML = '';
 
+  // THEIR landscape, not yours. The skin id rides in the summary
+  // document (see buildGardenSummary in 02), so a friend's plot is
+  // painted in the ground they chose - which is the entire point of
+  // choosing one. Resolved through getGardenSkin, so a summary
+  // written by a newer build naming a skin this one doesn't have
+  // falls back to the default instead of rendering a plot with no
+  // ground at all.
+  //
+  // Applied to the scene element every render, unconditionally: this
+  // element is reused for every friend in turn, so leaving it alone
+  // when a summary has no skin would show the previous friend's
+  // landscape under this one's plants.
+  var friendSkin = applyGardenSkin(
+    friendGardenSceneEl,
+    getGardenSkin((friendGardenSummary && friendGardenSummary.gardenSkinId) || null)
+  );
+
   // Same sky, lawn, ground texture and fence as the owner's garden, so
   // a friend's plot reads as the same place rather than a different
   // screen — and scrolls up into the same sky. All four take the track
   // as an argument (see 04), which is what makes them reusable here.
   renderSky(friendGardenTrackEl);
   renderLawn(friendGardenTrackEl);
-  renderGrassField(friendGardenTrackEl);
+  renderGrassField(friendGardenTrackEl, friendSkin);
+  renderSkinProps(friendGardenTrackEl, friendSkin);
   renderFence(friendGardenTrackEl);
 
   var plants = (friendGardenSummary && Array.isArray(friendGardenSummary.plants))

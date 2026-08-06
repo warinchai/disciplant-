@@ -145,6 +145,16 @@ const SKY_KEY_FRAMES = [
 // ============================================
 let tasks               = [];
 let lastResetDate       = null;
+// Which landscape skin the plot is wearing - garden state, not user
+// state, which is why it sits here beside lastResetDate rather than
+// in currentUserProfile below. Loaded from gardens/{uid} by
+// 02-auth-tasks.js and read by getActiveGardenSkinId() in 03.
+//
+// null rather than the default id on purpose: 03-plant-art.js loads
+// AFTER this file, so GARDEN_SKIN_DEFAULT_ID doesn't exist yet and
+// naming it here would throw. null already means "no choice stored",
+// which resolves to the default at read time anyway.
+let gardenSkinId        = null;
 let nextId              = 1;
 let currentUserId       = null;
 let unsubscribeSnapshot = null;

@@ -284,12 +284,70 @@ body {
    IS the bottom 50vh) and now moves with everything rooted in it.
    Painted first and z-indexed under the grass clumps (1), the fence
    (2) and the plants (3+). Built by renderLawn() in 04. */
+/* ========================================
+   Garden landscape skin tokens
+
+   Everything the ground is painted with, pulled out of the rules
+   below into one named set so a landscape skin can repaint the plot
+   without any rule here knowing which skin is on. The values below
+   ARE the Meadow skin - the garden as it has always looked - so with
+   no skin applied at all (first paint, JS not run yet, a skin id that
+   no longer exists) the scene renders exactly as before.
+
+   GARDEN_SKINS in 03-plant-art.js overrides these by setting the same
+   custom properties inline on .garden-scene; see applyGardenSkin() in
+   04-garden-scene.js. Inline properties beat these, so a skin never
+   has to fight specificity.
+
+   Two of these deliberately point at the shared UI palette rather
+   than at hexes: the fence and the signpost were painted straight
+   from --clay and --bark, which are the same tokens the Tasks page
+   and the nav planks use. Skinning them without this indirection
+   would have repainted half the app along with the garden.
+
+   Grass is the one part NOT here. Blades are built in JS with their
+   gradients written as inline styles (see buildGrassClump), so their
+   palette rides on the skin object itself as skin.grass.
+   ======================================== */
+.garden-scene {
+  /* Ground. back = the far edge up by the fence, front = underfoot. */
+  --lawn-back:  #6fae46;
+  --lawn-mid:   #58973a;
+  --lawn-front: #3f7a2a;
+  --lawn-crest: #6fae46;
+
+  /* Fence - four picket shades cycling every 104px */
+  --fence-a:    var(--clay);
+  --fence-b:    var(--clay-edge);
+  --fence-c:    var(--clay-deep);
+  --fence-d:    var(--clay-deep);
+  --fence-rail: var(--clay-deep);
+  /* Bare channels, so the three shadow stops can share one colour at
+     three alphas. A green-black contact shadow is right on grass and
+     wrong on anything else. */
+  --fence-shadow-rgb: 20, 40, 12;
+
+  /* Man-made props standing in the plot (the signpost, for now) */
+  --scenery-wood:      var(--bark);
+  --scenery-wood-lit:  var(--bark-light);
+  --scenery-wood-deep: var(--bark-deep);
+  --scenery-ink:       var(--linen);
+
+  /* Night dimming. A skin whose ground is already dark or already
+     pale gets crushed by one fixed filter, so each skin carries its
+     own numbers rather than inheriting these. */
+  --scene-night-bright:       0.45;
+  --scene-night-sat:          0.85;
+  --scene-night-fence-bright: 0.55;
+}
+
 .garden-lawn {
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: linear-gradient(to bottom, #6fae46 0%, #58973a 45%, #3f7a2a 100%);
+  background: linear-gradient(to bottom,
+    var(--lawn-back) 0%, var(--lawn-mid) 45%, var(--lawn-front) 100%);
   transition: filter 1.5s ease;
 }
 
@@ -306,14 +364,14 @@ body {
   left: 0;
   width: 100%;
   height: 40px;
-  background: #6fae46;
+  background: var(--lawn-crest);
   border-radius: 52% 48% 58% 42% / 55% 62% 40% 50%;
 }
 
 /* Same real-time night dimming the lawn always had, moved onto the
    scene's own night class (see updateSky in 05-stats-app.js). */
 .garden-scene.scene-night .garden-lawn {
-  filter: brightness(0.45) saturate(0.85);
+  filter: brightness(var(--scene-night-bright)) saturate(var(--scene-night-sat));
 }
 
 
@@ -344,6 +402,45 @@ body {
 }
 
 
+/* Landscape props - the small things lying about in the plot, built
+   by renderSkinProps() in 04-garden-scene.js from the active skin.
+
+   Note what this layer deliberately does NOT have: a z-index, and a
+   filter. Either one would turn it into a stacking context, and every
+   prop inside would then be pinned at the layer's depth regardless of
+   the z-index it carries - which would put a foreground crater behind
+   a background plant. Each prop sets its own z-index off the same
+   depth curve the plants use, so the two interleave correctly, and
+   the night dimming below is applied per prop for the same reason. */
+.garden-prop-field {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.garden-prop {
+  position: absolute;
+  transform: translateX(-50%);
+  pointer-events: none;
+  /* Contact shadow, matching the upper-left light every prop is drawn
+     for. Without it they float. */
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.28));
+}
+
+/* The drop-shadow has to be repeated rather than inherited: filter is
+   a single property, so naming brightness here would drop the shadow
+   at dusk. Both dimming numbers come off the skin, which is how the
+   Emberfield lava keeps glowing at midnight while the meadow goes
+   properly dark. */
+.garden-scene.scene-night .garden-prop {
+  filter:
+    drop-shadow(0 2px 3px rgba(0, 0, 0, 0.28))
+    brightness(var(--scene-night-bright))
+    saturate(var(--scene-night-sat));
+  transition: filter 1.5s ease;
+}
+
+
 /* ========================================
    Garden fence - lives INSIDE #gardenSceneTrack
    (the scrollable element), not the fixed
@@ -364,7 +461,7 @@ body {
   height: 42px;
   z-index: 2;
   pointer-events: none;
-  border-top: 4px solid var(--clay-deep);
+  border-top: 4px solid var(--fence-rail);
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.20);
   opacity: 0.95;
   /* Four picket shades of the same tan/brown family, cycling every
@@ -372,13 +469,13 @@ body {
      alternating shades make the panning motion obvious at a glance. */
   background-image: repeating-linear-gradient(
     90deg,
-    var(--clay) 0px,  var(--clay) 9px,
+    var(--fence-a) 0px,  var(--fence-a) 9px,
     transparent 9px, transparent 26px,
-    var(--clay-edge) 26px, var(--clay-edge) 35px,
+    var(--fence-b) 26px, var(--fence-b) 35px,
     transparent 35px, transparent 52px,
-    var(--clay-deep) 52px, var(--clay-deep) 61px,
+    var(--fence-c) 52px, var(--fence-c) 61px,
     transparent 61px, transparent 78px,
-    var(--clay-deep) 78px, var(--clay-deep) 87px,
+    var(--fence-d) 78px, var(--fence-d) 87px,
     transparent 87px, transparent 104px
   );
 }
@@ -404,9 +501,9 @@ body {
      rather than a hard-edged stripe. */
   background: linear-gradient(
     to bottom,
-    rgba(20, 40, 12, 0.26) 0%,
-    rgba(20, 40, 12, 0.12) 45%,
-    rgba(20, 40, 12, 0) 100%
+    rgba(var(--fence-shadow-rgb), 0.26) 0%,
+    rgba(var(--fence-shadow-rgb), 0.12) 45%,
+    rgba(var(--fence-shadow-rgb), 0) 100%
   );
   filter: blur(5px);
 }
@@ -415,7 +512,7 @@ body {
    updateSky() in script.js), kept in sync with the same real-time
    day/night state as the rest of the garden. */
 .garden-scene.scene-night .garden-fence-strip {
-  filter: brightness(0.55);
+  filter: brightness(var(--scene-night-fence-bright));
   transition: filter 1.5s ease;
 }
 .garden-scene.scene-night .garden-fence-shadow {
@@ -4272,25 +4369,25 @@ body.nav-open { overflow: hidden; }
 
 .garden-signpost-board {
   padding: 8px 16px 9px;
-  background-color: var(--bark-light);
+  background-color: var(--scenery-wood-lit);
   background-image: var(--wood-grain);
-  border: 2px solid var(--bark-deep);
+  border: 2px solid var(--scenery-wood-deep);
   border-radius: 4px 4px 10px 10px;
   font-family: var(--font-display);
   font-size: var(--fs-sm);
   font-weight: 800;
   letter-spacing: 0.08em;
-  color: var(--linen);
+  color: var(--scenery-ink);
   transform: rotate(-2deg);
-  box-shadow: var(--lip) var(--bark-deep);
+  box-shadow: var(--lip) var(--scenery-wood-deep);
 }
 
 .garden-signpost-stake {
   width: 8px;
   height: 46px;
   margin-top: -2px;
-  background: var(--bark);
-  border: 2px solid var(--bark-deep);
+  background: var(--scenery-wood);
+  border: 2px solid var(--scenery-wood-deep);
   border-top: none;
   border-radius: 0 0 3px 3px;
 }
@@ -4563,4 +4660,70 @@ body.nav-open { overflow: hidden; }
 @keyframes skyConstellationTwinkle {
   0%, 100% { opacity: 0.95; }
   50%      { opacity: 0.58; }
+}
+
+
+/* ========================================
+   Landscape picker - Greenhouse page
+
+   The plant tiles below choose what ONE plant wears. This chooses
+   what the whole plot is made of, so it sits above them in its own
+   panel rather than inside a per-plant drawer, and there is exactly
+   one of it. Tiles reuse .skin-tile / .skin-grid wholesale: same
+   selected ring, same focus ring, same hover lift, so the two
+   pickers can't drift apart visually.
+
+   The preview inside each tile is drawn from the skin's own custom
+   properties, which are set inline on the tile button - so the
+   swatch is not a picture OF the skin, it is the skin, painted by
+   the same tokens the real garden reads. A skin can never preview
+   as something it won't render as.
+   ======================================== */
+.landscape-picker {
+  margin: 0 0 16px;
+  padding: 14px;
+  /* Same bench as .plant-card-grid, down to the border and the lip.
+     The two pickers sit one above the other on this page, and a cream
+     panel over a wood one read as two unrelated widgets. Both are the
+     same thing now: a wooden bench with tiles laid out on it. */
+  background-color: var(--bark);
+  background-image: var(--wood-grain);
+  border: 2px solid var(--bark-deep);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lip-deep) var(--bark-deep);
+}
+
+.landscape-picker-head {
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+/* Sized and coloured like .greenhouse-title rather than a drawer
+   heading, since it is now sitting on wood and has to read against
+   bark instead of paper. */
+.landscape-picker-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--sun);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+/* Shorter than the 118px plant stage: a landscape preview is a wide
+   letterbox, not a tall plant, and the extra height would just be
+   empty tile. */
+.landscape-tile-art {
+  display: block;
+  width: 100%;
+  height: 78px;
+  border-radius: 9px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22) inset;
+}
+
+.landscape-tile-art svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }

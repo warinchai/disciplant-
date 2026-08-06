@@ -3478,4 +3478,666 @@ function skinExtrasFor(catId, skin, stageIndex) {
 }
 
 
+// ============================================
+// GARDEN LANDSCAPE SKINS
+// ============================================
+// A plant skin repaints one plant. A landscape skin repaints the
+// ground every plant is standing in: the lawn, the grass, the fence
+// and the man-made props in the plot.
+//
+// It is deliberately NOT built the way plant skins are, because a
+// plant is a single <svg> string and the landscape is not. The plot
+// is a stack of separate DOM layers - a CSS gradient for the lawn, a
+// repeating gradient for the fence pickets, a few hundred inline
+// styled <div> blades for the grass, a button for the signpost - so
+// there is nothing to hang one set of vars off the way skinStyleString
+// hangs them off an <svg> root. What there is instead:
+//
+//   vars   set on the .garden-scene element itself, where every one
+//          of those layers can read them (see applyGardenSkin in
+//          04-garden-scene.js, and the token block in style.css that
+//          declares the same names as fallbacks).
+//   grass  handed to buildGrassClump directly, because blades are
+//          built in JS and their gradients written as inline styles,
+//          which no stylesheet var can reach.
+//   props  SVG things scattered about the plot, placed as their own
+//          depth-scaled elements by renderSkinProps in 04. A skin
+//          without them just omits the key.
+//
+//          `width` is in px at neutral depth, BEFORE the depth curve
+//          multiplies it (0.6x at the back of the plot to 1.4x at the
+//          front), and it is worth reading against a plant, which is
+//          120px wide at the same depth. Small numbers here produce
+//          litter dropped on a lawn; these are sized to be terrain.
+//          `count` is spread over the whole track, which is three
+//          screens wide - so divide by three for how many are in
+//          view at once.
+//
+// ONE SKIN PER GARDEN, not one per plant. The chosen id lives on the
+// gardens/{uid} document as gardenSkinId - a field on a document the
+// app already reads and writes, so this costs no extra Firestore
+// reads and no extra writes - and is mirrored into the friend-visible
+// gardenSummaries document so a friend sees your plot in your skin.
+//
+// WHAT A SKIN DOES NOT TOUCH: the sky. The sky is repainted from the
+// real clock every minute by updateSky() in 05-stats-app.js, and the
+// scrolled sky strip above the plot reads --sky-top / --sky-high from
+// that same tick. A skin that also painted the sky would either fight
+// the clock or throw away the time-of-day read, so the horizon is
+// where a skin stops.
+//
+// ADDING A SKIN: copy the meadow entry, change the values, append it.
+// Every skin must declare the WHOLE token set, not a subset. A
+// missing token is not inherited from the default skin - it falls
+// through to the stylesheet value, which is the meadow value, which
+// on a candy-coloured plot is a stripe of lawn green. `props` is the
+// one optional key; when present, each entry needs `ratio` (the
+// builder's viewBox height over its width) as well as `width`,
+// because the Greenhouse preview sizes props itself and has no other
+// way to know how tall one stands.
+// ============================================
 
+// ---- Ground props -------------------------------------------------
+// Small things lying about in the plot: a lollipop dropped in the
+// candy grass, a sandcastle on the shore, cooling lava, a crater.
+// They belong to the landscape skin rather than to the garden, so a
+// skin with none simply omits the key and nothing renders.
+//
+// Each builder returns a COMPLETE <svg> sized to the width it's
+// handed, because 04-garden-scene.js positions each prop as its own
+// absolutely-placed element and scales it by the same depth curve the
+// plants use. Builders take a seed so a prop type placed four times
+// isn't the same picture four times, and so the scatter is stable
+// across renders rather than reshuffling every time the garden
+// repaints.
+//
+// Flat illustration throughout: no strokes, no outlines, no gradients
+// and no element ids. Ids especially - every prop is inlined into the
+// page several times over, and two copies of the same id is a bug
+// that only shows up on the second one.
+
+function gardenPropWrap(vbW, vbH, width, body) {
+  var h = width * vbH / vbW;
+  return '<svg viewBox="0 0 ' + vbW + ' ' + vbH + '"' +
+    ' width="' + skinN(width) + '" height="' + skinN(h) + '"' +
+    ' xmlns="http://www.w3.org/2000/svg"' +
+    ' style="overflow:visible;display:block">' + body + '</svg>';
+}
+
+// A closed, slightly irregular blob: points spaced evenly round an
+// ellipse, each pushed in or out a little by the seed, then joined
+// with quadratics THROUGH the points rather than to them - which is
+// what keeps the outline smooth instead of faceted. Used for
+// everything round here, since a true circle is the one shape that
+// reads as clip art.
+function gardenPropBlobPath(cx, cy, rx, ry, points, wobble, seed) {
+  var pts = [];
+  for (var i = 0; i < points; i++) {
+    var a = (i / points) * Math.PI * 2;
+    var k = 1 + (hashSeed(seed + i * 1.73) - 0.5) * wobble;
+    pts.push([cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]);
+  }
+
+  var mid = function (p, q) { return [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]; };
+  var start = mid(pts[points - 1], pts[0]);
+  var d = 'M' + skinN(start[0]) + ',' + skinN(start[1]);
+  for (var j = 0; j < points; j++) {
+    var m = mid(pts[j], pts[(j + 1) % points]);
+    d += ' Q' + skinN(pts[j][0]) + ',' + skinN(pts[j][1]) +
+         ' ' + skinN(m[0]) + ',' + skinN(m[1]);
+  }
+  return d + ' Z';
+}
+
+// One pie slice, for the lollipop's pinwheel. Angles in degrees,
+// clockwise from east.
+function gardenPropWedge(cx, cy, r, a0deg, a1deg, fill) {
+  var a0 = a0deg * Math.PI / 180;
+  var a1 = a1deg * Math.PI / 180;
+  var large = (a1deg - a0deg) > 180 ? 1 : 0;
+  return '<path d="M' + skinN(cx) + ',' + skinN(cy) +
+    ' L' + skinN(cx + Math.cos(a0) * r) + ',' + skinN(cy + Math.sin(a0) * r) +
+    ' A' + skinN(r) + ',' + skinN(r) + ' 0 ' + large + ' 1 ' +
+      skinN(cx + Math.cos(a1) * r) + ',' + skinN(cy + Math.sin(a1) * r) +
+    ' Z" fill="' + fill + '"/>';
+}
+
+// An angular chunk with one lit top facet. Shared by the volcanic
+// basalt and the martian stones, since a rock is a rock and only the
+// palette differs.
+function gardenPropStone(cx, base, w, h, body, lit) {
+  var d = 'M' + skinN(cx - w / 2) + ',' + skinN(base) +
+    ' L' + skinN(cx - w * 0.42) + ',' + skinN(base - h * 0.55) +
+    ' L' + skinN(cx - w * 0.12) + ',' + skinN(base - h) +
+    ' L' + skinN(cx + w * 0.26) + ',' + skinN(base - h * 0.88) +
+    ' L' + skinN(cx + w / 2) + ',' + skinN(base - h * 0.34) + ' Z';
+
+  return '<path d="' + d + '" fill="' + body + '"/>' +
+    '<path d="M' + skinN(cx - w * 0.42) + ',' + skinN(base - h * 0.55) +
+    ' L' + skinN(cx - w * 0.12) + ',' + skinN(base - h) +
+    ' L' + skinN(cx + w * 0.26) + ',' + skinN(base - h * 0.88) +
+    ' L' + skinN(cx - w * 0.02) + ',' + skinN(base - h * 0.6) +
+    ' Z" fill="' + lit + '"/>';
+}
+
+// A crowned tower, tapering out toward its base so it reads as packed
+// sand rather than as a brick keep. teeth is the battlement count.
+function gardenPropSandTower(x, yTop, w, h, teeth, body, lit, crown) {
+  var flare = w * 0.18;
+  var out =
+    '<path d="M' + skinN(x - flare) + ',' + skinN(yTop + h) +
+    ' L' + skinN(x) + ',' + skinN(yTop) +
+    ' L' + skinN(x + w) + ',' + skinN(yTop) +
+    ' L' + skinN(x + w + flare) + ',' + skinN(yTop + h) + ' Z" fill="' + body + '"/>' +
+    // Lit left face. The whole garden is lit from the upper left, so
+    // every prop's highlight has to fall on the same side or the plot
+    // ends up with several suns.
+    '<path d="M' + skinN(x - flare) + ',' + skinN(yTop + h) +
+    ' L' + skinN(x) + ',' + skinN(yTop) +
+    ' L' + skinN(x + w * 0.34) + ',' + skinN(yTop) +
+    ' L' + skinN(x + w * 0.2 - flare) + ',' + skinN(yTop + h) + ' Z" fill="' + lit + '"/>';
+
+  var tw = w / (teeth * 2 - 1);
+  var d = '';
+  for (var i = 0; i < teeth; i++) {
+    var tx = x + i * tw * 2;
+    d += 'M' + skinN(tx) + ',' + skinN(yTop) +
+         ' L' + skinN(tx) + ',' + skinN(yTop - tw * 0.85) +
+         ' L' + skinN(tx + tw) + ',' + skinN(yTop - tw * 0.85) +
+         ' L' + skinN(tx + tw) + ',' + skinN(yTop) + ' Z ';
+  }
+  return out + '<path d="' + d + '" fill="' + crown + '"/>';
+}
+
+
+// ---- Candy Land ---------------------------------------------------
+
+function gardenPropLollipop(seed, width) {
+  var pal = hashSeed(seed) < 0.5
+    ? { disc: '#f8f0f5', a: '#ef7f9c', b: '#8fd9c0' }
+    : { disc: '#fdf4e6', a: '#f6c86a', b: '#c9a7ec' };
+
+  var cx = 13, cy = 13, r = 11;
+  var spin = hashSeed(seed + 1.13) * 360;
+
+  var body =
+    // Stick, with a narrow shaded edge down its right so it doesn't
+    // read as a flat white line.
+    '<path d="M12.1,19 L14.2,19 L14.7,42 L11.9,42 Z" fill="#f4ede2"/>' +
+    '<path d="M13.5,19 L14.2,19 L14.7,42 L13.9,42 Z" fill="#dccfbb"/>' +
+    '<path d="' + gardenPropBlobPath(cx, cy, r, r, 9, 0.09, seed + 4.21) + '" fill="' + pal.disc + '"/>' +
+    // Three slices rather than a drawn spiral: at 20px across, a
+    // spiral is mush, and a pinwheel still reads as swirled sugar.
+    gardenPropWedge(cx, cy, r * 0.93, spin, spin + 62, pal.a) +
+    gardenPropWedge(cx, cy, r * 0.93, spin + 120, spin + 182, pal.b) +
+    gardenPropWedge(cx, cy, r * 0.93, spin + 240, spin + 302, pal.a);
+
+  return gardenPropWrap(26, 44, width, body);
+}
+
+function gardenPropJelly(seed, width) {
+  // Reusing skinGumdrop from the candy PLANT skin on purpose: same
+  // sweets, same shape language, one definition.
+  var cols = [
+    ['#ef7f9c', '#ffd6e2'],
+    ['#8fd9c0', '#ddf7ee'],
+    ['#f6c86a', '#fff0c9'],
+    ['#c9a7ec', '#f0e2ff'],
+  ];
+
+  var count = 2 + Math.floor(hashSeed(seed) * 2);
+  var body = '';
+  for (var i = 0; i < count; i++) {
+    var c = cols[Math.floor(hashSeed(seed + i * 2.31) * cols.length)];
+    var s = 0.95 + hashSeed(seed + i * 3.07) * 0.4;
+    var x = 5.5 + i * 7.6 + hashSeed(seed + i * 1.71) * 1.8;
+    body += skinGumdrop(x, 13.4, s, c[0], c[1]);
+  }
+  return gardenPropWrap(26, 14, width, body);
+}
+
+
+// ---- Driftwood Shore ----------------------------------------------
+
+function gardenPropSandcastle(seed, width) {
+  var body  = '#c9a071';
+  var lit   = '#ddb789';
+  var crown = '#d3aa7c';
+
+  var out =
+    // The heaped sand the castle is standing in, so it doesn't look
+    // set down on the ground like a toy.
+    '<path d="' + gardenPropBlobPath(16, 28.4, 15, 3.2, 9, 0.18, seed + 2.17) + '" fill="#bd9265"/>' +
+    gardenPropSandTower(2.6, 13, 6.4, 16, 3, body, lit, crown) +
+    gardenPropSandTower(23, 13, 6.4, 16, 3, body, lit, crown) +
+    gardenPropSandTower(11.4, 8, 9.2, 21, 4, body, lit, crown) +
+    // Doorway, arched.
+    '<path d="M14.6,29 L14.6,24 Q16,21.9 17.4,24 L17.4,29 Z" fill="#8e6a47"/>' +
+    // Flag. Pole starts clear of the battlements above the keep.
+    '<path d="M15.7,6.2 L16.6,6.2 L16.6,1 L15.7,1 Z" fill="#8e8272"/>' +
+    '<path d="M16.6,1.4 L23,3 L16.6,4.9 Z" fill="#d9694f"/>';
+
+  return gardenPropWrap(32, 32, width, out);
+}
+
+function gardenPropShovel(seed, width) {
+  var hot = hashSeed(seed) < 0.5;
+  var grip  = hot ? '#d9694f' : '#3f7ea8';
+  var gripD = hot ? '#b5503a' : '#2f6285';
+
+  // Drawn upright and then tilted as a whole, so the blade and the
+  // handle can't drift out of line with each other.
+  var lean = -14 + hashSeed(seed + 0.91) * 28;
+
+  var out =
+    '<g transform="rotate(' + skinN(lean) + ' 9 31)">' +
+      // D-grip
+      '<path d="M5.8,7 Q5.8,1.2 9,1.2 Q12.2,1.2 12.2,7 L10.4,7 Q10.4,3.1 9,3.1' +
+        ' Q7.6,3.1 7.6,7 Z" fill="' + grip + '"/>' +
+      // Shaft
+      '<path d="M7.6,6.4 L10.4,6.4 L10.4,21.4 L7.6,21.4 Z" fill="' + grip + '"/>' +
+      '<path d="M9.5,6.4 L10.4,6.4 L10.4,21.4 L9.5,21.4 Z" fill="' + gripD + '"/>' +
+      // Blade, buried a little at the tip
+      '<path d="M4.5,20.8 L13.5,20.8 L12.3,27.6 Q9,32.4 5.7,27.6 Z" fill="#e2e7e9"/>' +
+      '<path d="M9,20.8 L13.5,20.8 L12.3,27.6 Q10.7,30 9,30.9 Z" fill="#c3cbd1"/>' +
+    '</g>' +
+    // Sand piled against the blade, which is what sells it as stuck
+    // in rather than lying on.
+    '<path d="' + gardenPropBlobPath(9, 32, 8, 2.2, 8, 0.2, seed + 5.3) + '" fill="#d3b177"/>';
+
+  return gardenPropWrap(18, 34, width, out);
+}
+
+
+// ---- Emberfield ---------------------------------------------------
+
+function gardenPropLavaSmear(seed, width) {
+  // Four nested blobs, each smaller and hotter, each with its own
+  // wobble seed so the edges don't run parallel. Offset leftward as
+  // they go in, so the smear reads as flowing rather than as a
+  // target.
+  var body =
+    '<path d="' + gardenPropBlobPath(22, 10, 20,   5.4, 11, 0.22, seed + 1.31) + '" fill="#2b1a15"/>' +
+    '<path d="' + gardenPropBlobPath(22, 10, 15.4, 3.9, 10, 0.24, seed + 2.93) + '" fill="#a8401c"/>' +
+    '<path d="' + gardenPropBlobPath(21, 10, 10.2, 2.5,  9, 0.28, seed + 4.71) + '" fill="#e07a2a"/>' +
+    '<path d="' + gardenPropBlobPath(19.6, 10, 5.6, 1.3, 8, 0.3,  seed + 6.13) + '" fill="#ffd07a"/>';
+  return gardenPropWrap(44, 16, width, body);
+}
+
+function gardenPropBasalt(seed, width) {
+  var big = 8 + hashSeed(seed + 0.4) * 3;
+  var out =
+    gardenPropStone(9,  17, 13, big, '#3a2e2b', '#584743') +
+    gardenPropStone(20, 17, 9.5, big * 0.62, '#312624', '#4c3c38');
+
+  // One crack still lit, on one rock in three. Every rock glowing
+  // would be a bonfire; none glowing is gravel.
+  if (hashSeed(seed + 3.7) < 0.34) {
+    out += '<path d="M6.2,16.6 L8.4,' + skinN(17 - big * 0.55) +
+           ' L9.4,' + skinN(17 - big * 0.5) + ' L7.4,16.6 Z" fill="#c0512c"/>';
+  }
+  return gardenPropWrap(28, 18, width, out);
+}
+
+
+// ---- Mars ---------------------------------------------------------
+
+function gardenPropCrater(seed, width) {
+  var rx = 14 + hashSeed(seed + 0.7) * 3.5;
+  var out =
+    // Raised rim, catching the light.
+    '<path d="' + gardenPropBlobPath(18, 9, rx, rx * 0.44, 12, 0.16, seed + 1.09) + '" fill="#dd9a6d"/>' +
+    // The bowl. Dark all round...
+    '<path d="' + gardenPropBlobPath(18, 9.4, rx * 0.74, rx * 0.3, 11, 0.18, seed + 2.61) + '" fill="#75391f"/>' +
+    // ...then a lifted floor set LOW inside it. The far wall staying
+    // dark while the near floor catches light is the whole depth cue;
+    // without it a crater is just a brown patch. Done with a second
+    // shape rather than a clipped crescent because there are no clip
+    // paths in these builders by design.
+    '<path d="' + gardenPropBlobPath(18, 11, rx * 0.6, rx * 0.19, 10, 0.2, seed + 4.03) + '" fill="#a35c3c"/>';
+  return gardenPropWrap(36, 18, width, out);
+}
+
+function gardenPropMarsStones(seed, width) {
+  var out =
+    gardenPropStone(8,  17, 11, 6.5 + hashSeed(seed + 0.5) * 2.5, '#8a4a30', '#b26a48') +
+    gardenPropStone(19, 17, 8,  4.4 + hashSeed(seed + 1.9) * 2,   '#7a3f28', '#a35c3c');
+  return gardenPropWrap(28, 18, width, out);
+}
+
+
+var GARDEN_SKIN_DEFAULT_ID = 'meadow';
+
+var GARDEN_SKINS = [
+  {
+    id:     'meadow',
+    name:   'Meadow',
+    note:   'The garden as it grows on its own.',
+    swatch: ['#6fae46', '#58973a', '#3f7a2a'],
+    // These are the same values style.css declares as fallbacks, so
+    // applying this skin is a no-op and an unskinned garden and a
+    // meadow-skinned one are the same picture.
+    vars: {
+      '--lawn-back':  '#6fae46',
+      '--lawn-mid':   '#58973a',
+      '--lawn-front': '#3f7a2a',
+      '--lawn-crest': '#6fae46',
+
+      // Pointing at the shared UI palette on purpose: the fence and
+      // the signpost have always been painted in the app's own clay
+      // and bark, and the default should keep being exactly that
+      // even if those tokens are retuned later.
+      '--fence-a':    'var(--clay)',
+      '--fence-b':    'var(--clay-edge)',
+      '--fence-c':    'var(--clay-deep)',
+      '--fence-d':    'var(--clay-deep)',
+      '--fence-rail': 'var(--clay-deep)',
+      '--fence-shadow-rgb': '20, 40, 12',
+
+      '--scenery-wood':      'var(--bark)',
+      '--scenery-wood-lit':  'var(--bark-light)',
+      '--scenery-wood-deep': 'var(--bark-deep)',
+      '--scenery-ink':       'var(--linen)',
+
+      '--scene-night-bright':       '0.45',
+      '--scene-night-sat':          '0.85',
+      '--scene-night-fence-bright': '0.55',
+    },
+    grass: ['#3a6020', '#4a7a30', '#537d33', '#5a9035', '#487526', '#6aab45', '#436b2c'],
+    grassTip: '#cfe8a0',
+  },
+
+  {
+    id:     'candy',
+    name:   'Candy Land',
+    note:   'Bubblegum ground, candy-cane fence, gingerbread post.',
+    swatch: ['#f3a9cb', '#8fd9c0', '#ef7f9c'],
+    vars: {
+      '--lawn-back':  '#f7bcd6',
+      '--lawn-mid':   '#e894ba',
+      '--lawn-front': '#c56b9c',
+      '--lawn-crest': '#fbcde1',
+
+      // Four pickets instead of the meadow's three shades of one
+      // wood: icing, strawberry, mint, butterscotch, cycling every
+      // 104px, which is what turns a fence into a row of sweets.
+      '--fence-a':    '#fbf3f6',
+      '--fence-b':    '#ef7f9c',
+      '--fence-c':    '#8fd9c0',
+      '--fence-d':    '#f6c86a',
+      '--fence-rail': '#d4577f',
+      // Plum rather than the meadow's green-black. A contact shadow
+      // takes its colour from the ground it falls on, and this ground
+      // is pink.
+      '--fence-shadow-rgb': '92, 42, 74',
+
+      '--scenery-wood':      '#c07a45',
+      '--scenery-wood-lit':  '#dda06a',
+      '--scenery-wood-deep': '#8f5730',
+      '--scenery-ink':       '#fff3e0',
+
+      // Lifted well off the meadow's 0.45. Pastels have nowhere to go
+      // when they are darkened: at the default night filter this plot
+      // reads as grey mud rather than as a candy garden after dark,
+      // which is the whole reason night lives on the skin.
+      '--scene-night-bright':       '0.62',
+      '--scene-night-sat':          '1',
+      '--scene-night-fence-bright': '0.72',
+    },
+    grass: ['#7fd0b4', '#a8e6cf', '#f6dc8a', '#c9a7ec', '#6cc0a4', '#ffd1a8', '#b489e0'],
+    grassTip: '#fff6dd',
+    props: [
+      { build: gardenPropLollipop, count: 5, width: 40, ratio: 44 / 26 },
+      { build: gardenPropJelly,    count: 7, width: 38, ratio: 14 / 26 },
+    ],
+  },
+
+  {
+    id:     'beach',
+    name:   'Driftwood Shore',
+    note:   'Sun-bleached sand, marram grass, salt-worn palings.',
+    swatch: ['#f2dfb4', '#d3b177', '#8e8272'],
+    vars: {
+      // Sand runs the opposite way to grass: dry and pale up by the
+      // fence, damp and deeper toward the foreground, which is the
+      // direction the tide comes from.
+      '--lawn-back':  '#f2dfb4',
+      '--lawn-mid':   '#e5cb96',
+      '--lawn-front': '#d3b177',
+      '--lawn-crest': '#f7e9c6',
+
+      // Driftwood, not paint. Four greys of the same silvered timber
+      // rather than four colours, so the fence reads as one weathered
+      // material with some planks older than others.
+      '--fence-a':    '#e6ded1',
+      '--fence-b':    '#bfb3a2',
+      '--fence-c':    '#d8cfc0',
+      '--fence-d':    '#a89b89',
+      '--fence-rail': '#8e8272',
+      '--fence-shadow-rgb': '120, 96, 62',
+
+      '--scenery-wood':      '#a89583',
+      '--scenery-wood-lit':  '#c4b3a1',
+      '--scenery-wood-deep': '#6f6154',
+      // Dark lettering here, where every other skin uses light. The
+      // board this sits on is pale driftwood rather than dark bark,
+      // and cream text on cream wood is not text.
+      '--scenery-ink':       '#514434',
+
+      // Barely dimmed and slightly cooled: a beach at night is
+      // moonlit, and sand is the one ground that keeps giving light
+      // back after dark rather than swallowing it.
+      '--scene-night-bright':       '0.58',
+      '--scene-night-sat':          '0.72',
+      '--scene-night-fence-bright': '0.66',
+    },
+    // Marram and sea oats: bleached straw with what green survives
+    // salt, so the ground cover reads as dune rather than lawn.
+    grass: ['#b9b573', '#cfc389', '#8f9a5c', '#ddd0a0', '#a3a869', '#7f8a52', '#c7bb80'],
+    grassTip: '#f6efcd',
+    props: [
+      { build: gardenPropSandcastle, count: 5, width: 64, ratio: 32 / 32 },
+      { build: gardenPropShovel,     count: 6, width: 32, ratio: 34 / 18 },
+    ],
+  },
+
+  {
+    id:     'volcanic',
+    name:   'Emberfield',
+    note:   'Cooled basalt, ember grass, charred palings.',
+    swatch: ['#2a1f1f', '#d4652f', '#8c3a1c'],
+    vars: {
+      // Dark ground needs its depth cue inverted: lighter at the back
+      // where a distant glow catches it, near black underfoot. Run
+      // the usual way round and the plot reads as a hole.
+      '--lawn-back':  '#57443f',
+      '--lawn-mid':   '#3d2e2c',
+      '--lawn-front': '#2a1f1f',
+      '--lawn-crest': '#6b514a',
+
+      // Three charred planks and one that hasn't finished burning.
+      // The single hot picket in four is doing the work here: make
+      // them all glow and it stops reading as fire.
+      '--fence-a':    '#3a2c28',
+      '--fence-b':    '#241b19',
+      '--fence-c':    '#8c3a1c',
+      '--fence-d':    '#2f2320',
+      '--fence-rail': '#171010',
+      '--fence-shadow-rgb': '10, 6, 6',
+
+      '--scenery-wood':      '#3b2b26',
+      '--scenery-wood-lit':  '#55403a',
+      '--scenery-wood-deep': '#150e0d',
+      // The sign glows rather than reflects, since there is nothing
+      // pale enough on this plot for dark lettering to sit on.
+      '--scenery-ink':       '#ffb066',
+
+      // The clearest case for night living on the skin rather than in
+      // the stylesheet. Run this ground through the meadow's
+      // brightness(0.45) and it goes to flat black; the embers are
+      // the whole picture and they are what has to survive dusk, so
+      // it barely dims and gains saturation instead.
+      '--scene-night-bright':       '0.82',
+      '--scene-night-sat':          '1.18',
+      '--scene-night-fence-bright': '0.9',
+    },
+    // Sparks rather than blades. The two dark entries matter as much
+    // as the bright ones: an all-ember field is a bonfire, and what
+    // this wants is ash with fire still in it.
+    grass: ['#c0512c', '#7a3320', '#d4652f', '#e08a3c', '#5e2a1c', '#a8452a', '#8c3a22'],
+    grassTip: '#ffd07a',
+    props: [
+      { build: gardenPropLavaSmear, count: 6, width: 84, ratio: 16 / 44 },
+      { build: gardenPropBasalt,    count: 6, width: 50, ratio: 18 / 28 },
+    ],
+  },
+
+  {
+    id:     'mars',
+    name:   'Mars',
+    note:   'Rust dust, cratered flats, panelled palings.',
+    swatch: ['#cf7d52', '#8e4c31', '#b9c2c8'],
+    vars: {
+      '--lawn-back':  '#cf7d52',
+      '--lawn-mid':   '#b26340',
+      '--lawn-front': '#8e4c31',
+      '--lawn-crest': '#dd8f61',
+
+      // The only fence here that isn't wood. Four shades of one
+      // brushed panel, cool against the rust so the plot reads as
+      // something built on the ground rather than grown out of it.
+      '--fence-a':    '#d3d9dc',
+      '--fence-b':    '#8d979e',
+      '--fence-c':    '#b9c2c8',
+      '--fence-d':    '#6f7a81',
+      '--fence-rail': '#5a646b',
+      // Rust, not grey: the shadow takes its colour from the dust it
+      // falls on.
+      '--fence-shadow-rgb': '70, 34, 20',
+
+      '--scenery-wood':      '#9aa4ab',
+      '--scenery-wood-lit':  '#c2cad0',
+      '--scenery-wood-deep': '#5c666d',
+      // Dark lettering, same reason as the shore: the sign is pale
+      // metal and cream on cream is nothing.
+      '--scenery-ink':       '#2b3a44',
+
+      // A thin atmosphere gives a hard night with no glow to soften
+      // it, so this dims further than the shore does and loses a
+      // little colour with it.
+      '--scene-night-bright':       '0.46',
+      '--scene-night-sat':          '0.78',
+      '--scene-night-fence-bright': '0.6',
+    },
+    // Not grass. The blade field still renders on every skin, so on a
+    // dead planet it becomes wind-blown dust and dry scrub - the same
+    // shapes reading as something else entirely, which is cheaper
+    // than a switch to turn the field off.
+    grass: ['#8a5a44', '#a06b4e', '#6f4d3d', '#95664b', '#7d5540', '#ab7757', '#5f4436'],
+    grassTip: '#d9a982',
+    props: [
+      { build: gardenPropCrater,     count: 7, width: 78, ratio: 18 / 36 },
+      { build: gardenPropMarsStones, count: 5, width: 46, ratio: 18 / 28 },
+    ],
+  },
+];
+
+
+// ---- Landscape skin lookup ---------------------------------------
+
+// Always returns a real skin, same contract as getSkin() above: an
+// unknown or removed id falls back to the first entry rather than
+// leaving the plot with no ground.
+function getGardenSkin(skinId) {
+  var found = null;
+  GARDEN_SKINS.forEach(function (s) { if (s.id === skinId) found = s; });
+  return found || GARDEN_SKINS[0];
+}
+
+// Every token any skin can set, taken from the default skin's own
+// keys rather than written out a second time here - a list that has
+// to be kept in step with the skins by hand is a list that won't be.
+// applyGardenSkin() clears each of these before setting, so switching
+// from a skin that sets a token to one that doesn't can't leave the
+// old value stranded on the element.
+function getGardenSkinTokens() {
+  return Object.keys(GARDEN_SKINS[0].vars);
+}
+
+
+// ---- Landscape skin unlocks --------------------------------------
+// Nothing is gated yet: every landscape is free to choose. The shape
+// is here because the gates are a decision that hasn't been made, not
+// one that's been made against - when it is, it lands in this array
+// and nothing else has to change.
+//
+// Slot-indexed, same as SKIN_UNLOCK_RULES, but the KINDS have to
+// differ. A landscape belongs to the garden, not to a plant, so the
+// per-plant gates ('streak', 'growth') have no plant to read from.
+// Whatever goes in here will need to be account-wide: friends, or
+// lifetime growth across every plant, or plants brought to full size.
+//
+// An empty rule for a slot means unlocked, matching the plant
+// picker's own rule that a skin whose gate was forgotten is available
+// rather than unreachable.
+var GARDEN_SKIN_UNLOCK_RULES = [];
+
+function getGardenSkinUnlockState(skinId) {
+  var skin = getGardenSkin(skinId);
+  var slot = -1;
+  GARDEN_SKINS.forEach(function (s, i) { if (s.id === skin.id) slot = i; });
+  var rule = (slot >= 0 && GARDEN_SKIN_UNLOCK_RULES[slot]) || null;
+
+  var have = 0;
+  var need = (rule && rule.need) || 0;
+
+  if (rule && rule.kind === 'friends') have = getMyFriendCount();
+
+  return {
+    skin:     skin,
+    slot:     slot,
+    kind:     rule ? rule.kind : 'always',
+    need:     need,
+    have:     have,
+    unlocked: !rule || have >= need,
+  };
+}
+
+function isGardenSkinUnlocked(skinId) {
+  return getGardenSkinUnlockState(skinId).unlocked;
+}
+
+function gardenSkinUnlockRequirement(state) {
+  if (!state || state.unlocked) return '';
+  if (state.kind === 'friends') {
+    return 'Add ' + state.need + ' friend' + (state.need === 1 ? '' : 's') + ' to unlock';
+  }
+  return 'Locked';
+}
+
+
+// The landscape the garden actually WEARS, which is not always the
+// one stored - exactly the arrangement getTaskSkinId() uses for
+// plants, and for the same reason. The saved id is never overwritten,
+// so a landscape behind a gate that somehow closed comes back on its
+// own when the gate opens again.
+//
+// gardenSkinId is a global owned by 02-auth-tasks.js, loaded from the
+// gardens/{uid} document. Guarded with typeof because this file loads
+// before it, and because a signed-out visitor never loads a garden at
+// all: the honest answer then is the default, not a crash.
+function getActiveGardenSkinId() {
+  var stored = (typeof gardenSkinId === 'string' && gardenSkinId)
+    ? gardenSkinId
+    : GARDEN_SKIN_DEFAULT_ID;
+
+  // Resolve first, so an id that no longer exists comes back as the
+  // default rather than being handed on to be resolved again later.
+  var wanted = getGardenSkin(stored).id;
+  if (wanted === GARDEN_SKIN_DEFAULT_ID) return GARDEN_SKIN_DEFAULT_ID;
+  return isGardenSkinUnlocked(wanted) ? wanted : GARDEN_SKIN_DEFAULT_ID;
+}
+
+function getActiveGardenSkin() {
+  return getGardenSkin(getActiveGardenSkinId());
+}

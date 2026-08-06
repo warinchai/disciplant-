@@ -1047,10 +1047,199 @@ function buildSkinDrawer(task, cat) {
 }
 
 
+// ============================================
+// The landscape picker
+// ============================================
+// One choice for the whole garden, so unlike the plant skins below
+// there is no card to open and no drawer to unfold - it is just the
+// row of options, always visible, at the top of the page.
+//
+// The preview in each tile is NOT a picture of the skin. The tile
+// button carries the skin's own custom properties inline, and the
+// SVG inside reads them by name, exactly as the real lawn and fence
+// do. So the swatch cannot drift from what the garden will look
+// like: to make it lie you would have to break the garden too.
+//
+// One consequence worth knowing: every colour in that SVG has to be
+// set through a style attribute, never a fill/stroke attribute.
+// Presentation attributes don't resolve var(), so fill="var(--x)"
+// silently paints nothing at all.
+// ============================================
+
+var landscapePickerEl = document.getElementById('landscapePicker');
+
+// Enough blades to read as ground cover at this size without turning
+// the tile into a solid block of colour.
+var LANDSCAPE_PREVIEW_BLADES = 22;
+
+function landscapePreviewSvg(skin) {
+  var grass = getGrassPalette(skin);
+
+  // Grass first as a string, so the blades sit above the ground bands
+  // and below the fence in paint order.
+  var blades = '';
+  for (var i = 0; i < LANDSCAPE_PREVIEW_BLADES; i++) {
+    var s   = i * 7.31;
+    // Stratified across the width, same trick as the real field, so
+    // no tile ever draws with a bald patch down one side.
+    var x   = (i + 0.15 + hashSeed(s) * 0.7) * (160 / LANDSCAPE_PREVIEW_BLADES);
+    // Bases only in the ground band, so the tallest blade still tops
+    // out below the fence rather than sprouting out of thin air.
+    var y   = 38 + hashSeed(s + 0.41) * 48;
+    var h   = 5 + hashSeed(s + 0.83) * 8;
+    var w   = 1.5 + hashSeed(s + 1.27) * 1.3;
+    var rot = (hashSeed(s + 1.79) - 0.5) * 34;
+    var col = grass.palette[Math.floor(hashSeed(s + 2.31) * grass.palette.length)];
+    blades +=
+      '<rect x="' + (x - w / 2).toFixed(2) + '" y="' + (y - h).toFixed(2) +
+      '" width="' + w.toFixed(2) + '" height="' + h.toFixed(2) +
+      '" rx="' + (w / 2).toFixed(2) + '"' +
+      ' transform="rotate(' + rot.toFixed(1) + ' ' + x.toFixed(2) + ' ' + y.toFixed(2) + ')"' +
+      ' style="fill:' + col + ';opacity:0.9"></rect>';
+  }
+
+  // One of each prop type the skin carries, at the two spots on the
+  // right that the signpost isn't using. Built by the same builders
+  // the garden calls, so a skin can't advertise a lollipop and then
+  // grow something else.
+  //
+  // Wrapped in a <g transform> rather than given x/y: the builders
+  // return a complete <svg> sized in user units, and a nested <svg>
+  // inherits an ancestor transform, so translating the group puts the
+  // prop's top-left exactly where it's told.
+  var propPreview = '';
+  if (skin && Array.isArray(skin.props)) {
+    var spots = [[116, 84], [62, 88]];
+    skin.props.slice(0, 2).forEach(function (prop, i) {
+      // Not the garden's px width - the preview is a 160x90 box and
+      // a crater 78px across at real size would fill half of it. The
+      // factor is tuned to the tile, and only the proportions and
+      // palette are meant to carry over.
+      var w = (prop.width || 24) * 0.42;
+      var h = w * (prop.ratio || 1);
+      propPreview +=
+        '<g transform="translate(' + (spots[i][0] - w / 2).toFixed(1) + ',' +
+          (spots[i][1] - h).toFixed(1) + ')">' +
+        prop.build(i * 9.71 + 3.37, w) + '</g>';
+    });
+  }
+
+  // Five pickets cycling the four fence shades, which is what the
+  // real repeating gradient does over 104px.
+  var pickets = '';
+  var order = ['--fence-a', '--fence-b', '--fence-c', '--fence-d', '--fence-a'];
+  for (var p = 0; p < order.length; p++) {
+    pickets +=
+      '<rect x="' + (10 + p * 31) + '" y="8" width="11" height="19" rx="2"' +
+      ' style="fill:var(' + order[p] + ')"></rect>';
+  }
+
+  return (
+    '<svg viewBox="0 0 160 90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      // Ground, back to front. Three flat bands rather than a
+      // gradient: no gradient means no <defs>, and no <defs> means no
+      // element id that could collide with the other tile's.
+      '<rect x="0" y="24" width="160" height="30" style="fill:var(--lawn-back)"></rect>' +
+      '<rect x="0" y="50" width="160" height="22" style="fill:var(--lawn-mid)"></rect>' +
+      '<rect x="0" y="68" width="160" height="22" style="fill:var(--lawn-front)"></rect>' +
+      // The soft crest along the top edge of the ground.
+      '<path d="M0 26 Q40 20 82 25 Q124 30 160 24 L160 32 L0 32 Z"' +
+        ' style="fill:var(--lawn-crest)"></path>' +
+      // Fence: rail, pickets, then the contact shadow bridging it
+      // into the grass - the same three parts as the real one.
+      '<rect x="0" y="6" width="160" height="3" style="fill:var(--fence-rail)"></rect>' +
+      pickets +
+      '<rect x="0" y="27" width="160" height="5"' +
+        ' style="fill:rgba(var(--fence-shadow-rgb), 0.30)"></rect>' +
+      blades +
+      propPreview +
+      // The signpost, so the man-made half of the skin is visible too.
+      '<rect x="20" y="63" width="4" height="17" rx="1"' +
+        ' style="fill:var(--scenery-wood);stroke:var(--scenery-wood-deep);stroke-width:1.4"></rect>' +
+      '<rect x="8" y="52" width="29" height="13" rx="2.5"' +
+        ' style="fill:var(--scenery-wood-lit);stroke:var(--scenery-wood-deep);stroke-width:1.6"></rect>' +
+      '<rect x="13" y="57" width="19" height="2" rx="1"' +
+        ' style="fill:var(--scenery-ink);opacity:0.75"></rect>' +
+    '</svg>'
+  );
+}
+
+// Writes the choice. The only place gardenSkinId is ever assigned
+// outside the Firestore load, which is what keeps a locked landscape
+// from being saved if the gates ever arrive and something bypasses
+// the disabled button.
+function setGardenSkin(skinId) {
+  if (!isGardenSkinUnlocked(skinId)) return;
+
+  var resolved = getGardenSkin(skinId).id;
+  // Re-tapping the tile that's already on would otherwise cost a
+  // document write for no change at all.
+  if (resolved === getActiveGardenSkinId()) return;
+
+  gardenSkinId = resolved;
+  saveData();
+  // One render repaints the tiles here AND the garden itself, since
+  // renderGarden() re-resolves the active skin every time.
+  render();
+}
+
+function renderLandscapePicker() {
+  if (!landscapePickerEl) return;
+
+  var current = getActiveGardenSkinId();
+
+  var tiles = GARDEN_SKINS.map(function (skin) {
+    var state    = getGardenSkinUnlockState(skin.id);
+    var selected = (skin.id === current);
+    var locked   = !state.unlocked;
+
+    var footer = locked
+      ? '<span class="skin-tile-req">' +
+          escapeHtml(gardenSkinUnlockRequirement(state)) + '</span>'
+      : '<span class="skin-tile-note">' + escapeHtml(skin.note || '') + '</span>';
+
+    return (
+      '<button type="button" class="skin-tile' +
+        (selected ? ' selected' : '') + (locked ? ' locked' : '') + '"' +
+        ' data-garden-skin-id="' + skin.id + '"' +
+        // The skin paints its own preview - see the note above.
+        ' style="' + skinStyleString(skin) + '"' +
+        (locked ? ' disabled aria-disabled="true"' : '') +
+        ' aria-pressed="' + (selected ? 'true' : 'false') + '"' +
+        ' title="' + escapeHtml(skin.name) + '">' +
+        (locked ? '<span class="skin-lock" aria-hidden="true"></span>' : '') +
+        '<span class="landscape-tile-art">' + landscapePreviewSvg(skin) + '</span>' +
+        '<span class="skin-tile-name">' + skinPipHtml(skin) +
+          escapeHtml(skin.name) + '</span>' +
+        footer +
+      '</button>'
+    );
+  }).join('');
+
+  landscapePickerEl.innerHTML =
+    '<div class="landscape-picker-head">' +
+      '<h3 class="landscape-picker-title">The grounds</h3>' +
+    '</div>' +
+    '<div class="skin-grid">' + tiles + '</div>';
+
+  landscapePickerEl.querySelectorAll('.skin-tile').forEach(function (tile) {
+    if (tile.disabled) return;
+    tile.addEventListener('click', function () {
+      setGardenSkin(tile.getAttribute('data-garden-skin-id'));
+    });
+  });
+}
+
+
 // ---- The page ----------------------------------------------------
 
 function renderGreenhouse() {
   if (!greenhouseGridEl) return;
+
+  // Independent of the plant cards below - it has no task to hang
+  // off, and it should still be there to choose from on a garden
+  // with nothing planted in it yet.
+  renderLandscapePicker();
 
   // A task can be removed on the Tasks page while its skin section is
   // open here — don't leave a dangling id behind.
