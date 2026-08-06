@@ -44,9 +44,15 @@ var friendGardenUsername = null;   // display name, for the header
 var friendGardenSummary  = null;   // the fetched gardenSummaries doc, or null
 var friendGardenLoading  = false;
 var friendGardenError    = null;   // user-facing message, or null
-var friendGardenTab      = 'daily'; // 'daily' | 'longterm' — separate from the
-                                    // user's own currentGardenTab so looking at
-                                    // a friend never changes their own view
+
+// There is no view tab here any more. This page used to carry its own
+// Daily / Long-Term pair, mirroring the owner's; both were dropped
+// once the two views turned out to be the same plot drawn twice.
+//
+// The owner's growth toggle is deliberately NOT mirrored here either.
+// It rolls back a day earned TODAY, and a friend's summary carries no
+// date (buildGardenSummary in 02 drops it on purpose), so there is no
+// day of theirs it could honestly roll back.
 
 // Bumped on every open. A slow fetch for friend A must not paint over
 // friend B's garden if the user clicked through to B in the meantime.
@@ -97,7 +103,6 @@ function openFriendGarden(uid, username) {
   friendGardenSummary  = null;
   friendGardenError    = null;
   friendGardenLoading  = true;
-  friendGardenTab      = 'daily';
 
   navigateTo('friend-garden');
 
@@ -185,14 +190,6 @@ function closeFriendGarden() {
   navigateTo('friends');
 }
 
-function switchFriendGardenTab(tabId) {
-  friendGardenTab = tabId;
-  document.querySelectorAll('[data-friend-garden-tab]').forEach(function (btn) {
-    btn.classList.toggle('active', btn.getAttribute('data-friend-garden-tab') === tabId);
-  });
-  renderFriendGardenIfVisible();
-}
-
 function renderFriendGardenIfVisible() {
   if (currentPage === 'friend-garden') renderFriendGarden();
 }
@@ -240,7 +237,7 @@ function renderFriendGardenMessage(plants) {
   var message = null;
 
   if (friendGardenLoading) {
-    message = '\uD83C\uDF31 Loading ' + friendGardenDisplayName() + '\u2019s garden\u2026';
+    message = 'Loading ' + friendGardenDisplayName() + '\u2019s garden\u2026';
   } else if (friendGardenError) {
     message = friendGardenError;
   } else if (!plants.length) {
@@ -334,8 +331,6 @@ function renderFriendGarden() {
     return;
   }
 
-  var maxStageIdx = PLANT_SVG_DATA.misc.length - 1;
-
   // Same two-group slot bucketing as renderGarden() in 04, for the
   // plants their owner never dragged anywhere.
   var slotGroups = { a: [], b: [] };
@@ -365,31 +360,23 @@ function renderFriendGarden() {
 
     var totalGrowthDays = Math.max(0, plant.totalGrowthDays || 0);
     var streak          = Math.max(0, plant.streak || 0);
-    // Ticked off as of their last save — which may or may not have
-    // been today. The label below is worded to be true either way.
-    var ticked          = !!plant.completed;
+    // NOTE: the summary still carries plant.completed, but nothing on
+    // this page reads it now. It was only ever used by the deleted
+    // daily view, and it could not be labelled honestly anyway -
+    // the summary has no date, so "done" could mean any day.
 
-    var stageIdx, scale, subLabel;
+    // One view, matching the owner's garden: size and art stage from
+    // lifetime days, with the same streak momentum flourish on top.
+    // The branch that used to sit here drew a second, streak-sized
+    // "daily" version at a 1.35x bloom; that view no longer exists on
+    // either side, and keeping it would have meant a friend's plot
+    // looking nothing like the one its owner sees.
+    var stageIdx = getStageIndexForDays(totalGrowthDays);
+    var momentum = 1 + Math.min(streak, 60) * 0.004;
+    var scale    = computeScaleForDays(totalGrowthDays) * momentum;
 
-    if (friendGardenTab === 'daily') {
-      var streakStage = getStageIndexForDays(streak);
-      var streakScale = computeScaleForDays(streak);
-
-      stageIdx = ticked ? maxStageIdx        : streakStage;
-      scale    = ticked ? streakScale * 1.35 : streakScale;
-
-      // Deliberately not "Done today": nothing in the summary can
-      // justify the word "today" now that it carries no date.
-      subLabel = (ticked ? 'Done \u2713' : 'Not done') +
-        (streak > 0 ? ' \u00B7 \uD83D\uDD25 ' + streak + ' day streak' : '');
-    } else {
-      stageIdx = getStageIndexForDays(totalGrowthDays);
-      var momentum = 1 + Math.min(streak, 60) * 0.004;
-      scale = computeScaleForDays(totalGrowthDays) * momentum;
-
-      var streakPart = streak > 0 ? ' \u00B7 \uD83D\uDD25 ' + streak + ' day streak' : '';
-      subLabel = totalGrowthDays + ' days grown' + streakPart;
-    }
+    var streakPart = streak > 0 ? ' \u00B7 ' + streak + ' day streak' : '';
+    var subLabel   = totalGrowthDays + ' days grown' + streakPart;
 
     var growthOnlyScale = scale;
     scale = scale * layout.depthScale;
@@ -405,7 +392,7 @@ function renderFriendGarden() {
     wrap.setAttribute(
       'title',
       cat.name + ' (' + cat.species + ') \u00B7 ' + totalGrowthDays + ' days grown' +
-      (streak > 0 ? ' \u00B7 \uD83D\uDD25 ' + streak + ' day streak' : '')
+      (streak > 0 ? ' \u00B7 ' + streak + ' day streak' : '')
     );
 
     var visual = document.createElement('div');
@@ -416,10 +403,11 @@ function renderFriendGarden() {
     // Days, not `growthOnlyScale`. computeHeightMeters() takes a day
     // count, and this was handing it the size multiplier - so every
     // friend's plant reported the height of a two-day-old seedling.
-    // Which day count depends on the tab, exactly as it does in the
-    // owner's own garden (see renderGarden in 04): the daily plot is
-    // built from the streak, the long-term plot from lifetime days.
-    var heightDays = friendGardenTab === 'daily' ? streak : totalGrowthDays;
+    // Lifetime days, matching the owner's own garden (see renderGarden
+    // in 04); this used to pick between the streak and the total
+    // depending on which view tab was showing, and there is only one
+    // view now.
+    var heightDays = totalGrowthDays;
 
     var heightTag = document.createElement('div');
     heightTag.className = 'plant-height-tag';
@@ -449,13 +437,4 @@ function renderFriendGarden() {
 var friendGardenBackBtn = document.getElementById('friendGardenBack');
 if (friendGardenBackBtn) {
   friendGardenBackBtn.addEventListener('click', closeFriendGarden);
-}
-
-var friendGardenTabDaily    = document.getElementById('friend-garden-tab-daily');
-var friendGardenTabLongterm = document.getElementById('friend-garden-tab-longterm');
-if (friendGardenTabDaily) {
-  friendGardenTabDaily.addEventListener('click', function () { switchFriendGardenTab('daily'); });
-}
-if (friendGardenTabLongterm) {
-  friendGardenTabLongterm.addEventListener('click', function () { switchFriendGardenTab('longterm'); });
 }

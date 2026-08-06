@@ -250,11 +250,26 @@
   <div id="page-garden" class="page page-garden hidden">
     <p id="loadingState" class="loading-state">Loading your garden...</p>
 
-    <!-- Garden toolbar: view tabs and the edit button on one row -->
+    <!-- Garden toolbar: the growth toggle and the edit button on one
+         row. There used to be a Daily / Long-Term pair of tabs here
+         too. They are gone: the two views had become the same render
+         with one optional day of difference, so the split was two
+         names for one garden. There is now just "the garden". -->
     <div class="garden-toolbar">
-      <div class="cat-subnav garden-subnav" id="gardenSubnav">
-        <button class="cat-tab active" id="garden-tab-daily"    data-garden-tab="daily">Daily Garden</button>
-        <button class="cat-tab"        id="garden-tab-longterm" data-garden-tab="longterm">Long-Term Garden</button>
+
+      <!-- Today's growth. Rolls back the day of growth a ticked habit
+           earned today so the plant can be watched growing into it;
+           switching it on puts the plot back to exactly where it
+           really stands. It is a VIEW - nothing is spent, no day
+           count, streak or height changes, and pressing it twice puts
+           things exactly back. It reads nothing from Firestore; see
+           the "Today's growth" section in 04-garden-scene.js. Hidden
+           while the garden is being edited. -->
+      <div class="garden-grow-bar hidden" id="gardenGrowBar">
+        <button type="button" class="cat-tab garden-grow-btn" id="gardenGrowBtn" aria-pressed="false">
+          <span class="garden-grow-label" id="gardenGrowLabel">Show today&rsquo;s growth</span>
+        </button>
+        <span class="garden-grow-hint" id="gardenGrowHint"></span>
       </div>
 
       <!-- Garden edit bar. Plants are only draggable while this mode is
@@ -478,13 +493,13 @@
 
     <p id="friendGardenNote" class="friend-garden-note hidden"></p>
 
-    <!-- Same Daily / Long-Term split as the user's own garden, but on
-         its own state so looking at a friend doesn't change which
-         view their own garden is left on. -->
-    <div class="cat-subnav garden-subnav">
-      <button class="cat-tab active" id="friend-garden-tab-daily"    data-friend-garden-tab="daily">Daily Garden</button>
-      <button class="cat-tab"        id="friend-garden-tab-longterm" data-friend-garden-tab="longterm">Long-Term Garden</button>
-    </div>
+    <!-- No view tabs here. This page used to carry its own copy of the
+         Daily / Long-Term pair; both are gone along with the owner's,
+         so a friend's plot is simply "their garden". The growth
+         toggle is deliberately NOT repeated here either - it previews
+         a day YOU earned today, and a friend's summary carries no
+         date, so there is no day of theirs it could honestly roll
+         back. -->
   </div>
 
   <!-- ================================================

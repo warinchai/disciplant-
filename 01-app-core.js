@@ -20,9 +20,13 @@
 //    tasks reset to unchecked.
 // 3. Each task tracks its own streak: +1 for every calendar day
 //    it gets checked off, reset if a day is missed.
-// 4. Daily Garden view: each plant is simply "done today" or not.
-//    Long-Term Garden view: each plant's stage reflects its
-//    total completed days + current streak.
+// 4. The Garden: one view, not two. Each plant's stage and size
+//    come from its total completed days, with a flourish while a
+//    streak is alive. A show/hide button rolls back the day of
+//    growth a ticked habit earned today so the plant can be
+//    watched growing into it - purely a view, changing no day
+//    count, streak or height (see the today's growth section in
+//    04-garden-scene.js).
 // 5. The sky background reflects the current local time and
 //    updates every 60 seconds so it stays live.
 // 6. Multi-page navigation: Home / Garden / Tasks (with
@@ -177,7 +181,6 @@ let authActionError   = null;  // last-error message shown in the modal, if any
 // Navigation state
 let currentPage      = 'home';
 let currentTaskTab   = 'all';
-let currentGardenTab = 'daily';
 let authReady        = false;
 
 // Set true whenever we navigate TO the garden page, so the next
@@ -753,8 +756,6 @@ if (plotGateEl) plotGateEl.addEventListener('click', function () { navigateTo('g
 
 
 // Garden sub-nav
-document.getElementById('garden-tab-daily').addEventListener('click',    function () { switchGardenTab('daily');    });
-document.getElementById('garden-tab-longterm').addEventListener('click',  function () { switchGardenTab('longterm'); });
 
 
 // ============================================

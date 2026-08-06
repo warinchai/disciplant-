@@ -54,13 +54,18 @@
 //   depth      where a plant sits front-to-back in the scene. Pure
 //              perspective - dragging a plant back does not shrink
 //              the plant, so it must not shrink its height.
-//   flourishes the Daily tab's ×1.35 bloom when today is ticked, and
-//              the Long-Term tab's streak momentum multiplier. Both
-//              are celebration on top of the plant's real size. The
-//              underlying day count still moves the moment you tick
-//              a box (completing a task raises the streak first, and
-//              the streak is what's measured), so the number does
-//              respond - it just isn't inflated by the animation.
+//   flourishes the streak momentum multiplier, and the light played
+//              over a plant while it grows. Both are celebration laid
+//              on top of the plant's real size and neither is
+//              measured.
+//   the toggle the show/hide growth button (see today's growth,
+//              below) changes how big a plant is DRAWN, between
+//              before and after the day it earned today. The height
+//              is read from task.totalGrowthDays in both positions,
+//              so it says the same thing either way - it is a fact
+//              about the plant, not a readout of what is currently on
+//              screen. It does still move on its own the moment a box
+//              is ticked, because ticking raises the day count.
 //
 // So the label answers "how much has this grown", consistently, from
 // anywhere in the app; it is not a readout of pixels on screen.
@@ -1194,15 +1199,391 @@ function getPlantSVG(catId, stageIndex, skinId, width) {
 }
 
 
+
 // ============================================
-// Garden sub-nav toggle
+// Today's growth - the garden's growth preview toggle
 // ============================================
-function switchGardenTab(tabId) {
-  currentGardenTab = tabId;
-  document.querySelectorAll('#gardenSubnav .cat-tab').forEach(function (btn) {
-    btn.classList.toggle('active', btn.dataset.gardenTab === tabId);
+// There were once two gardens here, Daily and Long-Term, on a pair of
+// tabs. The Daily one was sized off the streak rather than lifetime
+// days and jumped to the last piece of art at 1.35x the instant a box
+// was ticked. Two gardens meant two sets of rules to keep in step,
+// and they did not stay in step.
+//
+// They were merged into one render path, at which point the tabs were
+// showing the same plot twice and were removed as well. There is now
+// one garden, and this button is the only thing that changes how it
+// is drawn - it rolls today's growth back by one day so it can be
+// watched happening:
+//
+//   off (default)  every plant whose box is ticked today is drawn one
+//                  day short of where it is
+//   on             every plant exactly where it really stands
+//
+// So pressing it is the same event as ticking the box was, replayed:
+// the plant grows by one day, crossing into new art if that day
+// happens to land on a milestone. It is the "+1 day" dev button,
+// pointed at today and running backwards first.
+//
+// THE CHECKLIST DECIDES WHO MOVES. Ticking a box is what added the
+// day (toggleTask in 02 raises totalGrowthDays), so a plant with an
+// unticked box has no day to roll back and is drawn identically in
+// both positions. It does not shrink, it does not wilt, it simply
+// does not move - and standing still next to a neighbour that grew is
+// the whole of the feedback.
+//
+// THIS IS A VIEW, NOT A STATE CHANGE. Nothing here writes to a task,
+// advances anything, or can be got into a wrong order by pressing it
+// twice: both sizes are pure functions of numbers that were already
+// true before the button existed, so the toggle is reversible,
+// idempotent, and safe to leave in either position across a reload, a
+// midnight rollover or a re-render. There is deliberately no
+// half-applied middle state for anything to glitch into.
+//
+// WHAT IT DOES NOT TOUCH: the day count, the streak and the hover
+// height are read from the task in both positions, so they say the
+// same thing whichever way the button is set. It rolls back SIZE.
+//
+// AND IT COSTS NOTHING. No new Firestore field, no new read, no new
+// write. Both sizes come from what is already on every task in
+// memory:
+//
+//   task.totalGrowthDays   lifetime days, ALREADY counting today
+//   task.completed         whether today's tick happened
+//
+// so "before today" is simply totalGrowthDays - (completed ? 1 : 0).
+// The only new fact is which way the button is currently set, and
+// that is a preference about this browser's view of the plot rather
+// than garden data, so it lives in localStorage. Losing it (private
+// window, storage off, another device) just opens the plot with the
+// growth still to play, which is the default anyway.
+// ============================================
+
+var DAILY_GROWTH_KEY = 'disciplant:showDailyGrowth';
+
+var dailyGrowthShown  = readDailyGrowthShown();
+var dailyGrowthAnimating = false;  // blocks a second press mid-animation
+
+function readDailyGrowthShown() {
+  try {
+    // Left over from the first version of this feature, which banked
+    // per-task reveals under a dated key. Nothing reads it now, so
+    // clear it rather than leave it sitting in people's browsers.
+    localStorage.removeItem('disciplant:dailyGrowth');
+    return localStorage.getItem(DAILY_GROWTH_KEY) === '1';
+  } catch (e) {
+    // Private browsing or storage switched off. Opening on yesterday
+    // is the harmless direction to fail in.
+    return false;
+  }
+}
+
+function persistDailyGrowthShown() {
+  try {
+    localStorage.setItem(DAILY_GROWTH_KEY, dailyGrowthShown ? '1' : '0');
+  } catch (e) {}
+}
+
+// The day count a plant is DRAWN at - its size and art stage, and
+// nothing else. The height tag and the label read task.totalGrowthDays
+// directly in both positions of the toggle.
+//
+// Only ever one day apart from the real total, and only for a task
+// whose box is ticked today. Everything else returns the real total in
+// both positions, so switching the toggle on leaves the garden showing
+// exactly what it would show if this button did not exist.
+function getDailyDisplayDays(task) {
+  var days = Math.max(0, task.totalGrowthDays || 0);
+  if (dailyGrowthShown || !task.completed) return days;
+  return Math.max(0, days - 1);
+}
+
+// The growth-only scale (before depth) that the garden draws a plant
+// at. Lives here as one function because renderGarden and the toggle
+// animation both have to arrive at the same number for the same
+// plant, and the streak momentum flourish is easy to apply in one
+// place and forget in the other.
+//
+// Momentum is deliberately NOT rolled back with the day: it is a
+// property of the streak being alive right now, and the toggle's job
+// is to show the difference one DAY makes. Holding it constant is
+// what makes the size change on screen exactly one day's worth.
+function computeGardenGrowthScale(days, momentum) {
+  return computeScaleForDays(days) * (momentum || 1);
+}
+
+function computeTaskMomentum(task) {
+  return 1 + Math.min(Math.max(0, task.streak || 0), 60) * 0.004;
+}
+
+// Plants drawn differently in the two positions - i.e. the ones the
+// button actually has something to show. The day count guard is
+// belt-and-braces: toggleTask() raises totalGrowthDays before it sets
+// the flag, so a completed task always has at least one day on it.
+function getGrownTodayTasks() {
+  return tasks.filter(function (task) {
+    return task.completed && (task.totalGrowthDays || 0) > 0;
   });
-  if (authReady) renderGarden();
+}
+
+
+// ============================================
+// The button
+// ============================================
+var gardenGrowBarEl   = document.getElementById('gardenGrowBar');
+var gardenGrowBtnEl   = document.getElementById('gardenGrowBtn');
+var gardenGrowLabelEl = document.getElementById('gardenGrowLabel');
+var gardenGrowHintEl  = document.getElementById('gardenGrowHint');
+
+// Says which way it will move things, not which way they are - a
+// button labelled with its current state reads as a description and
+// gets ignored. Hidden on an empty plot, and in edit mode (resizing a
+// plant mid-drag is a fight nobody needs).
+function updateGardenGrowUI() {
+  if (!gardenGrowBarEl) return;
+
+  var show = tasks.length > 0 && !gardenEditMode;
+  gardenGrowBarEl.classList.toggle('hidden', !show);
+  if (!show) return;
+
+  var grown = getGrownTodayTasks().length;
+
+  var label, hint;
+  if (dailyGrowthShown) {
+    label = "Hide today's growth";
+    hint  = grown === 1 ? '1 plant grew today' : grown + ' plants grew today';
+  } else if (grown > 0) {
+    label = "Show today's growth (" + grown + ')';
+    hint  = grown === 1 ? '1 plant is ready' : grown + ' plants are ready';
+  } else {
+    label = "Show today's growth";
+    hint  = 'Tick a habit to see it grow';
+  }
+
+  if (gardenGrowLabelEl) gardenGrowLabelEl.textContent = label;
+  if (gardenGrowHintEl)  gardenGrowHintEl.textContent  = hint;
+
+  if (gardenGrowBtnEl) {
+    gardenGrowBtnEl.classList.toggle('is-ready', grown > 0 && !dailyGrowthShown && !dailyGrowthAnimating);
+    gardenGrowBtnEl.classList.toggle('is-showing', dailyGrowthShown);
+    gardenGrowBtnEl.setAttribute('aria-pressed', dailyGrowthShown ? 'true' : 'false');
+    gardenGrowBtnEl.disabled = dailyGrowthAnimating || (grown === 0 && !dailyGrowthShown);
+  }
+}
+
+
+// ============================================
+// Moving between the two sizes
+// ============================================
+// Deliberately NOT done by re-rendering the scene. renderGarden()
+// replaces the track's children outright, so a fresh element would
+// arrive already at its final size with nothing left to transition
+// from - the plant would cut between two sizes with no growing in
+// between, which is the exact thing this feature exists to show.
+//
+// Instead each plant already on screen is nudged: --plant-scale is
+// moved and .plant-visual's existing 1.1s transition does the actual
+// growing. renderGarden() still renders whichever position the toggle
+// is in, so a re-render landing at any moment - a snapshot, a resize,
+// switching pages - agrees with what is on screen instead of fighting
+// it. There is no state here that can be half-applied.
+var DAILY_GROWTH_STAGGER_MS = 130;
+
+function toggleDailyGrowth() {
+  setDailyGrowthShown(!dailyGrowthShown);
+}
+
+function setDailyGrowthShown(next) {
+  if (dailyGrowthAnimating) return;
+  if (gardenEditMode) return;
+  if (next === dailyGrowthShown) return;
+
+  dailyGrowthShown = next;
+  persistDailyGrowthShown();
+
+  var crop = getGrownTodayTasks();
+
+  // Nothing to animate: no plot built yet (garden page not opened this
+  // session), or nothing ticked. Paint the position and be done.
+  if (!gardenTrackEl || !crop.length || !gardenTrackEl.querySelector('.garden-plant')) {
+    renderGarden();
+    return;
+  }
+
+  dailyGrowthAnimating = true;
+  updateGardenGrowUI();
+
+  // Growing is staggered so a full plot ripples rather than jumping as
+  // one block. Going back is not - hiding a preview should feel like
+  // closing it, not like watching everything wilt in sequence.
+  var stagger = dailyGrowthShown ? DAILY_GROWTH_STAGGER_MS : 0;
+
+  crop.forEach(function (task, i) {
+    setTimeout(function () { resizePlantForToggle(task); }, i * stagger);
+  });
+
+  setTimeout(function () {
+    dailyGrowthAnimating = false;
+    updateGardenGrowUI();
+  }, (crop.length - 1) * stagger + (dailyGrowthShown ? 1400 : 900));
+}
+
+function resizePlantForToggle(task) {
+  if (!gardenTrackEl) return;
+
+  var wrap = gardenTrackEl.querySelector(
+    '.garden-plant[data-task-id="' + task.id + '"]'
+  );
+  if (!wrap) return;
+
+  var cat  = getCategoryById(task.categoryId);
+  var days = getDailyDisplayDays(task);
+
+  // Depth is recomputed from the plant's own bottom% rather than read
+  // back off the rendered scale, so a rounded custom property can't
+  // accumulate error into the plant's size over repeated toggles.
+  var bottomPct   = parseFloat(wrap.style.getPropertyValue('--plant-depth-bottom')) || 0;
+  var depthScale  = computeDepthScale(bottomPct);
+  var growthScale = computeGardenGrowthScale(days, computeTaskMomentum(task));
+
+  // The drag handler in edit mode reads this back to recompute total
+  // scale live while a plant is carried between depth bands.
+  wrap.dataset.growthScale = growthScale.toFixed(4);
+  wrap.style.setProperty('--plant-scale', (growthScale * depthScale).toFixed(3));
+
+  // The waiting glow is an invitation to press the button, so it
+  // belongs on the plants that still have something to show.
+  wrap.classList.toggle('daily-ready', !dailyGrowthShown);
+
+  // A day that crosses a milestone (day 2, 15 or 60) is drawn as a
+  // different plant, and previewing the growth has to preview that
+  // too - otherwise the one day that changes the most shows the least.
+  var stageIdx = getStageIndexForDays(days);
+  var wasStage = plantStageMemory.hasOwnProperty(task.id)
+    ? plantStageMemory[task.id]
+    : stageIdx;
+  if (stageIdx !== wasStage) crossfadePlantStage(wrap, task, cat, stageIdx);
+
+  if (dailyGrowthShown) playGrowthFlourish(wrap);
+}
+
+// The in-place twin of the crossfade buildPlantVisual() does at render
+// time. Needed because a milestone crossed mid-animation lands in an
+// element that is deliberately not being rebuilt.
+function crossfadePlantStage(wrap, task, cat, stageIdx) {
+  var host = wrap.querySelector('.plant-stage-crossfade');
+  if (!host) return;
+
+  var oldLayers = Array.prototype.slice.call(
+    host.querySelectorAll('.plant-stage-layer')
+  );
+
+  var layer = document.createElement('div');
+  layer.className     = 'plant-stage-layer';
+  layer.style.opacity = '0';
+  layer.innerHTML     = getPlantSVG(cat.id, stageIdx, getTaskSkinId(task));
+  host.appendChild(layer);
+
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      oldLayers.forEach(function (el) { el.style.opacity = '0'; });
+      layer.style.opacity = '1';
+    });
+  });
+
+  setTimeout(function () {
+    oldLayers.forEach(function (el) {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    });
+    // Same bookkeeping buildPlantVisual does, so the next full render
+    // doesn't replay a crossfade that has already happened.
+    plantStageMemory[task.id] = stageIdx;
+  }, 900);
+}
+
+// A four-point spark, drawn with curves rather than as a star polygon
+// so it keeps the soft edges the rest of the art has. No ids in it -
+// this is stamped several times per plant, and duplicate ids in a
+// document are exactly how gradients start bleeding between copies.
+var GROWTH_SPARK_SVG =
+  '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">' +
+  '<path d="M12 0.8 C13.1 7.3 16.7 10.9 23.2 12 C16.7 13.1 13.1 16.7 12 23.2 ' +
+  'C10.9 16.7 7.3 13.1 0.8 12 C7.3 10.9 10.9 7.3 12 0.8 Z"/>' +
+  '</svg>';
+
+// Hand-placed rather than randomised: five sparks that read as one
+// burst, weighted upward and slightly off-centre so it doesn't look
+// like a symmetrical explosion.
+var GROWTH_SPARKS = [
+  { x: '-31px', y: '-42px', spin: '-120deg', delay: '0s',    size: 16 },
+  { x:  '27px', y: '-48px', spin:  '135deg', delay: '0.07s', size: 13 },
+  { x:  '-7px', y: '-60px', spin:   '55deg', delay: '0.14s', size: 18 },
+  { x:  '39px', y: '-17px', spin:  '-75deg', delay: '0.21s', size: 11 },
+  { x: '-41px', y: '-13px', spin:   '95deg', delay: '0.27s', size: 12 },
+];
+
+// The pop and the sparks. Worth being clear about what these are for,
+// because a day of growth is a much smaller number than it feels like:
+// a plant's first day is +15%, but day 29 to 30 is +1.5% and day 59 to
+// 60 is under 1%. Past the first fortnight the honest difference is a
+// couple of pixels, and without something drawing the eye to the plant
+// that moved you would not know which one it was.
+//
+// So a light comes up over the plant while it grows, and the sparks
+// mark the spot.
+//
+// It used to be a bounce - the plant gathered down and sprang up. That
+// was a mistake and is worth not repeating: it MOVED the plant, over
+// the top of the one movement you were supposed to be watching, and a
+// 1% size change cannot be read through a 12% bounce happening at the
+// same time. A light adds no motion of its own, so the only thing
+// changing shape on screen is the growth itself.
+//
+// It lands only on plants that are actually growing, because this runs
+// only for those: an unticked habit has no day to roll back, never
+// gets passed to resizePlantForToggle, and so is never lit.
+//
+// Nothing here ADDS anything to the plant: the size it settles at is
+// the true one, and once the light has faded the plot is identical to
+// the Long-Term garden down to the pixel. All of it is decoration over
+// a size that is already correct, which is why the
+// prefers-reduced-motion block in style.css can drop the lot, and why
+// deleting this function would cost nothing but legibility.
+function playGrowthFlourish(wrap) {
+  // On the wrap rather than inside it, so the light can be a filter on
+  // .plant-visual - the same property, and the same warm colour, as
+  // the halo edit mode puts on a grabbable plant.
+  wrap.classList.remove('plant-growing');
+  void wrap.offsetWidth;   // lets the same class be re-added and re-run
+  wrap.classList.add('plant-growing');
+  setTimeout(function () { wrap.classList.remove('plant-growing'); }, 1450);
+
+  var burst = document.createElement('div');
+  burst.className = 'plant-grow-burst';
+  burst.setAttribute('aria-hidden', 'true');
+  burst.innerHTML = GROWTH_SPARKS.map(function (spark) {
+    return (
+      '<span class="plant-grow-spark" style="' +
+      '--spark-x:' + spark.x + ';' +
+      '--spark-y:' + spark.y + ';' +
+      '--spark-spin:' + spark.spin + ';' +
+      '--spark-delay:' + spark.delay + ';' +
+      'width:' + spark.size + 'px;height:' + spark.size + 'px;' +
+      'margin:' + (-spark.size / 2) + 'px 0 0 ' + (-spark.size / 2) + 'px;">' +
+      GROWTH_SPARK_SVG +
+      '</span>'
+    );
+  }).join('');
+
+  wrap.appendChild(burst);
+  // Removed rather than left to pile up: the toggle can be pressed as
+  // often as anyone likes.
+  setTimeout(function () {
+    if (burst.parentNode) burst.parentNode.removeChild(burst);
+  }, 1400);
+}
+
+if (gardenGrowBtnEl) {
+  gardenGrowBtnEl.addEventListener('click', toggleDailyGrowth);
 }
 
 
@@ -1317,6 +1698,7 @@ function renderSignpost(track) {
 
 function renderGarden() {
   if (!gardenSceneEl || !gardenTrackEl) return;
+
   updateGardenEditUI();
   gardenTrackEl.innerHTML = '';
 
@@ -1352,10 +1734,6 @@ function renderGarden() {
   }
   if (emptyMsgEl) emptyMsgEl.classList.add('hidden');
 
-  // Highest available art stage index - same length across every
-  // category's PLANT_SVG_DATA array (4 stages: 0–3).
-  var maxStageIdx = PLANT_SVG_DATA.misc.length - 1;
-
   // Bucket auto-positioned (never-dragged) tasks into their slot
   // group once per render. Each task's group is a stable hash of its
   // id, so this grouping (and therefore each task's position) stays
@@ -1386,40 +1764,34 @@ function renderGarden() {
     // The day count this plant's height is read from - the same one
     // its size is built from in each tab, but without the flourish
     // multipliers layered on afterwards.
-    var stageIdx, scale, subLabel, heightDays;
+    // Everything below reads LIFETIME days (totalGrowthDays), never
+    // the streak. A broken streak shrinks the momentum flourish but
+    // must never shrink what a plant has actually grown to.
+    var momentum = computeTaskMomentum(task); // up to +24% at a 60-day streak
 
-    if (currentGardenTab === 'daily') {
-      // Daily Garden: what today's plant looks like right now.
-      // Baseline fullness tracks the *current streak* - a long
-      // unbroken run already looks lush before today's box is even
-      // checked - then it blooms out fully the moment today is done.
-      var streakStage = getStageIndexForDays(streak);
-      var streakScale = computeScaleForDays(streak);
+    // The checklist is what decides whether there is a day to roll
+    // back: ticking a box is what added the day in the first place
+    // (toggleTask in 02 raises totalGrowthDays), so an unticked plant
+    // has nothing to subtract and is drawn the same in both positions
+    // of the toggle - it simply does not move.
+    var readyToGrow = task.completed && totalGrowthDays > 0 && !dailyGrowthShown;
 
-      stageIdx = task.completed ? maxStageIdx   : streakStage;
-      scale    = task.completed ? streakScale * 1.35 : streakScale;
+    // Through the same helper the toggle animation calls, so the
+    // rendered size and the animated size cannot be computed two
+    // slightly different ways.
+    var drawnDays = getDailyDisplayDays(task);
 
-      // Ticking today's box already added a day to the streak, so the
-      // height rises on the tick without borrowing the ×1.35 bloom.
-      heightDays = streak;
+    var stageIdx = getStageIndexForDays(drawnDays);
+    var scale    = computeGardenGrowthScale(drawnDays, momentum);
 
-      subLabel = (task.completed ? 'Done today' : 'Not done yet') +
-        (streak > 0 ? ' · ' + streak + ' day streak' : '');
-    } else {
-      // Long-Term Garden: permanent size from lifetime completed
-      // days (never shrinks), with a bit of extra flourish layered
-      // on top while a streak is currently alive.
-      stageIdx = getStageIndexForDays(totalGrowthDays);
-      var momentum = 1 + Math.min(streak, 60) * 0.004; // up to +24% at a 60-day streak
-      scale = computeScaleForDays(totalGrowthDays) * momentum;
+    // Read from the real lifetime total, NOT from drawnDays. The
+    // height and the label are facts about the plant and say the same
+    // thing whichever way the button is set - the toggle rolls back
+    // SIZE, and only size.
+    var heightDays = totalGrowthDays;
 
-      // Lifetime days only. A broken streak shrinks the plant on
-      // screen but must never shrink what it has grown to.
-      heightDays = totalGrowthDays;
-
-      var streakPart = streak > 0 ? ' · ' + streak + ' day streak' : '';
-      subLabel = totalGrowthDays + ' days grown' + streakPart;
-    }
+    var streakPart = streak > 0 ? ' · ' + streak + ' day streak' : '';
+    var subLabel   = totalGrowthDays + ' days grown' + streakPart;
 
     // Depth multiplier stacks with the growth-based scale - a fully
     // grown far-row plant is still smaller than a fully grown
@@ -1435,7 +1807,7 @@ function renderGarden() {
 
     // Ground-anchored wrapper - position only, never scales.
     var wrap = document.createElement('div');
-    wrap.className = 'garden-plant';
+    wrap.className = 'garden-plant' + (readyToGrow ? ' daily-ready' : '');
     wrap.style.left = layout.center;
     wrap.style.zIndex = layout.z;
     // Set on the wrap (not the inner .plant-visual) so both the
@@ -1572,6 +1944,11 @@ function updateGardenEditUI() {
   if (gardenEditStartEl)   gardenEditStartEl.classList.toggle('hidden', gardenEditMode);
   if (gardenEditActionsEl) gardenEditActionsEl.classList.toggle('hidden', !gardenEditMode);
   if (gardenSceneEl)       gardenSceneEl.classList.toggle('garden-editing', gardenEditMode);
+
+  // The grow button shares this row and hides while editing, so it is
+  // updated from here rather than from a second call site that would
+  // have to be remembered every time this one is touched.
+  updateGardenGrowUI();
 }
 
 function enterGardenEditMode() {

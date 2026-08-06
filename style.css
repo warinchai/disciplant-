@@ -1945,13 +1945,6 @@ body {
   pointer-events: none;
 }
 
-.page-garden .garden-subnav {
-  pointer-events: auto;
-  justify-content: center;
-  padding: 0 18px 8px;
-}
-
-
 /* ========================================
    Tasks page
    ======================================== */
@@ -3877,12 +3870,6 @@ body {
 }
 
 
-.page-friend-garden .garden-subnav {
-  pointer-events: auto;
-  justify-content: center;
-  padding: 0 18px 8px;
-}
-
 .friend-garden-bar {
   display: flex;
   align-items: center;
@@ -4459,7 +4446,12 @@ body.nav-open { overflow: hidden; }
 
 
 /* ============================================================
-   Garden toolbar - view tabs and the edit button on one row
+   Garden toolbar - the growth toggle and the edit button on one row
+   ------------------------------------------------------------
+   This used to also hold a Daily / Long-Term pair of view tabs, in a
+   .garden-subnav. Both the tabs and that class are gone: the two
+   views had become one render with an optional day of difference, so
+   the split was two names for one garden.
    ============================================================ */
 
 .garden-toolbar {
@@ -4472,7 +4464,7 @@ body.nav-open { overflow: hidden; }
   padding: 0 18px 8px;
 }
 
-.garden-toolbar .garden-subnav,
+.garden-toolbar .garden-grow-bar,
 .garden-toolbar .garden-edit-bar {
   margin: 0;
   padding: 0;
@@ -4726,4 +4718,264 @@ body.nav-open { overflow: hidden; }
   display: block;
   width: 100%;
   height: 100%;
+}
+
+
+/* ============================================================
+   Today's growth - the preview toggle and its payoff
+   ------------------------------------------------------------
+   The Daily Garden IS the regular garden - same plants, same sizes,
+   same labels, one render path. The button below is the only
+   difference: it rolls today's day of growth back so it can be
+   watched happening, and switching it on puts the plot back to
+   exactly the Long-Term garden. Nothing is spent and no number
+   changes - it is a view. See the "Today's growth" section in
+   04-garden-scene.js.
+
+   Two rules worth keeping if any of this is edited:
+
+     the growing itself is NOT animated here. It is the existing
+     transform transition on .plant-visual doing the work, driven
+     by JS moving --plant-scale. Everything in this block is the
+     celebration laid over that - a pop, some sparks and a glow -
+     and all of it is safe to drop, which is what the global
+     prefers-reduced-motion block further up already does.
+
+     nothing here touches .plant-visual's own filter. The hover
+     highlight and the edit-mode halo both live on that property,
+     and an animation on it beats both of them for as long as it
+     runs. The waiting-plant glow is a separate pseudo-element
+     underneath the plant instead.
+   ============================================================ */
+
+.garden-grow-bar {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.garden-toolbar .garden-grow-bar.hidden {
+  display: none;
+}
+
+/* Leaf rather than bark: this is the one control on the page that
+   makes something happen in the garden, so it is the one control
+   painted in the growth colour. */
+.garden-grow-btn {
+  border-color: var(--leaf-dark);
+  background: var(--leaf);
+  color: var(--linen);
+  box-shadow: var(--lip) var(--leaf-dark);
+}
+
+.garden-grow-btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--leaf-dark);
+}
+
+/* Nothing ticked yet. Still says "Grow today" - the hint beside it
+   explains why it can't be pressed, which is more use than a button
+   that greys out and gives no reason. */
+.garden-grow-btn:disabled {
+  cursor: default;
+  background: var(--bark-light);
+  border-color: var(--bark-deep);
+  box-shadow: var(--lip) var(--bark-deep);
+  opacity: 0.7;
+}
+
+.garden-grow-btn:disabled:hover {
+  filter: none;
+}
+
+/* There is a day sitting there waiting to be spent. The only thing
+   breathing on the whole toolbar, so it reads as the one thing asking
+   to be pressed. Expanding ring rather than a pulse of the button
+   itself, so the chunky lip underneath never distorts. */
+.garden-grow-btn.is-ready {
+  animation: growReadyRing 2.1s ease-in-out infinite;
+}
+
+@keyframes growReadyRing {
+  0%, 100% {
+    box-shadow: var(--lip) var(--leaf-dark), 0 0 0 0 rgba(232, 183, 92, 0.6);
+  }
+  55% {
+    box-shadow: var(--lip) var(--leaf-dark), 0 0 0 8px rgba(232, 183, 92, 0);
+  }
+}
+
+/* Currently showing today's growth. Held down and darker, the way the
+   active tab beside it is - a toggle has to look switched on, or the
+   only thing telling you which of the two plots you are looking at is
+   the wording on the button itself. */
+.garden-grow-btn.is-showing {
+  background: var(--leaf-deep);
+  border-color: var(--leaf-dark);
+  box-shadow: inset 0 3px 0 rgba(45, 62, 34, 0.28);
+  transform: translateY(3px);
+}
+
+.garden-grow-btn.is-showing:active:not(:disabled) {
+  box-shadow: inset 0 4px 0 rgba(45, 62, 34, 0.34);
+}
+
+.garden-grow-hint {
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--linen);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  white-space: nowrap;
+}
+
+
+/* A plant whose box is ticked but whose day has not been released
+   yet. Sits BEHIND the plant (negative z-index inside .garden-plant,
+   which is already a stacking context thanks to its inline z-index),
+   so a tall plant is haloed rather than washed out. Sized and placed
+   off --plant-scale so the glow tracks how big the plant actually is
+   on screen, the same way .plant-height-tag does. */
+.garden-plant.daily-ready::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--plant-scale, 1) * 22px);
+  width: calc(var(--plant-scale, 1) * 96px);
+  height: calc(var(--plant-scale, 1) * 96px);
+  transform: translateX(-50%);
+  background: radial-gradient(
+    closest-side,
+    rgba(232, 183, 92, 0.36) 0%,
+    rgba(232, 183, 92, 0.16) 46%,
+    rgba(232, 183, 92, 0) 78%
+  );
+  pointer-events: none;
+  z-index: -1;
+  animation: dailyReadyGlow 2.4s ease-in-out infinite;
+}
+
+@keyframes dailyReadyGlow {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+
+/* Edit mode is about moving plants, not growing them, and the grow
+   button hides there anyway - so the waiting glow would just be
+   competing with the edit halo for attention. */
+.garden-scene.garden-editing .garden-plant.daily-ready::before {
+  display: none;
+}
+
+/* The light that comes up over a plant while it grows.
+
+   Same property, same warm colour and the same idea as the halo edit
+   mode puts on a grabbable plant - just swelling and fading instead of
+   sitting still. Deliberately a LIGHT and not a movement: this replaced
+   a scale bounce that moved the plant on top of the one movement the
+   button exists to show, and a 1% size change cannot be read through a
+   12% bounce happening at the same time.
+
+   Only ever on plants that grew - JS adds the class from
+   playGrowthFlourish, which only runs for a habit that was ticked.
+
+   Runs 1.4s against the 1.1s growth transition on .plant-visual, so it
+   is still up as the plant settles and lets go just after. No
+   fill-mode on purpose: the moment it ends, .plant-visual's own filter
+   (and its hover and edit-mode overrides) take back over cleanly. The
+   base drop-shadow is repeated in every frame because filter is one
+   property, so a keyframe that named only the glow would drop the
+   plant's contact shadow for the duration. */
+.garden-plant.plant-growing .plant-visual {
+  animation: plantGrowLight 1.4s ease-in-out;
+}
+
+@keyframes plantGrowLight {
+  0% {
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.30));
+  }
+  40% {
+    filter:
+      drop-shadow(0 4px 10px rgba(0, 0, 0, 0.30))
+      drop-shadow(0 0 13px rgba(242, 184, 75, 0.7))
+      brightness(1.09);
+  }
+  70% {
+    filter:
+      drop-shadow(0 4px 10px rgba(0, 0, 0, 0.30))
+      drop-shadow(0 0 13px rgba(242, 184, 75, 0.55))
+      brightness(1.06);
+  }
+  100% {
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.30));
+  }
+}
+
+/* Sparks. A zero-size anchor point placed up the plant, with each
+   spark flying out from it - so the spans can be positioned in plain
+   pixels regardless of how big the plant under them is. */
+.plant-grow-burst {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--plant-scale, 1) * 62px);
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.plant-grow-spark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--sun);
+  opacity: 0;
+  animation: growSparkFly 1.15s ease-out forwards;
+  animation-delay: var(--spark-delay, 0s);
+}
+
+.plant-grow-spark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes growSparkFly {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.25) rotate(0deg);
+  }
+  22% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform:
+      translate(var(--spark-x, 0), var(--spark-y, -40px))
+      scale(1.05)
+      rotate(var(--spark-spin, 90deg));
+  }
+}
+
+/* Mobile scales .plant-visual by a further 0.60x on top of
+   --plant-scale (see .plant-visual), so both anchors that are placed
+   off the plant's on-screen height have to be scaled to match, or the
+   glow and the sparks float above a smaller plant. */
+@media (max-width: 600px) {
+  .garden-plant.daily-ready::before {
+    bottom: calc(var(--plant-scale, 1) * 13px);
+    width: calc(var(--plant-scale, 1) * 58px);
+    height: calc(var(--plant-scale, 1) * 58px);
+  }
+  .plant-grow-burst {
+    bottom: calc(var(--plant-scale, 1) * 37px);
+  }
+}
+
+@media (max-width: 560px) {
+  /* The hint is the first thing to go when the toolbar starts
+     wrapping - the button's own count already says how many. */
+  .garden-grow-hint { display: none; }
 }

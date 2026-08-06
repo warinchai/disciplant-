@@ -700,17 +700,15 @@ function getDevTaskId(el) {
 }
 
 // Builds the full editable panel body: a short summary line, then
-// one card per task with live-computed Daily and Long-Term stage +
-// scale, so the numbers you're editing and their visual effect are
-// right next to each other.
+// one card per task with its live-computed stage + scale, so the
+// numbers you're editing and their visual effect are right next to
+// each other.
 function renderDevPanel() {
   if (!devModeEnabled || !devPanelBody) return;
 
-  var maxStageIdx = PLANT_SVG_DATA.misc.length - 1;
-
   var summaryHtml =
     '<div class="dev-summary">' +
-      '<span>' + currentGardenTab + ' garden</span><span>·</span>' +
+      '<span>garden</span><span>·</span>' +
       '<span>' + tasks.length + ' task' + (tasks.length === 1 ? '' : 's') + '</span><span>·</span>' +
       '<span>' + getTodayString() + '</span>' +
     '</div>' +
@@ -721,14 +719,12 @@ function renderDevPanel() {
     var streak          = Math.max(0, t.streak || 0);
     var totalGrowthDays = Math.max(0, t.totalGrowthDays || 0);
 
-    var dailyStreakStage = getStageIndexForDays(streak);
-    var dailyStreakScale = computeScaleForDays(streak);
-    var dailyStageIdx    = t.completed ? maxStageIdx : dailyStreakStage;
-    var dailyScale       = t.completed ? (dailyStreakScale * 1.35) : dailyStreakScale;
-
-    var ltStageIdx = getStageIndexForDays(totalGrowthDays);
-    var momentum   = 1 + Math.min(streak, 60) * 0.004;
-    var ltScale    = computeScaleForDays(totalGrowthDays) * momentum;
+    // One garden, so one pair of numbers. The separate "daily" pair
+    // that used to sit beside these was computed off the streak with
+    // a 1.35x bloom, and that whole second view no longer exists.
+    var stageIdx = getStageIndexForDays(totalGrowthDays);
+    var momentum = 1 + Math.min(streak, 60) * 0.004;
+    var plantScale = computeScaleForDays(totalGrowthDays) * momentum;
 
     var milestoneBtns = STAGE_MILESTONES.map(function (m) {
       return '<button type="button" class="dev-quick-btn" data-dev-action="set" ' +
@@ -767,8 +763,7 @@ function renderDevPanel() {
         '</div>' +
 
         '<div class="dev-task-readout">' +
-          'Daily: stage ' + dailyStageIdx + ' · ' + dailyScale.toFixed(2) + 'x' +
-          ' &nbsp;|&nbsp; Long-term: stage ' + ltStageIdx + ' · ' + ltScale.toFixed(2) + 'x' +
+          'Stage ' + stageIdx + ' · ' + plantScale.toFixed(2) + 'x' +
         '</div>' +
       '</div>'
     );
@@ -862,7 +857,7 @@ if (devActionLog) {
   devActionLog.addEventListener('click', function () {
     console.log('DISCIPLANT dev state:', {
       tasks: tasks, lastResetDate: lastResetDate, currentUserId: currentUserId,
-      currentPage: currentPage, currentGardenTab: currentGardenTab,
+      currentPage: currentPage,
     });
     console.table(tasks);
     devFlashButton(devActionLog, 'Logged ✓', 'Log to console', 1200);
