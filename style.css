@@ -237,7 +237,12 @@ body {
      plot in exactly the same place and keeps every pixel above it
      scrollable. */
   overflow: auto;
-  overscroll-behavior: contain;
+  /* `none`, not `contain`. Both stop a scroll here from chaining out
+     to the page behind, but `contain` still lets THIS element
+     rubber-band past its own end - and since the scene paints no
+     background of its own, that bounce shows .sky-bg straight
+     through, as a strip of sky sliding in under the plot. */
+  overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: rgba(242, 184, 75, 0.55) transparent;
@@ -248,6 +253,14 @@ body {
   width: 8px;
 }
 .garden-scene::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* The little square where the two scrollbars meet. Left unstyled it
+   does NOT inherit the transparent track above - it falls back to the
+   browser's own opaque default, a pale block in the bottom-right
+   corner of the sky. */
+.garden-scene::-webkit-scrollbar-corner {
   background: transparent;
 }
 .garden-scene::-webkit-scrollbar-thumb {
@@ -263,9 +276,56 @@ body {
    left/bottom values on .garden-plant are relative to THIS box, not
    the viewport, so a plant's x-position is stable no matter how the
    surrounding viewport is scrolled. */
+/* The clip box: the plot's true edges, and nothing is allowed to move
+   them.
+
+   The bug this exists for: a scroll container's range is the union of
+   its descendants' boxes AFTER transforms, and .plant-visual's scale
+   is uncapped - about 12x on a year-old habit, so a 120px plant is
+   1539px wide. clampCenterPct in 04 only keeps a plant's CENTRE 68px
+   inside the edge (it protects the 130px name tag, not the plant), so
+   half a wide canopy hung over the end of the plot and the scene grew
+   its scroll range to reach it. Scrolling out there found no scenery,
+   just .sky-bg showing through the transparent scene - the blue
+   rectangle past the bottom and right edges. The same thing happened
+   downward through .garden-plant's negative bottom offset.
+
+   Clipping HERE and not on the track itself is the whole trick. The
+   sky strip is a child of the track sitting entirely above it
+   (bottom: 100%), so clipping the track would need an
+   overflow-clip-margin to spare it - and that margin moves the clip
+   edge on every side, taking the scroll range with it and handing the
+   plants their overhang straight back. This box has no margin at all
+   because it does not need one: it is a plain block wrapper whose own
+   height is the track's margin box, so the sky strip is already
+   inside it. overflow: clip establishes the formatting context that
+   keeps the track's top margin in, and is not a scroll container, so
+   the scene stays the only thing that scrolls.
+
+   Nothing visible is lost. At full scroll the plot's edges sit
+   exactly on the edges of the screen, so everything this cuts away
+   was already off-screen - it just cannot be chased any more. */
+.garden-scene-clip {
+  width: 300%;
+
+  /* flow-root is load-bearing, not decoration. This box's whole job is
+     to be exactly as tall as the plot, and it gets that height by
+     containing the track's 150vh top margin. `overflow: clip` will NOT
+     do that on its own - clip is the one overflow value that does not
+     establish a block formatting context, so without this the margin
+     would collapse straight through, leaving this box 50vh tall,
+     shunted 150vh down, with the sky strip clipped clean off the top
+     of the garden. flow-root establishes the context explicitly. */
+  display: flow-root;
+  overflow: clip;
+}
+
 .garden-scene-track {
   position: relative;
-  width: 300%;
+  /* Full width of the clip box above, which is the 300% that used to
+     be declared here - the plot is the same three screens wide, the
+     measurement just moved out one level. */
+  width: 100%;
   height: 50vh;
   /* Deliberately still 50vh. Every .garden-plant's bottom% is a
      percentage of THIS box, so growing the track to make room for the

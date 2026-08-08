@@ -1545,7 +1545,11 @@ function getCategoryById(catId) {
 //                     from the on-screen size, so a plant that is now
 //                     the size of a two-month-old at three weeks still
 //                     honestly says three weeks' worth of metres.
-var GROWTH_SPEEDUP = 2.75;
+// 2.75 was the first pass at this. x1.5 again on top of that is
+// 4.125, which is what is here - written out as one number rather
+// than left as `2.75 * 1.5`, so there is one thing to read and one
+// thing to change next time.
+var GROWTH_SPEEDUP = 4.125;
 
 // Day thresholds where the art itself changes to a more detailed
 // stage (seed → sprout → young → mature). Matches the 4 SVG stages
@@ -1570,10 +1574,17 @@ var STAGE_MILESTONES = [0, 2, 15, 60];
 //
 // - so multiplying the coefficient once, here, is exactly the same
 // thing as scaling every day count at every call site, for a fraction
-// of the arithmetic. 0.074 * 2.75^0.7 works out to about 0.150.
+// of the arithmetic. 0.074 * 4.125^0.7 works out to about 0.200.
 //
-// Where that lands: ~2.3x at day 60 became ~3.6x, ~5.6x at a year
-// became ~10.3x. Day 22 is now the size day 60 used to be.
+// Where that lands: 3.6x at day 60 is now 4.5x, 10.3x at a year is
+// now 13.4x, and any given size arrives in two thirds of the days it
+// used to - 3x was day 40, now day 27. On screen that takes a 60-day
+// plant from about 437px wide to about 541px before depth.
+//
+// Nothing needs capping for this. A plant leaning past the end of the
+// plot is cut off by .garden-scene-clip and can no longer drag the
+// scene's scroll range out with it (see style.css), so a bigger plant
+// costs nothing but its own overhang.
 var GROWTH_SCALE_K = 0.074 * Math.pow(GROWTH_SPEEDUP, 0.7);
 
 function computeScaleForDays(totalGrowthDays) {

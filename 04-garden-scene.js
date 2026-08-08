@@ -60,15 +60,19 @@
 //              measured.
 //   the toggle the show/hide growth button (see today's growth,
 //              below) changes how big a plant is DRAWN, between
-//              before and after the day it earned today. The height
-//              is read from task.totalGrowthDays in both positions,
-//              so it says the same thing either way - it is a fact
-//              about the plant, not a readout of what is currently on
-//              screen. It does still move on its own the moment a box
-//              is ticked, because ticking raises the day count.
+//              before and after the day it earned today - and the
+//              height follows it, because it is measuring the plant
+//              that is actually standing there. Hiding the growth
+//              shows yesterday's plant AND yesterday's height;
+//              showing it grows both together. Anything else made
+//              the button look like it was only playing an
+//              animation, since the one number attached to a plant
+//              never acknowledged the day it had just gained.
 //
-// So the label answers "how much has this grown", consistently, from
-// anywhere in the app; it is not a readout of pixels on screen.
+// So the height answers "how tall is the plant I am looking at". It
+// still is not a readout of pixels: depth and the flourish
+// multipliers move a plant on screen without touching it, and only a
+// real day of growth ever does.
 var PLANT_SEED_HEIGHT_M    = 0.02; // a plant with no days yet
 var PLANT_HEIGHT_CANOPY_M  = 120;  // ceiling the S-curve alone approaches
 var PLANT_HEIGHT_STEEPNESS = 2.2;  // >1 = slow start then a growth spurt
@@ -1450,6 +1454,17 @@ function resizePlantForToggle(task) {
   wrap.dataset.growthScale = growthScale.toFixed(4);
   wrap.style.setProperty('--plant-scale', (growthScale * depthScale).toFixed(3));
 
+  // The hover height, which has to be rewritten by hand here: the
+  // toggle deliberately does NOT re-render the scene (a fresh element
+  // would arrive at its final size with nothing to transition from),
+  // so nothing else in this path would ever update the tag. Left
+  // alone it kept reporting the height of a plant that was no longer
+  // the one on screen.
+  var heightTag = wrap.querySelector('.plant-height-tag');
+  if (heightTag) {
+    heightTag.textContent = formatHeightMeters(computeHeightMeters(days));
+  }
+
   // The waiting glow is an invitation to press the button, so it
   // belongs on the plants that still have something to show.
   wrap.classList.toggle('daily-ready', !dailyGrowthShown);
@@ -1784,12 +1799,16 @@ function renderGarden() {
     var stageIdx = getStageIndexForDays(drawnDays);
     var scale    = computeGardenGrowthScale(drawnDays, momentum);
 
-    // Read from the real lifetime total, NOT from drawnDays. The
-    // height and the label are facts about the plant and say the same
-    // thing whichever way the button is set - the toggle rolls back
-    // SIZE, and only size.
-    var heightDays = totalGrowthDays;
+    // Same day count the plant is DRAWN at, so the tag measures the
+    // plant that is on screen rather than one that isn't. One day is
+    // worth about a metre through the middle of the curve, so the
+    // number visibly moves when the growth is shown.
+    var heightDays = drawnDays;
 
+    // The label stays on the lifetime total in both positions. It
+    // answers "how much has this grown" rather than "how tall is it
+    // right now", and that count is the same fact whichever way the
+    // button happens to be set.
     var streakPart = streak > 0 ? ' · ' + streak + ' day streak' : '';
     var subLabel   = totalGrowthDays + ' days grown' + streakPart;
 

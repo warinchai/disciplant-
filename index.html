@@ -101,7 +101,16 @@
        replaced on each render). -->
   <div id="gardenScene" class="garden-scene hidden">
     <p id="gardenEmptyMsg" class="garden-empty-msg hidden">Your garden is empty. Add a task to plant your first seed.</p>
-    <div id="gardenSceneTrack" class="garden-scene-track"></div>
+    <!-- The clip box. Everything the plot is made of lives inside
+         this, and it is exactly the size of the plot: three screens
+         wide, and tall enough for the sky strip plus the ground. A
+         plant big enough to lean past the edge gets cut off here
+         rather than pushing the scene bigger to fit itself in, which
+         is what used to open a strip of bare sky past the bottom and
+         right edges. See .garden-scene-clip in style.css. -->
+    <div class="garden-scene-clip">
+      <div id="gardenSceneTrack" class="garden-scene-track"></div>
+    </div>
   </div>
 
   <!-- Friend garden scene - a second, read-only copy of the scene
@@ -113,7 +122,9 @@
        never from that friend's private gardens/{uid} document. -->
   <div id="friendGardenScene" class="garden-scene hidden">
     <p id="friendGardenMsg" class="garden-empty-msg hidden"></p>
-    <div id="friendGardenTrack" class="garden-scene-track"></div>
+    <div class="garden-scene-clip">
+      <div id="friendGardenTrack" class="garden-scene-track"></div>
+    </div>
   </div>
 
   <!-- ================================================
