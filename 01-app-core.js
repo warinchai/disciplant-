@@ -109,8 +109,13 @@ const CATEGORIES = [
     ],
   },
   {
+    // The id stays 'misc'. It is not a label - it is the value stored
+    // as task.categoryId in every existing garden document, the key
+    // PLANT_SVG_DATA / PLANT_ANCHORS / PLANT_SKINS are looked up by,
+    // and the fallback every one of those lookups falls back TO.
+    // Renaming it would orphan every task already saved under it.
     id:          'misc',
-    name:        'Misc',
+    name:        'Miscellaneous',
     species:     'Mushroom',
     streakStages: [
       { min: 0, },

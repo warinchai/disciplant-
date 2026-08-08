@@ -156,8 +156,30 @@ var PLANT_Z_INDEX      = 3;
 // plant further down toward DEPTH_BOTTOM_MIN (foreground) scales it
 // up toward DEPTH_MAX_SCALE, and further up toward DEPTH_BOTTOM_MAX
 // (background) scales it down toward DEPTH_MIN_SCALE.
+//
+// DEPTH_BOTTOM_MAX is the back of the plot: the highest a plant's base
+// can sit. It stops well short of the fence on purpose. A plant's
+// drawn base does NOT land exactly on its bottomPct line - .plant-visual
+// scales from a fixed origin near its foot, and the ground-sink offset
+// in .garden-plant (style.css) only cancels about half of the drift
+// that produces, so the base creeps upward as a plant grows, by roughly
+// 3px per unit of total scale. At 1x that's ~2px and invisible; a
+// year-old plant at the far edge is ~8x total scale, which lifted its
+// base a good 20px and, at the old cap of 92, left it level with or
+// above the fence's own base - the plant read as hovering over the
+// fence rather than standing in front of it. 76 keeps even the oldest
+// plant's base clearly down in the lawn, on short viewports too (the
+// fence's base is only around 93% of the track there, versus ~97% on a
+// tall one, because its position mixes a -7% top with a 42px height),
+// and leaves a band of empty lawn between the furthest plant and the
+// fence, which is what makes the fence read as the horizon.
+//
+// Tuning note: this is the one number to change. Lowering it also
+// steepens the depth cue, since computeDepthScale() reaches
+// DEPTH_MIN_SCALE at whatever this says - the plot gets shallower and
+// plants shrink with height a little faster.
 var DEPTH_BOTTOM_MIN = 4;
-var DEPTH_BOTTOM_MAX = 92;
+var DEPTH_BOTTOM_MAX = 82;   // 92 -> 82, to keep plants off the fence
 var DEPTH_MIN_SCALE  = 0.6;  // furthest back
 var DEPTH_MAX_SCALE  = 1.4;  // furthest front
 
@@ -209,11 +231,18 @@ function clampCenterPct(pct) {
   return Math.max(marginPct, Math.min(100 - marginPct, pct));
 }
 
-// Keeps a dragged plant's base from landing above the top of the
-// scene or below the visible grass - a free y placement, just kept
-// within a sane visible range.
+// Keeps a dragged plant's base from landing above the back of the plot
+// or below the visible grass - a free y placement, just kept within a
+// sane visible range. This is the function that actually limits
+// dragging, so it reads DEPTH_BOTTOM_MIN/MAX rather than repeating
+// their values: the two numbers used to be hardcoded here as well, and
+// a copy of a limit is a limit that quietly stops matching.
+//
+// A stored posY above the new maximum (from before it was lowered) is
+// pulled down to it the next time the garden renders, since every read
+// of task.posY goes through here.
 function clampBottomPct(pct) {
-  return Math.max(4, Math.min(92, pct));
+  return Math.max(DEPTH_BOTTOM_MIN, Math.min(DEPTH_BOTTOM_MAX, pct));
 }
 
 function computePlantLayout(task, indexInGroup, groupTotal) {
@@ -1018,7 +1047,11 @@ function renderSky(track) {
 // front edge to just under the fence is what makes the ground look
 // like it is made of them.
 var PROP_BOTTOM_MIN = 5;
-var PROP_BOTTOM_MAX = 84;
+// Kept at or below DEPTH_BOTTOM_MAX, not just for looks: computeDepthZ()
+// derives its z-index from (DEPTH_BOTTOM_MAX - bottomPct), so a prop
+// placed further back than the plant horizon computes a NEGATIVE z and
+// drops behind the lawn and the fence instead of standing in them.
+var PROP_BOTTOM_MAX = 76;
 
 function renderSkinProps(track, skin) {
   if (!skin || !Array.isArray(skin.props) || !skin.props.length) return;
@@ -1315,6 +1348,28 @@ function computeGardenGrowthScale(days, momentum) {
   return computeScaleForDays(days) * (momentum || 1);
 }
 
+// The scale a plant is actually DRAWN at, before depth. Same growth
+// curve as above, times the one correction the curve cannot know
+// about: the species' artwork is not the same height as everyone
+// else's, so drawing every species at the same multiplier drew them
+// at different heights (see PLANT_ART_HEIGHT_UNITS in 03).
+//
+// This is what keeps the number under a plant honest. The height tag
+// is read from days grown and nothing else, so for it to agree with
+// what is on screen, two plants of the same age have to BE the same
+// height. Once they are, the only way one plant can stand taller than
+// another is by being older - which is exactly what the tag measures,
+// so a smaller number can no longer belong to a bigger plant.
+//
+// Depth still shrinks a plant without shrinking its number, and the
+// streak flourish still swells it without swelling its number. Both
+// are deliberate and unchanged: they are perspective and celebration,
+// not growth (see the height system notes at the top of this file).
+function computePlantRenderScale(catId, days, momentum) {
+  return computeGardenGrowthScale(days, momentum) *
+         plantArtScaleAdjust(catId, getStageIndexForDays(days));
+}
+
 function computeTaskMomentum(task) {
   return 1 + Math.min(Math.max(0, task.streak || 0), 60) * 0.004;
 }
@@ -1447,7 +1502,7 @@ function resizePlantForToggle(task) {
   // accumulate error into the plant's size over repeated toggles.
   var bottomPct   = parseFloat(wrap.style.getPropertyValue('--plant-depth-bottom')) || 0;
   var depthScale  = computeDepthScale(bottomPct);
-  var growthScale = computeGardenGrowthScale(days, computeTaskMomentum(task));
+  var growthScale = computePlantRenderScale(cat && cat.id, days, computeTaskMomentum(task));
 
   // The drag handler in edit mode reads this back to recompute total
   // scale live while a plant is carried between depth bands.
@@ -1797,7 +1852,7 @@ function renderGarden() {
     var drawnDays = getDailyDisplayDays(task);
 
     var stageIdx = getStageIndexForDays(drawnDays);
-    var scale    = computeGardenGrowthScale(drawnDays, momentum);
+    var scale    = computePlantRenderScale(cat.id, drawnDays, momentum);
 
     // Same day count the plant is DRAWN at, so the tag measures the
     // plant that is on screen rather than one that isn't. One day is

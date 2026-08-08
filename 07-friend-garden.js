@@ -373,7 +373,12 @@ function renderFriendGarden() {
     // looking nothing like the one its owner sees.
     var stageIdx = getStageIndexForDays(totalGrowthDays);
     var momentum = 1 + Math.min(streak, 60) * 0.004;
-    var scale    = computeScaleForDays(totalGrowthDays) * momentum;
+    // The same per-species height correction the owner's own garden
+    // applies (see computePlantRenderScale in 04), so a friend's plot
+    // is drawn to the same rules as theirs and the height tags below
+    // mean the same thing in both places.
+    var scale    = computeScaleForDays(totalGrowthDays) * momentum *
+                   plantArtScaleAdjust(cat.id, stageIdx);
 
     var streakPart = streak > 0 ? ' \u00B7 ' + streak + ' day streak' : '';
     var subLabel   = totalGrowthDays + ' days grown' + streakPart;

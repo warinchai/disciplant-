@@ -608,7 +608,7 @@ var PLANT_SVG_DATA = {
     '<circle cx="40" cy="45" r="0.8" style="fill:var(--c-bloom,#F5F0EB)" opacity="0.08"/>'
   ],
 
-  // ---- MUSHROOM (Misc) ----
+  // ---- MUSHROOM (Miscellaneous) ----
   // Modelled on the flat-illustration reference: a broad, slightly
   // off-centre cap over a swollen tapering stalk, with soft apricot
   // gill tabs tucked under the rim. No outlines anywhere — the cap's
@@ -892,6 +892,77 @@ var PLANT_ANCHORS = {
 function getPlantAnchors(catId, stageIndex) {
   var set = PLANT_ANCHORS[catId] || PLANT_ANCHORS.misc;
   return set[Math.max(0, Math.min(stageIndex, set.length - 1))];
+}
+
+
+// ---- How tall each stage is actually drawn ------------------------
+// The vertical extent of the artwork above, in the art's own units:
+// from the top of the highest drawn shape to the bottom of the lowest,
+// with the ground shadow left out (it lies on the ground, it is not
+// part of the plant). Measured off the SVG bodies at the top of this
+// file, not guessed, and NOT the same thing as the `top` values in
+// PLANT_ANCHORS - those are rough hand-placed hooks for hanging skin
+// extras on and are several units out in places.
+//
+// WHY THIS EXISTS
+// Every species is drawn inside the same 80x130 box, but none of them
+// fill it the same way. A mature oak stands 116 units tall; a mature
+// mushroom, 73.5. At the same growth scale the oak therefore renders
+// nearly 60% taller than the mushroom - while the height tag under
+// each plant is computed from days grown alone and knows nothing about
+// which species it is sitting on. The result was plants whose stated
+// height and drawn height disagreed, including the bad case: a plant
+// showing the SMALLER number standing visibly taller than one showing
+// a larger one.
+//
+// The fix is in plantArtScaleAdjust() below, which draws each species
+// at the scale that brings it to the common height for its stage. The
+// artwork is untouched; only the multiplier it is rendered at changes.
+//
+// If a stage's art is ever redrawn, remeasure that entry. A stale
+// number here breaks nothing - it just leaves that species a little
+// off the common height again.
+var PLANT_ART_HEIGHT_UNITS = {
+  //              seed   sprout  young  mature
+  education:   [  24.5,   35.7,  96.0,  116.0 ],
+  exercise:    [  14.0,   34.5,  68.5,   95.0 ],
+  mindfulness: [  18.5,   41.0,  65.6,   85.2 ],
+  sleep:       [  28.9,   45.1,  62.9,   81.1 ],
+  chores:      [  21.4,   48.0,  77.8,  104.4 ],
+  finance:     [  12.4,   50.8,  62.1,   91.6 ],
+  misc:        [  13.1,   30.9,  52.3,   73.5 ],
+};
+
+// The height every species is brought to, per stage: the mean of each
+// column above. A mean rather than a chosen species on purpose - it
+// pulls plants in both directions and keeps the garden roughly the
+// size it already was, instead of letting whichever species was drawn
+// biggest decide how big everything else has to be.
+var PLANT_ART_HEIGHT_REF = [18.97, 40.86, 69.31, 92.40];
+
+// 1  = every species is drawn to exactly the reference height for its
+//      stage. This is what makes size order and height order agree:
+//      once every plant of a given age is the same height on screen,
+//      the only thing that can make one plant taller than another is
+//      being older, which is the only thing the height tag measures.
+// 0  = the old behaviour, each species drawn at whatever height its
+//      art happens to be.
+// Anything in between is a partial correction and does NOT carry the
+// guarantee - it only narrows the disagreement.
+var PLANT_ART_NORMALIZE = 1;
+
+function plantArtScaleAdjust(catId, stageIndex) {
+  var row = PLANT_ART_HEIGHT_UNITS[catId] || PLANT_ART_HEIGHT_UNITS.misc;
+  var i   = Math.max(0, Math.min(stageIndex | 0, row.length - 1));
+  var own = row[i];
+  var ref = PLANT_ART_HEIGHT_REF[i];
+
+  // Any missing or nonsense entry falls back to drawing the plant
+  // exactly as it is, which is the behaviour this whole block
+  // replaces - never to a zero or negative scale.
+  if (!own || !ref || !isFinite(own) || !isFinite(ref)) return 1;
+  if (PLANT_ART_NORMALIZE === 1) return ref / own;
+  return Math.pow(ref / own, PLANT_ART_NORMALIZE);
 }
 
 

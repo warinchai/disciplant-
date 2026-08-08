@@ -4165,6 +4165,11 @@ a:focus-visible,
   font-weight: 700;
   color: var(--ink);
   line-height: 1.2;
+  /* "Miscellaneous" is one unbreakable word wider than a 116px card,
+     and a single long word has no break opportunity in it - without
+     this it spills out over the card's edge instead of wrapping. */
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 
 .plot-card-count {
@@ -4521,7 +4526,11 @@ body.nav-open { overflow: hidden; }
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 0 18px 8px;
+  /* The top value is doing real work. #loadingState above this is
+     display:none once auth resolves, and .page is fixed inset:0, so
+     without it the row sits flush against the very top of the
+     viewport with nothing above it at all. */
+  padding: 16px 18px 8px;
 }
 
 .garden-toolbar .garden-grow-bar,
@@ -4536,7 +4545,12 @@ body.nav-open { overflow: hidden; }
 }
 
 @media (max-width: 560px) {
-  .garden-toolbar { gap: 6px; }
+  .garden-toolbar {
+    gap: 6px;
+    /* A little less than on desktop - the same gap eats a bigger
+       share of a phone's screen, and the row still clears the top. */
+    padding-top: 12px;
+  }
 }
 
 
