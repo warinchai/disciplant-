@@ -85,8 +85,10 @@ var PLANT_HEIGHT_MIDPOINT_POW =
   Math.pow(PLANT_HEIGHT_MIDPOINT, PLANT_HEIGHT_STEEPNESS);
 
 function computeHeightMeters(growthDays) {
-  var days = Math.max(0, growthDays || 0);
-  if (!isFinite(days)) days = 0;
+  // Same ceiling and same junk filter as the growth scale (see
+  // clampGrowthDays in 01), so the number under a plant can never
+  // disagree with the plant above it.
+  var days = clampGrowthDays(growthDays);
 
   var grown = Math.pow(days, PLANT_HEIGHT_STEEPNESS);
   var surge = PLANT_HEIGHT_CANOPY_M * grown / (PLANT_HEIGHT_MIDPOINT_POW + grown);

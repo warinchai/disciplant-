@@ -3931,6 +3931,14 @@ body {
 
 
 .friend-garden-bar {
+  /* .page-friend-garden above is pointer-events:none so clicks fall
+     through to the scrollable garden scene behind it. That applies to
+     this bar and the "Friends" button in it too, which is why the
+     button did nothing: the click never reached it. The owner's Garden
+     page has the same page-level rule and re-enables events on
+     .garden-toolbar the same way - anything interactive that lives on
+     top of a scene has to opt back in here. */
+  pointer-events: auto;
   display: flex;
   align-items: center;
   gap: 10px;

@@ -577,23 +577,11 @@
     <defs></defs>
   </svg>
 
-  <!-- ================================================
-       DEVELOPER MODE - live state inspector
-       Toggle with the DEV button or Ctrl/Cmd+Shift+D
-       ================================================ -->
-  <div id="devPanel" class="dev-panel hidden">
-    <div class="dev-panel-header">
-      <span class="dev-panel-title">Developer Mode</span>
-      <button id="devPanelClose" class="dev-panel-close" aria-label="Close developer panel"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg></button>
-    </div>
-    <div class="dev-panel-actions">
-      <button id="devActionRollover" class="dev-btn">Simulate day rollover</button>
-      <button id="devActionLog" class="dev-btn">Log to console</button>
-      <button id="devActionCopy" class="dev-btn">Copy state JSON</button>
-    </div>
-    <div id="devPanelBody" class="dev-panel-body"></div>
-  </div>
-  <button id="devModeToggle" class="dev-toggle-btn" title="Developer mode (Ctrl/Cmd+Shift+D)">DEV</button>
+  <!-- Developer mode used to live here: a DEV button and a live state
+       inspector. Both now build themselves in 09-dev-mode.js, which is
+       not loaded on the public site (see the commented script tag at
+       the bottom of this file). Keeping the markup out of here too
+       means nothing about it ships in the page source either. -->
 
   <!-- Firebase SDKs (compat version) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -619,5 +607,13 @@
        The totals are still readable privately with a dry run of
        recompute-stats.js. -->
   <!-- <script src="08-home-stats.js"></script> -->
+
+  <!-- Developer mode. Same idea as the line above: this one tag is the
+       whole switch. Leave it commented for the public site. To use the
+       panel, serve this folder locally and uncomment it.
+       09-dev-mode.js is also listed in .vercelignore, so it is never
+       uploaded to the deploy - if this tag is ever pushed uncommented
+       by accident the file simply 404s and the app carries on. -->
+  <!-- <script src="09-dev-mode.js"></script> -->
 </body>
 </html>

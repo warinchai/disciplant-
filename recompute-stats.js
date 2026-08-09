@@ -64,6 +64,11 @@ const db = getFirestore();
 // live numbers.
 const WRITE = process.argv.includes('--write');
 
+// Kept in step with MAX_GROWTH_DAYS in 01-app-core.js by hand - this
+// script runs under Node and shares no code with the site. If you
+// change it there, change it here.
+const MAX_GROWTH_DAYS = 1000;
+
 
 // ---- Gardeners -------------------------------------------------
 // One /usernames document per person who claimed a name, so counting
@@ -116,8 +121,17 @@ async function countGardens() {
     tasks.forEach((task) => {
       // Guard every read: one malformed task shouldn't poison the
       // total or crash a run that's otherwise fine.
+      // Same ceiling the app applies (MAX_GROWTH_DAYS in 01-app-core.js).
+      // The app clamps on both read and write, so an honest client can
+      // never store more than this - but /gardens is writable by its
+      // owner and the rules cannot loop over the tasks array to check,
+      // so one hand-edited document could otherwise put an absurd
+      // number on the public home page. Capping here keeps that
+      // impossible no matter what is in the data.
       const days = task && Number(task.totalGrowthDays);
-      if (Number.isFinite(days) && days > 0) habitsCompleted += Math.floor(days);
+      if (Number.isFinite(days) && days > 0) {
+        habitsCompleted += Math.min(Math.floor(days), MAX_GROWTH_DAYS);
+      }
     });
   });
 

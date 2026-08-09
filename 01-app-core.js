@@ -1592,8 +1592,36 @@ var STAGE_MILESTONES = [0, 2, 15, 60];
 // costs nothing but its own overhang.
 var GROWTH_SCALE_K = 0.074 * Math.pow(GROWTH_SPEEDUP, 0.7);
 
+// ---- Ceiling on a plant's age ------------------------------------
+// A plant stops ageing at MAX_GROWTH_DAYS. 1000 days is well past any
+// real habit - the growth curve is nearly flat by then, so the last
+// few hundred days barely change the drawing - and everything above it
+// is either a typo, a bug, or someone editing the document by hand.
+//
+// Be clear about what this is NOT: it is not a security boundary. The
+// browser writes gardens/{uid} itself, and Firestore rules cannot loop
+// over the tasks array, so nothing stops a determined person storing
+// 1e18 in that field. What the ceiling guarantees is that whatever
+// ends up in the document, the app draws a plant rather than a
+// 1e18-scaled one, and writes the value back down on the next save.
+//
+// clampGrowthDays() is also the junk filter for this field, so it has
+// to survive everything a hand-edited document can hold: strings,
+// null, NaN, Infinity, negatives, fractions. Anything it cannot make
+// sense of becomes 0, which renders as a seed.
+var MAX_GROWTH_DAYS = 1000;
+
+function clampGrowthDays(value) {
+  var n = Number(value);
+  if (!isFinite(n) || n <= 0) return 0;
+  return Math.min(Math.floor(n), MAX_GROWTH_DAYS);
+}
+
+// The two curves below take a day count straight from a task, so they
+// clamp rather than trusting the caller: they are the last thing
+// standing between a bad number and the layout.
 function computeScaleForDays(totalGrowthDays) {
-  var days = Math.max(0, totalGrowthDays || 0);
+  var days = clampGrowthDays(totalGrowthDays);
   return 1 + GROWTH_SCALE_K * Math.pow(days, 0.7);
 }
 

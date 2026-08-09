@@ -545,21 +545,27 @@ auth.onIdTokenChanged(function (user) {
               // the species' default skin at render time.
               skinId:            t.skinId              || SKIN_DEFAULT_ID,
               completed:         t.completed           || false,
-              streak:            t.streak              || 0,
+              // Every day count coming out of the document goes
+              // through clampGrowthDays() (01): this is the edge the
+              // data arrives at, and the document is writable by the
+              // browser, so it is the first place a nonsense value -
+              // a hand-edited 1e18, a NaN, a negative - can be caught
+              // before anything tries to lay out a garden with it.
+              streak:            clampGrowthDays(t.streak),
               lastCleanDate:     t.lastCleanDate        || null,
               prevLastCleanDate: t.prevLastCleanDate    || null,
-              totalGrowthDays:    t.totalGrowthDays       || 0,
+              totalGrowthDays:   clampGrowthDays(t.totalGrowthDays),
               // All-time longest streak this task has ever reached.
               // Backfilled from the current streak on load in case a
               // task already had a streak before this field existed.
-              maxStreak:         Math.max(t.maxStreak || 0, t.streak || 0),
+              maxStreak:         Math.max(clampGrowthDays(t.maxStreak), clampGrowthDays(t.streak)),
               // All-time high-water mark for totalGrowthDays, which
               // is NOT monotonic - un-ticking today's box takes a day
               // back off it. Without this, a plant sitting exactly on
               // a 30-day skin unlock would lose that skin the moment
               // its owner corrected a mis-tap. Backfilled from the
               // current total for tasks saved before this existed.
-              maxGrowthDays:     Math.max(t.maxGrowthDays || 0, t.totalGrowthDays || 0),
+              maxGrowthDays:     Math.max(clampGrowthDays(t.maxGrowthDays), clampGrowthDays(t.totalGrowthDays)),
               // Per-day completion log - { "YYYY-MM-DD": true, ... } -
               // one entry per day this task was actually checked off.
               // Powers the Stats page heatmaps; only starts recording
@@ -660,12 +666,17 @@ function buildCleanTasks() {
       categoryId:        t.categoryId,
       skinId:            t.skinId || SKIN_DEFAULT_ID,
       completed:         t.completed,
-      streak:            t.streak || 0,
+      // Clamped on the way out as well as on the way in. The read side
+      // protects this session; this side means the next ordinary save
+      // rewrites an over-large stored value back down to the ceiling,
+      // and stops one from reaching gardenSummaries - which friends
+      // read - or the community counters.
+      streak:            clampGrowthDays(t.streak),
       lastCleanDate:     t.lastCleanDate || null,
       prevLastCleanDate: t.prevLastCleanDate || null,
-      totalGrowthDays:    t.totalGrowthDays || 0,
-      maxStreak:         Math.max(t.maxStreak || 0, t.streak || 0),
-      maxGrowthDays:     Math.max(t.maxGrowthDays || 0, t.totalGrowthDays || 0),
+      totalGrowthDays:   clampGrowthDays(t.totalGrowthDays),
+      maxStreak:         Math.max(clampGrowthDays(t.maxStreak), clampGrowthDays(t.streak)),
+      maxGrowthDays:     Math.max(clampGrowthDays(t.maxGrowthDays), clampGrowthDays(t.totalGrowthDays)),
       history:           t.history || {},
       posX:              (typeof pos.posX === 'number') ? pos.posX : null,
       posY:              (typeof pos.posY === 'number') ? pos.posY : null,
