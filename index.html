@@ -588,7 +588,14 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
-  <!-- Firebase project keys -->
+  <!-- App Check. Must load AFTER firebase-app-compat.js and BEFORE
+       firebase-config.js, which is where it is activated - a request
+       that goes out before activate() carries no attestation token.
+       Keep the version in step with the three SDKs above; mixing
+       compat versions is not supported. -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check-compat.js"></script>
+
+  <!-- Firebase project keys + App Check activation -->
   <script src="firebase-config.js"></script>
 
   <script src="01-app-core.js"></script>

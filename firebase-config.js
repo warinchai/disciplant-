@@ -39,5 +39,74 @@ const firebaseConfig = {
 // rules you set in the Firestore console, not from hiding this file.
 firebase.initializeApp(firebaseConfig);
 
+
+// ============================================
+// App Check — proves requests really come from this app
+//
+// From here on, every Firestore and Auth request carries a
+// short-lived App Check token, issued only after reCAPTCHA Enterprise
+// has scored the session as a real browser on a registered domain.
+// Someone who copies the config object above into a Node script
+// cannot obtain one, so their requests are rejected before the
+// security rules are even consulted. That is the point: the rules can
+// only limit an authenticated uid, and creating fresh anonymous uids
+// was free until now.
+//
+// ORDER MATTERS. This must run after initializeApp() and before
+// firestore()/auth() are called at the bottom of this file, or the
+// first requests of the page go out unattested.
+//
+// NOTHING IS REJECTED UNTIL YOU SAY SO IN THE CONSOLE.
+// This file only makes the app SEND tokens. Requests without one keep
+// working until Firebase Console -> Security -> App Check -> APIs
+// flips a product from Monitor to Enforce. Leave Firestore AND
+// Authentication on Monitor for a few days first, check the
+// verified/unverified split, then enforce Firestore, confirm the
+// garden still saves, and only then enforce Authentication.
+// ============================================
+
+// Public by design — it ships in the page either way, exactly like the
+// apiKey above. The separate reCAPTCHA "secret key" is only for
+// backends that verify tokens themselves; App Check does that inside
+// Google's infrastructure, so it is never needed here and must never
+// be committed to this repo.
+const APPCHECK_SITE_KEY = '6LfRnXwtAAAAAM1n1kB22kAXn8yGixz8rDGyxZ4U';
+
+// ---- Local development ----
+// A page served from localhost is not on the reCAPTCHA key's domain
+// list, so it can never be attested. Firebase's answer is a debug
+// token: with the flag below set, the SDK prints one to the console on
+// first run, and you register it under App Check -> Apps -> (this app)
+// -> Manage debug tokens. That token then stands in for attestation on
+// this machine only.
+//
+// The hostname gate is load-bearing. A debug token reaching
+// disciplant.vercel.app would hand anyone a way to skip attestation
+// entirely, which is the whole thing being bought here. It is an
+// exact-match list rather than a substring test on purpose — a
+// hostile domain like "localhost.example.com" must not switch it on.
+//
+// Note this also means Vercel PREVIEW deployments (the per-push
+// disciplant-xxxxx.vercel.app URLs) will fail App Check once
+// enforcement is on, since they are neither localhost nor on the key's
+// domain list. Test on production, or add the preview domain to the
+// reCAPTCHA key.
+const APPCHECK_LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]', ''];
+
+if (APPCHECK_LOCAL_HOSTS.indexOf(location.hostname) !== -1) {
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  console.warn(
+    'DISCIPLANT: App Check debug mode (local hosts only). Copy the debug ' +
+    'token logged below into Firebase Console -> Security -> App Check -> ' +
+    'Apps -> Manage debug tokens. Do not commit or share it.'
+  );
+}
+
+firebase.appCheck().activate(
+  new firebase.appCheck.ReCaptchaEnterpriseProvider(APPCHECK_SITE_KEY),
+  true   // keep refreshing the token for the life of the page
+);
+
+
 const db = firebase.firestore();
 const auth = firebase.auth();
