@@ -21,6 +21,74 @@ service cloud.firestore {
     function me()         { return request.auth.uid; }
     function changed()    { return request.resource.data.diff(resource.data).affectedKeys(); }
 
+
+    // ============================================
+    // RATE LIMITING — the tunable numbers
+    //
+    // THESE FOUR FUNCTIONS ARE THE KILL SWITCH. Under attack, cut
+    // rlGardenMax()/rlSummaryMax() to something like 20, paste, and
+    // hit Publish — it applies within about a minute and needs no
+    // deploy. Everything else in this file can stay as it is.
+    //
+    // How the limiter works, in one paragraph: every rate-limited
+    // document carries its own counter — rlAt (when it was last
+    // written), rlStart (when the current counting window opened) and
+    // rlCount (writes so far in that window). The rules below allow a
+    // write only if it either continues the current window with
+    // exactly one more write and stays under the ceiling, or opens a
+    // fresh window once the old one has genuinely expired. Because
+    // the counter lives ON the document being written, checking it
+    // reads `resource`, which Firestore does NOT bill as a document
+    // read — so this costs nothing per write. A separate /rateLimits
+    // collection would have cost one billed read every single time.
+    //
+    // The window is fixed, not sliding: it opens on the first write
+    // and resets rlWindow() later. So the true ceiling at a window
+    // boundary is briefly up to 2x the number below. That is a
+    // deliberate trade for the zero-read design.
+    // ============================================
+
+    function rlWindow()     { return duration.value(10, 'm'); }
+    function rlGardenMax()  { return 200; }
+    function rlSummaryMax() { return 200; }
+
+    // Stand-in for "this document has no counter yet". Any real
+    // rlStart is far newer than this, so a document written before
+    // these rules existed always takes the fresh-window branch on its
+    // next write and adopts a counter automatically. No migration,
+    // no backfill script.
+    function rlEpoch()      { return timestamp.date(2000, 1, 1); }
+
+    // For an UPDATE, where `resource` is the document as it stands.
+    //
+    // rlAt == request.time forces the client to use
+    // FieldValue.serverTimestamp(): request.time is the server's
+    // clock, so a client cannot backdate its own counter to look
+    // idle. The same trick is what makes rlStart unforgeable.
+    function rlOkUpdate(maxWrites) {
+      return request.resource.data.rlAt == request.time
+        && (
+             // Fresh window — only once the previous one has expired.
+             ( request.resource.data.rlStart == request.time
+               && request.resource.data.rlCount == 1
+               && request.time > resource.data.get('rlStart', rlEpoch()) + rlWindow() )
+             ||
+             // Same window — exactly one more, still under the ceiling.
+             ( request.resource.data.rlStart == resource.data.get('rlStart', rlEpoch())
+               && request.resource.data.rlCount == resource.data.get('rlCount', 0) + 1
+               && request.resource.data.rlCount <= maxWrites )
+           );
+    }
+
+    // For a CREATE, where `resource` is null and cannot be read.
+    // The first write of a brand new document always opens window 1.
+    function rlOkCreate() {
+      return request.resource.data.rlAt    == request.time
+        &&   request.resource.data.rlStart == request.time
+        &&   request.resource.data.rlCount == 1;
+    }
+
+
     // Am I on this person's friends list?
     //
     // The friends array on THEIR user doc is the authority, not mine —
@@ -37,13 +105,25 @@ service cloud.firestore {
              .data.get('friends', []).hasAny([me()]);
     }
 
-    // ---- Garden data — unchanged, owner only ----
+    // ---- Garden data — owner only, now rate limited ----
     // Deliberately NOT opened up to friends. Rules are document-level,
     // so there is no way to expose growth/streaks from this document
     // without also exposing every task's raw text and full history.
     // The friend-visible subset lives in gardenSummaries below.
+    //
+    // DELETE IS DENIED, and that is load-bearing rather than tidiness:
+    // if a user could delete this document they could drop their own
+    // counter and start a fresh window whenever they liked, which
+    // would make the ceiling above meaningless. Nothing in the app
+    // deletes a garden today, so this costs nothing. When account
+    // deletion gets built it has to run through the Admin SDK
+    // (recompute-stats.js already has the credentials), which bypasses
+    // these rules by design.
     match /gardens/{uid} {
-      allow read, write: if isSignedIn() && me() == uid;
+      allow read:   if isSignedIn() && me() == uid;
+      allow create: if isSignedIn() && me() == uid && rlOkCreate();
+      allow update: if isSignedIn() && me() == uid && rlOkUpdate(rlGardenMax());
+      allow delete: if false;
     }
 
     // ---- Public community counters ----
@@ -76,14 +156,27 @@ service cloud.firestore {
     // Writes stay owner-only: this document is derived data, and
     // letting anyone else touch it would let them fake a friend's
     // garden. Reads are owner-or-friend.
+    //
+    // Rate limited separately from gardens even though the app always
+    // writes the two together, because the app is not the only thing
+    // that can write here — a hostile client could hammer this path
+    // alone. Delete denied for the same counter-reset reason.
     match /gardenSummaries/{uid} {
-      allow read:  if isSignedIn() && (me() == uid || isFriend(uid));
-      allow write: if isSignedIn() && me() == uid;
+      allow read:   if isSignedIn() && (me() == uid || isFriend(uid));
+      allow create: if isSignedIn() && me() == uid && rlOkCreate();
+      allow update: if isSignedIn() && me() == uid && rlOkUpdate(rlSummaryMax());
+      allow delete: if false;
     }
 
     // ---- User profiles ----
     // The email lives here, so nobody else can read this document.
     // Other users' display names come from /usernames instead.
+    //
+    // NOT rate limited in this round — profile writes are already
+    // guarded by the signature check in ensureUserProfileDoc(), so
+    // they fire roughly once per account rather than per load. The
+    // social paths (friendRequests, usernames) come in the next round
+    // and will hang their counter here.
     match /users/{uid} {
       allow read: if isSignedIn() && me() == uid;
 
