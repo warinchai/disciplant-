@@ -537,12 +537,19 @@ auth.onIdTokenChanged(function (user) {
           var data  = docSnapshot.data();
 
           // Adopt the server's rate-limit window (see the RL block
-          // further down). This is the only place the true value is
-          // ever learned: the client writes rlStart as a server
-          // timestamp and cannot know what it resolved to until the
-          // document comes back. A pending local write shows a null
-          // timestamp here, so guard for it and keep the old value.
-          if (data.rlStart && typeof data.rlStart.toMillis === 'function') {
+          // further down) — but only as a FALLBACK, when this client
+          // has no estimate of its own. Once it has opened a window
+          // itself it keeps its own reading, because the two clocks
+          // are not the same clock: rlStart is the server's time and
+          // every comparison here is against Date.now(), which is the
+          // user's device clock and can be minutes out. Preferring the
+          // local reading keeps the whole comparison inside one clock
+          // and makes device skew irrelevant while a session is live.
+          //
+          // A pending local write shows a null timestamp here, so
+          // guard for that and keep whatever we had.
+          if (!gardenRlStartIsLocal &&
+              data.rlStart && typeof data.rlStart.toMillis === 'function') {
             gardenRlStartMs = data.rlStart.toMillis();
           }
           tasks = (data.tasks || []).map(function (t) {
@@ -598,6 +605,15 @@ auth.onIdTokenChanged(function (user) {
           tasks         = [];
           lastResetDate = null;
           gardenSkinId  = null;
+
+          // No garden document means a brand new account — a fresh
+          // guest, or a sign-out into a new one. Any window state
+          // carried over from the PREVIOUS account is meaningless
+          // here, and worse than meaningless: the client would send
+          // an increment against a document that has to be CREATED,
+          // and the create rule insists on rlStart == request.time.
+          // Clearing it makes the next save open window 1 correctly.
+          resetGardenRateLimitWindow();
         }
 
         nextId = getNextId(tasks);
@@ -746,6 +762,16 @@ var pendingSaveTimer = null;
 var RL_WINDOW_MS        = 10 * 60 * 1000;  // must match rlWindow() in firestore.rules
 var RL_EXPIRY_MARGIN_MS = 20 * 1000;       // err towards "still live"
 var gardenRlStartMs     = 0;               // 0 = unknown, treat as expired
+var gardenRlStartIsLocal = false;          // did WE open this window, or did it come from a snapshot?
+
+// Called when the account changes under us — a sign-out into a fresh
+// guest, a guest upgrading to Google, or any first load where the
+// garden document does not exist yet. Window state is per-document,
+// so carrying it across accounts guarantees a rejected write.
+function resetGardenRateLimitWindow() {
+  gardenRlStartMs      = 0;
+  gardenRlStartIsLocal = false;
+}
 
 // Retry pacing for a write the server rejected. Deliberately short:
 // a rate-limit rejection is usually a branch mismatch that the very
@@ -817,6 +843,22 @@ function saveData(rlOpensWindow, retryIndex) {
   };
   var counters = rlFields(rlOpensWindow);
   for (var k in counters) payload[k] = counters[k];
+
+  // Record the window locally the moment we ask for one, rather than
+  // waiting for the snapshot to come back and tell us what rlStart
+  // resolved to. Without this there is a gap of one network round
+  // trip in which the client still believes the window is expired, so
+  // a second save landing inside that gap sends a SECOND fresh-window
+  // write — which the server rejects, because the window it just
+  // opened is very much still live.
+  //
+  // Safe if this write is rejected: a rejection means the server's
+  // window is newer than we thought, i.e. a window really is open, so
+  // believing one is open is the correct conclusion either way.
+  if (rlOpensWindow) {
+    gardenRlStartMs      = Date.now();
+    gardenRlStartIsLocal = true;
+  }
 
   // merge:true, where this used to be a plain set(). Required, not
   // cosmetic: on the "same window" branch the client deliberately does
