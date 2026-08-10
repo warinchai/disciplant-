@@ -319,7 +319,49 @@ function signInWithGoogle() {
 }
 
 // ---- Sign out (drops back to a fresh anonymous guest session) ----
+// ============================================
+// Sign-out
+//
+// Signing out does NOT reload the page — it swaps the session for a
+// fresh anonymous one in place. So anything held in memory or in
+// localStorage survives unless it is cleared deliberately, and the
+// next person at this browser inherits it.
+//
+// clearPerAccountState() runs FIRST, synchronously, before
+// auth.signOut(). Doing it after would leave a window in which the
+// old account's data is still on screen and still on disk, and a user
+// who closes the tab during that window never gets it cleared at all.
+//
+// Everything here is state that BELONGS TO AN ACCOUNT. Deliberately
+// left alone: 'disciplant:dailyGrowth' in 04, which is a display
+// preference for this device and says nothing about who was signed
+// in.
+// ============================================
+function clearPerAccountState() {
+  // Rate-limit window bookkeeping — per document, so a value carried
+  // into a new uid guarantees a rejected write on that account's first
+  // save (see the notes on the counters above).
+  resetGardenRateLimitWindow();
+  resetUserRateLimitWindows();
+
+  // Forces the next ensureUserProfileDoc() to write for the new
+  // account rather than assuming the previous one's profile was saved.
+  lastProfileSignature = null;
+
+  // The friend-visible summary has to be republished by the new
+  // account before it counts as written.
+  gardenSummaryWritten = false;
+
+  // Owned by 06 and 07. Guarded because those files load after this
+  // one and a partial page could otherwise turn a sign-out into an
+  // exception.
+  if (typeof clearFriendsStateOnSignOut === 'function')     clearFriendsStateOnSignOut();
+  if (typeof clearFriendGardenStateOnSignOut === 'function') clearFriendGardenStateOnSignOut();
+}
+
 function signOutUser() {
+  clearPerAccountState();
+
   auth.signOut()
     .then(function () { return auth.signInAnonymously(); })
     .then(function () { closeAuthModal(); })

@@ -318,6 +318,31 @@ if (usernameModalBackdrop) usernameModalBackdrop.addEventListener('click', close
 // ============================================
 // Live listeners — profile, incoming, outgoing
 // ============================================
+// ============================================
+// Sign-out cleanup
+//
+// Called from signOutUser() in 02 BEFORE auth.signOut(), so nothing
+// from the outgoing account can be painted during the gap between
+// signing out and the replacement guest's listeners attaching.
+//
+// startFriendsListeners() already resets most of this when it attaches
+// for a new uid, but that happens later and only if it happens at all
+// — a user who signs out and closes the tab would otherwise leave the
+// cache sitting in localStorage.
+// ============================================
+function clearFriendsStateOnSignOut() {
+  stopFriendsListeners();
+  clearUsernameCache();
+
+  myUsername          = null;
+  myFriendUids        = [];
+  incomingRequests    = [];
+  outgoingRequests    = [];
+  friendsSearchResult = null;
+  friendsBusy         = false;
+  profileSynced       = false;
+}
+
 function stopFriendsListeners() {
   if (unsubscribeProfile)  { unsubscribeProfile();  unsubscribeProfile  = null; }
   if (unsubscribeIncoming) { unsubscribeIncoming(); unsubscribeIncoming = null; }
@@ -332,6 +357,11 @@ function startFriendsListeners(uid) {
 
   stopFriendsListeners();
   friendsListenerUid = uid;
+
+  // Bind the username cache to this account, discarding it outright if
+  // it was built for a different one. This runs on every account
+  // change, including ones that never pass through signOutUser().
+  adoptUsernameCacheFor(uid);
 
   // Reset per-user state so a signed-out user's data never lingers.
   myUsername       = null;
@@ -558,19 +588,46 @@ function getFriendCount() {
 // bound to that UID. A cached pair can therefore never go stale, which
 // is what makes caching it safe rather than merely convenient.
 //
-// Stored in localStorage, so it survives reloads. Nothing private goes
-// in here — usernames are the public directory every signed-in user
-// can already read, and the cache holds no UIDs the browser's own user
-// wasn't already shown.
+// Stored in localStorage, so it survives reloads.
+//
+// PER-ACCOUNT, not per-browser. localStorage is scoped to the origin,
+// which is not the same thing as the account, so without care this
+// map outlives a sign-out and sits on disk for the next person at the
+// machine to read out of DevTools. That matters more than it first
+// looks: it is a list of who this person is friends with, plus
+// everyone they searched for and never added.
+//
+// Two defences, because they cover different failures:
+//   - the payload records which uid built it, and a mismatch throws
+//     the whole thing away on load. Covers EVERY account change,
+//     including ones that never go through signOutUser() — a Google
+//     sign-in that lands on a different uid, a session restored on a
+//     shared machine.
+//   - clearUsernameCache() is called on sign-out, so the data leaves
+//     the disk immediately rather than at the next page load.
+//
+// The names themselves are public — /usernames is readable by any
+// signed-in user. What is worth protecting is the ASSOCIATION between
+// them and one person's account.
 // ============================================
 var USERNAME_CACHE_KEY = 'disciplant:usernames';
+var usernameCacheOwner = null;                // uid the cache below belongs to
 var usernameCache      = readUsernameCache(); // { uid: username }
 
 function readUsernameCache() {
   try {
     var raw    = localStorage.getItem(USERNAME_CACHE_KEY);
     var parsed = raw ? JSON.parse(raw) : null;
-    return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+
+    // Legacy shape (a bare uid -> name map, no owner recorded) is
+    // discarded rather than adopted. It cannot be attributed to an
+    // account, so keeping it would defeat the check below on exactly
+    // the caches written before this existed.
+    if (!parsed.owner || !parsed.names || typeof parsed.names !== 'object') return {};
+
+    usernameCacheOwner = parsed.owner;
+    return parsed.names;
   } catch (e) {
     // Private browsing, storage disabled, or corrupt JSON. An empty
     // cache just means every lookup falls through to Firestore, which
@@ -579,12 +636,31 @@ function readUsernameCache() {
   }
 }
 
+// Called when the signed-in uid is known, and whenever it changes.
+// Anything built for a different account is dropped on the spot.
+function adoptUsernameCacheFor(uid) {
+  if (!uid) return;
+  if (usernameCacheOwner && usernameCacheOwner !== uid) {
+    clearUsernameCache();
+  }
+  usernameCacheOwner = uid;
+}
+
+function clearUsernameCache() {
+  usernameCache      = {};
+  usernameCacheOwner = null;
+  try { localStorage.removeItem(USERNAME_CACHE_KEY); } catch (e) {}
+}
+
 function rememberUsername(uid, username) {
   if (!uid || !username) return;
   if (usernameCache[uid] === username) return;
   usernameCache[uid] = username;
   try {
-    localStorage.setItem(USERNAME_CACHE_KEY, JSON.stringify(usernameCache));
+    localStorage.setItem(USERNAME_CACHE_KEY, JSON.stringify({
+      owner: usernameCacheOwner,
+      names: usernameCache,
+    }));
   } catch (e) {}
 }
 

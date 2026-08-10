@@ -92,6 +92,33 @@ var friendGardenNoteEl   = document.getElementById('friendGardenNote');
 var FRIEND_GARDEN_CACHE_MS = 5 * 60 * 1000;
 var friendGardenCache      = {}; // uid -> { at, summary, error }
 
+// ============================================
+// Sign-out cleanup
+//
+// In memory rather than localStorage, so this never reaches disk —
+// but it does survive a sign-out, because signing out does not reload
+// the page. Without this, the previous account's friend gardens stay
+// in memory and would repaint if the replacement guest somehow
+// navigated back to the friend-garden page before it was cleared.
+//
+// These summaries are the friend-visible projection: species, skins,
+// growth, streaks. Not the habit text, but not nothing either.
+//
+// Called from signOutUser() in 02, alongside the friends-side reset.
+// ============================================
+function clearFriendGardenStateOnSignOut() {
+  friendGardenCache      = {};
+  friendGardenUid        = null;
+  friendGardenUsername   = null;
+  friendGardenSummary    = null;
+  friendGardenError      = null;
+  friendGardenLoading    = false;
+  // Bumped so any fetch already in flight for the OLD account lands
+  // on a stale sequence number and discards its own result instead of
+  // painting it over the new session.
+  friendGardenRequestSeq++;
+}
+
 function openFriendGarden(uid, username) {
   if (!uid) return;
 
