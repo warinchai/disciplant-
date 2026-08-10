@@ -535,6 +535,16 @@ auth.onIdTokenChanged(function (user) {
 
         if (docSnapshot.exists) {
           var data  = docSnapshot.data();
+
+          // Adopt the server's rate-limit window (see the RL block
+          // further down). This is the only place the true value is
+          // ever learned: the client writes rlStart as a server
+          // timestamp and cannot know what it resolved to until the
+          // document comes back. A pending local write shows a null
+          // timestamp here, so guard for it and keep the old value.
+          if (data.rlStart && typeof data.rlStart.toMillis === 'function') {
+            gardenRlStartMs = data.rlStart.toMillis();
+          }
           tasks = (data.tasks || []).map(function (t) {
             t = t || {};
             return {
@@ -693,45 +703,166 @@ function buildCleanTasks() {
 // is dropped; repeats are merged.
 //
 // This is what stops a stuck Enter key writing hundreds of documents:
-// held down, it now costs two writes a second instead of dozens.
-var SAVE_MIN_INTERVAL_MS = 500;
+// held down, it now costs well under one write a second instead of
+// dozens.
+//
+// Raised from 500ms to 1500ms alongside the server-side limiter. The
+// server now caps gardens at rlGardenMax() writes per rlWindow(), and
+// the cheapest way to stay far clear of that ceiling is to coalesce
+// more aggressively here. Ticking ten habits in a row still feels
+// instant — only the WRITE is deferred, never the UI — but it now
+// costs roughly three writes instead of ten.
+var SAVE_MIN_INTERVAL_MS = 1500;
 var lastSaveAt      = 0;
 var pendingSaveTimer = null;
 
-function saveData() {
+
+// ============================================
+// Server-side rate limit bookkeeping
+//
+// The rules in firestore.rules keep a counter ON each rate-limited
+// document: rlAt, rlStart, rlCount. A write is accepted only if it
+// continues the current window (rlCount exactly one higher, still
+// under the ceiling) or opens a fresh one (rlStart == request.time)
+// after the old window has expired.
+//
+// So every write has to pick a branch, and picking the wrong one is
+// rejected. The client can't compute rlStart itself — it's a server
+// timestamp — so it learns the real value from the garden snapshot
+// above and tracks it here.
+//
+// Two failure directions, and they are NOT symmetric:
+//
+//   Think the window is live when the server has moved on -> the
+//   "same window" branch still passes (rlStart unchanged, count+1,
+//   under the ceiling). Harmless; the reset just happens later.
+//
+//   Think the window has expired when the server says it hasn't ->
+//   the fresh-window branch is REJECTED.
+//
+// Hence the margin below: only declare the window expired once it is
+// comfortably past, and prefer the harmless direction.
+// ============================================
+var RL_WINDOW_MS        = 10 * 60 * 1000;  // must match rlWindow() in firestore.rules
+var RL_EXPIRY_MARGIN_MS = 20 * 1000;       // err towards "still live"
+var gardenRlStartMs     = 0;               // 0 = unknown, treat as expired
+
+// Retry pacing for a write the server rejected. Deliberately short:
+// a rate-limit rejection is usually a branch mismatch that the very
+// next attempt gets right, not a real ceiling hit.
+var RL_RETRY_DELAYS_MS  = [400, 2000, 6000];
+
+function rlWindowLooksExpired() {
+  if (!gardenRlStartMs) return true;
+  return (Date.now() - gardenRlStartMs) > (RL_WINDOW_MS + RL_EXPIRY_MARGIN_MS);
+}
+
+// The three counter fields to merge into a rate-limited write.
+// `opensWindow` true starts a fresh window at 1; false adds one to
+// whatever is already there, without the client needing to know what
+// that number is — FieldValue.increment resolves server-side and the
+// rules see the resolved value.
+function rlFields(opensWindow) {
+  var stamp = firebase.firestore.FieldValue.serverTimestamp();
+  if (opensWindow) {
+    return { rlAt: stamp, rlStart: stamp, rlCount: 1 };
+  }
+  return { rlAt: stamp, rlCount: firebase.firestore.FieldValue.increment(1) };
+}
+
+// A permission-denied on a path the user demonstrably owns is almost
+// always the rate limiter rather than a genuine authorisation problem
+// — the ownership half of these rules hasn't changed. Kept as its own
+// function so the distinction stays visible at the call sites.
+function isRateLimitDenial(error) {
+  return !!error && error.code === 'permission-denied';
+}
+
+function saveData(rlOpensWindow, retryIndex) {
   if (!currentUserId) return;
 
-  var sinceLast = Date.now() - lastSaveAt;
-  if (sinceLast < SAVE_MIN_INTERVAL_MS) {
-    // Already one queued - it will pick up whatever the tasks array
-    // looks like when it fires, including this change.
-    if (!pendingSaveTimer) {
-      pendingSaveTimer = setTimeout(function () {
-        pendingSaveTimer = null;
-        saveData();
-      }, SAVE_MIN_INTERVAL_MS - sinceLast);
+  // Retries come back in already past the throttle and with a branch
+  // chosen, so don't re-throttle or re-charge the client budget.
+  var isRetry = (typeof retryIndex === 'number');
+
+  if (!isRetry) {
+    var sinceLast = Date.now() - lastSaveAt;
+    if (sinceLast < SAVE_MIN_INTERVAL_MS) {
+      // Already one queued - it will pick up whatever the tasks array
+      // looks like when it fires, including this change.
+      if (!pendingSaveTimer) {
+        pendingSaveTimer = setTimeout(function () {
+          pendingSaveTimer = null;
+          saveData();
+        }, SAVE_MIN_INTERVAL_MS - sinceLast);
+      }
+      return;
     }
-    return;
+
+    if (typeof budgetAllowsWrite === 'function' && !budgetAllowsWrite('saveData')) return;
+
+    lastSaveAt = Date.now();
+    rlOpensWindow = rlWindowLooksExpired();
   }
 
-  if (typeof budgetAllowsWrite === 'function' && !budgetAllowsWrite('saveData')) return;
-
-  lastSaveAt = Date.now();
   var cleanTasks = buildCleanTasks();
 
-  db.collection('gardens').doc(currentUserId).set({
+  var payload = {
     tasks:         cleanTasks,
     lastResetDate: lastResetDate,
     // One string on a document that was already being written. The
     // landscape skin therefore costs no extra write of its own, and
     // no extra read: it arrives in the same snapshot as the tasks.
     gardenSkinId:  gardenSkinId || GARDEN_SKIN_DEFAULT_ID,
-  }).catch(function (error) {
-    console.error('Error saving data:', error);
-  });
+  };
+  var counters = rlFields(rlOpensWindow);
+  for (var k in counters) payload[k] = counters[k];
 
-  saveGardenSummary(cleanTasks);
+  // merge:true, where this used to be a plain set(). Required, not
+  // cosmetic: on the "same window" branch the client deliberately does
+  // NOT send rlStart (it has no way to produce the server's exact
+  // value), so a full overwrite would delete the counter it is trying
+  // to increment. Merge is safe here because every field this document
+  // holds is rewritten on every save — but that is now a rule to keep:
+  // ANY field dropped from the payload above will linger in the stored
+  // document rather than disappearing, so removing one means deleting
+  // it explicitly with FieldValue.delete().
+  db.collection('gardens').doc(currentUserId)
+    .set(payload, { merge: true })
+    .catch(function (error) {
+      if (isRateLimitDenial(error)) {
+        var next = (isRetry ? retryIndex : -1) + 1;
+
+        if (next < RL_RETRY_DELAYS_MS.length) {
+          // Flip the branch. The overwhelmingly likely cause is that
+          // the client guessed the window state wrong, and there are
+          // only two guesses to make.
+          setTimeout(function () {
+            saveData(!rlOpensWindow, next);
+          }, RL_RETRY_DELAYS_MS[next]);
+          return;
+        }
+
+        // Out of retries: this is a real ceiling, not a mismatch.
+        // Say so plainly rather than leaving a bare permission error
+        // in the console, because the visible symptom is confusing —
+        // Firestore rolls the rejected write back out of its local
+        // cache, so the habit the user just ticked will appear to
+        // untick itself a moment later.
+        console.error(
+          'DISCIPLANT: save rejected — the per-window write limit in ' +
+          'firestore.rules has been reached for this account. Saving ' +
+          'resumes when the window rolls over (see rlWindow()). Nothing ' +
+          'was lost: the next successful save writes the current state.'
+        );
+        return;
+      }
+      console.error('Error saving data:', error);
+    });
+
+  saveGardenSummary(cleanTasks, rlOpensWindow);
 }
+
 
 
 // ============================================
@@ -870,7 +1001,7 @@ function ensureGardenSummaryPublished() {
   writeGardenSummary(buildCleanTasks());
 }
 
-function saveGardenSummary(cleanTasks) {
+function saveGardenSummary(cleanTasks, rlOpensWindow) {
   if (!currentUserId) return;
 
   // Nobody can read it yet - don't pay to publish it. The moment a
@@ -878,14 +1009,33 @@ function saveGardenSummary(cleanTasks) {
   // the current state, and ordinary saves take over from there.
   if (!summaryHasAudience()) return;
 
-  writeGardenSummary(cleanTasks);
+  writeGardenSummary(cleanTasks, rlOpensWindow);
 }
 
-function writeGardenSummary(cleanTasks) {
+// rlOpensWindow is passed down from saveData rather than recomputed,
+// so both documents open their windows at the same moment and stay in
+// step. They can still drift — this write is skipped entirely while
+// the user has no friends, so its window can go stale while the
+// garden's keeps turning over. That drift is self-correcting: a stale
+// window only means the counter resets late, and the next time the
+// GARDEN's window expires this document gets a fresh one too.
+function writeGardenSummary(cleanTasks, rlOpensWindow) {
   gardenSummaryWritten = true;
 
+  var payload  = buildGardenSummary(cleanTasks);
+  var counters = rlFields(rlOpensWindow === undefined ? rlWindowLooksExpired() : rlOpensWindow);
+  for (var k in counters) payload[k] = counters[k];
+
+  // merge:true for the same reason as the garden write above: the
+  // "same window" branch omits rlStart, so a full overwrite would
+  // destroy the counter. NOTE THE PRIVACY CONSEQUENCE — this document
+  // is the friend-visible projection, and under merge a field removed
+  // from buildGardenSummary() stops being written but does NOT stop
+  // being readable. Anything taken out of that function must also be
+  // deleted here explicitly with FieldValue.delete(), or friends keep
+  // seeing the last value it ever had.
   db.collection('gardenSummaries').doc(currentUserId)
-    .set(buildGardenSummary(cleanTasks))
+    .set(payload, { merge: true })
     .catch(function (error) {
       // Left flagged as written even on failure would strand the
       // backstop, so clear it and let the next save or snapshot retry.
@@ -893,9 +1043,11 @@ function writeGardenSummary(cleanTasks) {
       if (error && error.code === 'permission-denied') {
         console.error(
           'DISCIPLANT: could not write gardenSummaries/' + currentUserId + '. ' +
-          'The gardenSummaries rules are probably not published yet - ' +
-          'paste firestore.rules into Firebase Console -> Firestore -> Rules -> Publish. ' +
-          'Your own garden saved fine; only the friend-visible copy is missing.'
+          'Either the rules are not published yet - paste firestore.rules into ' +
+          'Firebase Console -> Firestore -> Rules -> Publish - or the per-window ' +
+          'write limit for this account has been reached. ' +
+          'Your own garden is unaffected; only the friend-visible copy is stale, ' +
+          'and the next successful save republishes it.'
         );
         return;
       }
