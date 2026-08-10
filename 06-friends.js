@@ -160,10 +160,21 @@ function claimUsername(raw) {
         username:  display,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
-      transaction.set(userRef, {
+      // Both halves must land together. The /usernames create rule
+      // calls getAfter() on this very document and refuses unless it
+      // ends this transaction with usernameLower equal to the name
+      // being claimed — which is what makes one-username-per-account
+      // enforceable rather than merely conventional. Since `username`
+      // is frozen once set (usernameWriteOnce() in firestore.rules),
+      // a second claim can never satisfy that check.
+      //
+      // The rl* counters ride along because every owner write to
+      // users/{uid} has to advance them. No fr* here: claiming a name
+      // is not a friend request and must not spend that budget.
+      transaction.set(userRef, withUserRlFields({
         username:      display,
         usernameLower: lower,
-      }, { merge: true });
+      }, false), { merge: true });
     });
   });
 }
@@ -364,6 +375,32 @@ function startFriendsListeners(uid) {
       var hadUsername = myUsername;
 
       if (fromServer) profileSynced = true;
+
+      // Rate-limit window bookkeeping for users/{uid}. Same rule as
+      // the garden listener in 02: adopt the server's value only as a
+      // FALLBACK, because rlStart/frStart are the SERVER's clock while
+      // every comparison is against Date.now() on the device. Once
+      // this client has opened a window itself it keeps its own
+      // reading, which keeps the comparison inside one clock.
+      //
+      // Cache-only snapshots are ignored here entirely — a pending
+      // local write shows null timestamps, and adopting those would
+      // wipe a window we are in the middle of using.
+      if (fromServer) {
+        if (!docSnapshot.exists) {
+          // Brand new account: no document, so no counter. Anything
+          // carried over from a previous uid would make the next
+          // write fail, since a CREATE has to open window 1.
+          resetUserRateLimitWindows();
+        } else {
+          if (!userRlStartIsLocal && data.rlStart && typeof data.rlStart.toMillis === 'function') {
+            userRlStartMs = data.rlStart.toMillis();
+          }
+          if (!userFrStartIsLocal && data.frStart && typeof data.frStart.toMillis === 'function') {
+            userFrStartMs = data.frStart.toMillis();
+          }
+        }
+      }
 
       // A cache-only snapshot is allowed to ADD what it knows, never to
       // take away what it simply hasn't been told. Only the server gets
@@ -744,9 +781,24 @@ function sendFriendRequest(targetUid, targetUsername) {
 
   var requestId = currentUserId + '_' + targetUid;
 
+  // A BATCH now, not a single set. The friendRequests create rule
+  // calls getAfter() on the sender's own user document and refuses
+  // unless frAt equals this request's server time — i.e. unless the
+  // social counter was advanced in this same commit. That is what
+  // makes the per-hour ceiling unavoidable: there is no way to create
+  // the request without paying for it, and the arithmetic is checked
+  // by frOk() on the users rule rather than here.
+  //
+  // The two writes are atomic, so a rejected counter bump rejects the
+  // request too, and vice versa. Costs two writes plus one billed rule
+  // read per send — fine for something a person does rarely.
+  var batch      = db.batch();
+  var requestRef = db.collection('friendRequests').doc(requestId);
+  var meRef      = db.collection('users').doc(currentUserId);
+
   // create-only by rule, so this can never quietly overwrite an
   // existing request between the same two people.
-  db.collection('friendRequests').doc(requestId).set({
+  batch.set(requestRef, {
     from:         currentUserId,
     to:           targetUid,
     fromUsername: myUsername,
@@ -754,7 +806,12 @@ function sendFriendRequest(targetUid, targetUsername) {
     status:       'pending',
     createdAt:    firebase.firestore.FieldValue.serverTimestamp(),
     updatedAt:    firebase.firestore.FieldValue.serverTimestamp(),
-  })
+  });
+
+  // true = also advance fr*, the friend-request budget.
+  batch.set(meRef, withUserRlFields({}, true), { merge: true });
+
+  batch.commit()
     .then(function () {
       friendsBusy = false;
       setFriendsStatus('Request sent to ' + (targetUsername || 'that gardener') + '.', false);
@@ -763,7 +820,16 @@ function sendFriendRequest(targetUid, targetUsername) {
     .catch(function (error) {
       friendsBusy = false;
       if (error && error.code === 'permission-denied') {
-        setFriendsStatus('That request couldn\u2019t be sent — you may already have one open with them.', true);
+        // Three different causes arrive as this same error code and
+        // the client cannot tell them apart: a request already open
+        // between these two people, the per-hour send limit reached,
+        // or a stale rate-limit window guess. Say something true of
+        // all three rather than guessing wrong at the user.
+        setFriendsStatus(
+          'That request couldn\u2019t be sent. You may already have one open ' +
+          'with them, or you\u2019ve sent a lot recently — try again shortly.',
+          true
+        );
       } else {
         setFriendsStatus('Could not send that request. Try again.', true);
       }
@@ -798,9 +864,13 @@ function acceptFriendRequest(request) {
   var theirRef   = db.collection('users').doc(request.from);
   var requestRef = db.collection('friendRequests').doc(request.id);
 
-  batch.set(myRef, {
+  // My own document, so the rl* counter has to advance — the owner
+  // rule makes no exceptions. Deliberately NOT the fr* counter:
+  // accepting is not sending, and charging it to the social budget
+  // would let a popular person run out of accepts.
+  batch.set(myRef, withUserRlFields({
     friends: firebase.firestore.FieldValue.arrayUnion(request.from),
-  }, { merge: true });
+  }, false), { merge: true });
 
   // Nothing but `friends` may change here — the security rule rejects
   // the whole batch if any other field is touched (no updatedAt).

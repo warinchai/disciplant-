@@ -126,8 +126,39 @@ function ensureUserProfileDoc(user) {
     photoURL:    readUserField(user, 'photoURL'),
     updatedAt:   firebase.firestore.FieldValue.serverTimestamp(),
   };
+
+  // Every owner write to users/{uid} has to advance the rl* counter or
+  // the rule rejects it. This one fires roughly once per account
+  // thanks to the signature guard above, so it barely touches the
+  // budget — but it is still a write, and the rule makes no
+  // exceptions.
+  //
+  // Note this deliberately does NOT pass the friend-request flag: the
+  // fr* fields must stay untouched here, or an ordinary profile save
+  // would be charged against the social budget (see frUntouched() in
+  // firestore.rules).
+  withUserRlFields(profileData, false);
+
   db.collection('users').doc(user.uid).set(profileData, { merge: true })
     .catch(function (error) {
+      if (error && error.code === 'permission-denied') {
+        // Clear the signature so this is attempted again on the next
+        // ID-token refresh. Without that, the guard above would treat
+        // the change as already saved and the update would be lost.
+        //
+        // This path is realistic on a page load that happens within
+        // one window of a previous profile write: the users listener
+        // in 06 has not attached yet, so this write has no idea a
+        // window is already open and asks to start a fresh one, which
+        // the rule refuses.
+        lastProfileSignature = null;
+        console.error(
+          'DISCIPLANT: profile write denied. Either firestore.rules is not ' +
+          'published yet, or this account has hit the per-window write limit ' +
+          'on its user document. It will be retried automatically.'
+        );
+        return;
+      }
       console.error('DISCIPLANT: could not save profile doc:', error);
     });
 }
@@ -771,6 +802,88 @@ var gardenRlStartIsLocal = false;          // did WE open this window, or did it
 function resetGardenRateLimitWindow() {
   gardenRlStartMs      = 0;
   gardenRlStartIsLocal = false;
+}
+
+
+// ============================================
+// The same bookkeeping for users/{uid}
+//
+// Kept as its own small set of variables rather than folded into a
+// generic tracker, because the garden path above is verified working
+// and refactoring it to share code would put that at risk for no
+// behavioural gain. Two documents, two counters, same shape.
+//
+// users/{uid} carries TWO independent counters:
+//   rl*  — every owner write (profile save, username claim, accepting
+//          a friend request). Window rlWindow(), ceiling rlUserMax().
+//   fr*  — friend-request sends only. Window rlSocialWindow(),
+//          ceiling rlFriendReqMax(). Ordinary writes must leave these
+//          fields alone or the rule charges them against the social
+//          budget.
+// ============================================
+var RL_SOCIAL_WINDOW_MS  = 60 * 60 * 1000;  // must match rlSocialWindow() in firestore.rules
+var userRlStartMs        = 0;
+var userRlStartIsLocal   = false;
+var userFrStartMs        = 0;
+var userFrStartIsLocal   = false;
+
+function resetUserRateLimitWindows() {
+  userRlStartMs      = 0;
+  userRlStartIsLocal = false;
+  userFrStartMs      = 0;
+  userFrStartIsLocal = false;
+}
+
+function userRlWindowLooksExpired() {
+  if (!userRlStartMs) return true;
+  return (Date.now() - userRlStartMs) > (RL_WINDOW_MS + RL_EXPIRY_MARGIN_MS);
+}
+
+function userFrWindowLooksExpired() {
+  if (!userFrStartMs) return true;
+  return (Date.now() - userFrStartMs) > (RL_SOCIAL_WINDOW_MS + RL_EXPIRY_MARGIN_MS);
+}
+
+// The rl* trio for a write to users/{uid}. Every owner write needs
+// these, including ones that only mean to change one unrelated field.
+function userRlFields() {
+  var opens = userRlWindowLooksExpired();
+  var stamp = firebase.firestore.FieldValue.serverTimestamp();
+
+  if (opens) {
+    userRlStartMs      = Date.now();
+    userRlStartIsLocal = true;
+    return { rlAt: stamp, rlStart: stamp, rlCount: 1 };
+  }
+  return { rlAt: stamp, rlCount: firebase.firestore.FieldValue.increment(1) };
+}
+
+// The fr* trio, added ON TOP of userRlFields() for a friend-request
+// send. Both counters advance in that one write.
+function userFrFields() {
+  var opens = userFrWindowLooksExpired();
+  var stamp = firebase.firestore.FieldValue.serverTimestamp();
+
+  if (opens) {
+    userFrStartMs      = Date.now();
+    userFrStartIsLocal = true;
+    return { frAt: stamp, frStart: stamp, frCount: 1 };
+  }
+  return { frAt: stamp, frCount: firebase.firestore.FieldValue.increment(1) };
+}
+
+// Merges the counter fields into a payload object, so call sites stay
+// readable. Returns the same object it was given.
+function withUserRlFields(payload, includeFriendRequest) {
+  var counters = userRlFields();
+  var k;
+  for (k in counters) payload[k] = counters[k];
+
+  if (includeFriendRequest) {
+    var fr = userFrFields();
+    for (k in fr) payload[k] = fr[k];
+  }
+  return payload;
 }
 
 // Retry pacing for a write the server rejected. Deliberately short:

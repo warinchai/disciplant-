@@ -25,55 +25,65 @@ service cloud.firestore {
     // ============================================
     // RATE LIMITING — the tunable numbers
     //
-    // THESE FOUR FUNCTIONS ARE THE KILL SWITCH. Under attack, cut
-    // rlGardenMax()/rlSummaryMax() to something like 20, paste, and
-    // hit Publish — it applies within about a minute and needs no
-    // deploy. Everything else in this file can stay as it is.
+    // THESE ARE THE KILL SWITCH. Under attack, cut the Max numbers to
+    // something like 20, paste, and hit Publish — it applies within
+    // about a minute and needs no deploy. Everything else in this file
+    // can stay as it is.
     //
     // How the limiter works, in one paragraph: every rate-limited
-    // document carries its own counter — rlAt (when it was last
-    // written), rlStart (when the current counting window opened) and
-    // rlCount (writes so far in that window). The rules below allow a
-    // write only if it either continues the current window with
-    // exactly one more write and stays under the ceiling, or opens a
-    // fresh window once the old one has genuinely expired. Because
-    // the counter lives ON the document being written, checking it
-    // reads `resource`, which Firestore does NOT bill as a document
-    // read — so this costs nothing per write. A separate /rateLimits
-    // collection would have cost one billed read every single time.
+    // document carries its own counter — an "At" (when it was last
+    // written), a "Start" (when the current counting window opened)
+    // and a "Count" (writes so far in that window). The rules below
+    // allow a write only if it either continues the current window
+    // with exactly one more write and stays under the ceiling, or
+    // opens a fresh window once the old one has genuinely expired.
+    // Because the counter lives ON the document being written,
+    // checking it reads `resource`, which Firestore does NOT bill as a
+    // document read — so this costs nothing per write. A separate
+    // /rateLimits collection would have cost one billed read every
+    // single time.
     //
     // The window is fixed, not sliding: it opens on the first write
-    // and resets rlWindow() later. So the true ceiling at a window
+    // and resets one window later. So the true ceiling at a window
     // boundary is briefly up to 2x the number below. That is a
     // deliberate trade for the zero-read design.
+    //
+    // Two counters live on users/{uid} because a CREATE cannot check
+    // itself — a document that does not exist yet has no counter to
+    // read. friendRequests therefore hangs its counter on the sender's
+    // user document and is forced, by getAfter() below, to bump it in
+    // the same batch. That one costs a billed read, which is fine for
+    // an action a person takes a handful of times.
     // ============================================
 
-    function rlWindow()     { return duration.value(10, 'm'); }
-    function rlGardenMax()  { return 200; }
-    function rlSummaryMax() { return 200; }
+    function rlWindow()       { return duration.value(10, 'm'); }   // gardens, profile
+    function rlSocialWindow() { return duration.value(1,  'h'); }   // friend requests
+    function rlGardenMax()    { return 200; }
+    function rlSummaryMax()   { return 200; }
+    function rlUserMax()      { return 20;  }
+    function rlFriendReqMax() { return 20;  }
 
     // Stand-in for "this document has no counter yet". Any real
-    // rlStart is far newer than this, so a document written before
-    // these rules existed always takes the fresh-window branch on its
-    // next write and adopts a counter automatically. No migration,
-    // no backfill script.
-    function rlEpoch()      { return timestamp.date(2000, 1, 1); }
+    // window start is far newer than this, so a document written
+    // before these rules existed always takes the fresh-window branch
+    // on its next write and adopts a counter automatically. No
+    // migration, no backfill script.
+    function rlEpoch()        { return timestamp.date(2000, 1, 1); }
 
-    // For an UPDATE, where `resource` is the document as it stands.
+
+    // ---- The generic limiter, on the rl* fields ----
     //
     // rlAt == request.time forces the client to use
     // FieldValue.serverTimestamp(): request.time is the server's
     // clock, so a client cannot backdate its own counter to look
     // idle. The same trick is what makes rlStart unforgeable.
-    function rlOkUpdate(maxWrites) {
+    function rlOkUpdate(maxWrites, window) {
       return request.resource.data.rlAt == request.time
         && (
-             // Fresh window — only once the previous one has expired.
              ( request.resource.data.rlStart == request.time
                && request.resource.data.rlCount == 1
-               && request.time > resource.data.get('rlStart', rlEpoch()) + rlWindow() )
+               && request.time > resource.data.get('rlStart', rlEpoch()) + window )
              ||
-             // Same window — exactly one more, still under the ceiling.
              ( request.resource.data.rlStart == resource.data.get('rlStart', rlEpoch())
                && request.resource.data.rlCount == resource.data.get('rlCount', 0) + 1
                && request.resource.data.rlCount <= maxWrites )
@@ -81,11 +91,54 @@ service cloud.firestore {
     }
 
     // For a CREATE, where `resource` is null and cannot be read.
-    // The first write of a brand new document always opens window 1.
     function rlOkCreate() {
       return request.resource.data.rlAt    == request.time
         &&   request.resource.data.rlStart == request.time
         &&   request.resource.data.rlCount == 1;
+    }
+
+
+    // ---- The second counter on users/{uid}, on the fr* fields ----
+    //
+    // Only friend-request sends touch these. Every other write to a
+    // user document leaves them alone, which is what frUntouched()
+    // permits — so an ordinary profile save is not charged against the
+    // social budget.
+    function frUntouched() {
+      return !changed().hasAny(['frAt', 'frStart', 'frCount']);
+    }
+
+    function frOk() {
+      return request.resource.data.frAt == request.time
+        && (
+             ( request.resource.data.frStart == request.time
+               && request.resource.data.frCount == 1
+               && request.time > resource.data.get('frStart', rlEpoch()) + rlSocialWindow() )
+             ||
+             ( request.resource.data.frStart == resource.data.get('frStart', rlEpoch())
+               && request.resource.data.frCount == resource.data.get('frCount', 0) + 1
+               && request.resource.data.frCount <= rlFriendReqMax() )
+           );
+    }
+
+
+    // ---- Username: write once, never again ----
+    //
+    // This is the whole anti-squatting mechanism, and it is stronger
+    // than a rate limit would be: a rate limit slows down claiming
+    // many names, this makes it impossible to hold more than one. A
+    // user document may set `username` while it has none, and after
+    // that the field is frozen. Renaming is therefore an Admin SDK
+    // job, deliberately.
+    //
+    // The other half is on /usernames below, which refuses to create a
+    // reservation unless this document ends the same transaction
+    // pointing at exactly that name.
+    function usernameWriteOnce() {
+      return ( !('username' in resource.data)
+               || request.resource.data.get('username', null) == resource.data.username )
+        &&   ( !('usernameLower' in resource.data)
+               || request.resource.data.get('usernameLower', null) == resource.data.usernameLower );
     }
 
 
@@ -105,7 +158,7 @@ service cloud.firestore {
              .data.get('friends', []).hasAny([me()]);
     }
 
-    // ---- Garden data — owner only, now rate limited ----
+    // ---- Garden data — owner only, rate limited ----
     // Deliberately NOT opened up to friends. Rules are document-level,
     // so there is no way to expose growth/streaks from this document
     // without also exposing every task's raw text and full history.
@@ -122,7 +175,7 @@ service cloud.firestore {
     match /gardens/{uid} {
       allow read:   if isSignedIn() && me() == uid;
       allow create: if isSignedIn() && me() == uid && rlOkCreate();
-      allow update: if isSignedIn() && me() == uid && rlOkUpdate(rlGardenMax());
+      allow update: if isSignedIn() && me() == uid && rlOkUpdate(rlGardenMax(), rlWindow());
       allow delete: if false;
     }
 
@@ -164,7 +217,7 @@ service cloud.firestore {
     match /gardenSummaries/{uid} {
       allow read:   if isSignedIn() && (me() == uid || isFriend(uid));
       allow create: if isSignedIn() && me() == uid && rlOkCreate();
-      allow update: if isSignedIn() && me() == uid && rlOkUpdate(rlSummaryMax());
+      allow update: if isSignedIn() && me() == uid && rlOkUpdate(rlSummaryMax(), rlWindow());
       allow delete: if false;
     }
 
@@ -172,20 +225,33 @@ service cloud.firestore {
     // The email lives here, so nobody else can read this document.
     // Other users' display names come from /usernames instead.
     //
-    // NOT rate limited in this round — profile writes are already
-    // guarded by the signature check in ensureUserProfileDoc(), so
-    // they fire roughly once per account rather than per load. The
-    // social paths (friendRequests, usernames) come in the next round
-    // and will hang their counter here.
+    // Every owner write must advance the rl* counter. That covers the
+    // profile save in ensureUserProfileDoc(), the username claim, and
+    // the half of accepting a friend request that touches my own
+    // document. The fr* counter is only advanced by a friend-request
+    // send, and frUntouched() keeps ordinary writes off that budget.
+    //
+    // Delete denied: same counter-reset reasoning as gardens.
     match /users/{uid} {
       allow read: if isSignedIn() && me() == uid;
 
-      allow create, update: if isSignedIn() && me() == uid;
+      allow create: if isSignedIn() && me() == uid && rlOkCreate();
+
+      allow update: if isSignedIn()
+        && me() == uid
+        && usernameWriteOnce()
+        && rlOkUpdate(rlUserMax(), rlWindow())
+        && (frUntouched() || frOk());
 
       // Accepting a friend request: the ONLY write anyone else may make
       // to this document. It can add exactly one UID (their own) to
       // `friends`, cannot remove anything, cannot touch another field,
       // and only works if this document's owner sent them a request.
+      //
+      // Deliberately NOT rate limited, and it must not be: the counter
+      // belongs to this document's owner, and hasOnly(['friends'])
+      // already forbids the requester from touching it. Their own
+      // budget is charged on their own document, in the same batch.
       allow update: if isSignedIn()
         && me() != uid
         && changed().hasOnly(['friends'])
@@ -193,11 +259,29 @@ service cloud.firestore {
         && request.resource.data.friends
              .hasOnly(resource.data.get('friends', []).concat([me()]))
         && exists(/databases/$(database)/documents/friendRequests/$(uid + '_' + me()));
+
+      allow delete: if false;
     }
 
     // ---- Username reservations / public directory ----
     // Doc ID is the lowercased name, which is what makes it unique:
     // create only ever succeeds when the name is free.
+    //
+    // The getAfter() line is the anti-squatting half. getAfter reads
+    // the state a document will be in once this transaction commits,
+    // so it forces the claim to happen together with the matching
+    // write to users/{me}. Combined with usernameWriteOnce() above,
+    // that means a second name would require changing a frozen field,
+    // so nobody can ever hold more than one. This is why /usernames
+    // needs no counter of its own.
+    //
+    // Costs one billed document read per claim — an action taken once
+    // in the life of an account.
+    //
+    // Delete is now denied. It used to be allowed for the owner, but
+    // with the username frozen on the user document, deleting the
+    // reservation would strand the account: the name would be free for
+    // someone else while its former holder could never claim another.
     match /usernames/{name} {
       allow read: if isSignedIn();
 
@@ -205,15 +289,23 @@ service cloud.firestore {
         && request.resource.data.uid == me()
         && request.resource.data.keys().hasOnly(['uid', 'username', 'createdAt'])
         && name == request.resource.data.username.lower()
-        && name.matches('^[a-z0-9_]{3,20}$');
+        && name.matches('^[a-z0-9_]{3,20}$')
+        && getAfter(/databases/$(database)/documents/users/$(me()))
+             .data.get('usernameLower', '') == name;
 
-      allow update: if false;                                   // no renames yet
-      allow delete: if isSignedIn() && resource.data.uid == me();
+      allow update: if false;                                   // no renames
+      allow delete: if false;
     }
 
     // ---- Friend requests ----
     // Doc ID is always {fromUid}_{toUid}, enforced on create, so one
     // pair can never have two competing request documents.
+    //
+    // The getAfter() line forces every send to be a BATCH that also
+    // advances fr* on the sender's own user document. The arithmetic
+    // is checked by frOk() up in the users rule; all this needs to
+    // verify is that the bump happened in this same commit, which
+    // frAt == request.time proves.
     match /friendRequests/{reqId} {
       allow read: if isSignedIn()
         && (resource.data.from == me() || resource.data.to == me());
@@ -223,7 +315,8 @@ service cloud.firestore {
         && request.resource.data.to != me()
         && reqId == me() + '_' + request.resource.data.to
         && request.resource.data.status == 'pending'
-        && !exists(/databases/$(database)/documents/friendRequests/$(request.resource.data.to + '_' + me()));
+        && !exists(/databases/$(database)/documents/friendRequests/$(request.resource.data.to + '_' + me()))
+        && getAfter(/databases/$(database)/documents/users/$(me())).data.frAt == request.time;
 
       // Only the recipient decides the outcome.
       allow update: if isSignedIn()
@@ -231,7 +324,10 @@ service cloud.firestore {
         && changed().hasOnly(['status', 'updatedAt'])
         && request.resource.data.status in ['accepted', 'declined'];
 
-      // Either side can clear it away (decline, or cancel a sent request).
+      // Either side can clear it away (decline, or cancel a sent
+      // request). Not rate limited: deleting shrinks the collection,
+      // and the create side is already capped, so there is nothing
+      // here worth spending a counter on.
       allow delete: if isSignedIn()
         && (resource.data.from == me() || resource.data.to == me());
     }
