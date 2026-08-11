@@ -158,25 +158,65 @@ service cloud.firestore {
              .data.get('friends', []).hasAny([me()]);
     }
 
+    // ============================================
+    // ACCOUNT DELETION — the "all four, or none" rule
+    //
+    // A person's data lives in four documents: gardens/{uid},
+    // gardenSummaries/{uid}, users/{uid} and their one reservation in
+    // /usernames. Erasing an account has to remove all four, and every
+    // delete rule below refuses unless the OTHERS are going too. The
+    // check is existsAfter(), which reads the state a document will be
+    // in once this commit lands — so the only way to satisfy all four
+    // at once is a single atomic batch, and a half-finished deletion
+    // cannot exist.
+    //
+    // That mutual dependency is doing real work, not tidiness:
+    //
+    //   * Delete IS a counter reset. The rate limiter (above) keeps its
+    //     count ON the document being written, so a lone delete would
+    //     hand the account a fresh window whenever it liked. Tying the
+    //     delete to losing the whole account makes that pointless.
+    //   * A lone users/{uid} delete would strand the username. The name
+    //     is frozen by usernameWriteOnce() precisely so nobody holds
+    //     two — but a user who dropped the profile document while
+    //     keeping the reservation could then claim a SECOND name on the
+    //     recreated document. Requiring the reservation to go in the
+    //     same commit closes that.
+    //   * A lone usernames delete would free the name while its holder
+    //     could never claim another, which is why that rule was `if
+    //     false` before this.
+    //
+    // NOTHING HERE LETS ANYONE DELETE ANYONE ELSE. Every rule is
+    // me() == uid, or (for the reservation) resource.data.uid == me().
+    // A signed-in attacker asking to delete another person's garden
+    // fails on the first clause and never reaches the existsAfter()
+    // calls.
+    //
+    // Cost: one billed document access per existsAfter(). Six in total
+    // for a full deletion, once in the life of an account.
+    // ============================================
+
+    function gone(path) {
+      return !existsAfter(path);
+    }
+
     // ---- Garden data — owner only, rate limited ----
     // Deliberately NOT opened up to friends. Rules are document-level,
     // so there is no way to expose growth/streaks from this document
     // without also exposing every task's raw text and full history.
     // The friend-visible subset lives in gardenSummaries below.
     //
-    // DELETE IS DENIED, and that is load-bearing rather than tidiness:
-    // if a user could delete this document they could drop their own
-    // counter and start a fresh window whenever they liked, which
-    // would make the ceiling above meaningless. Nothing in the app
-    // deletes a garden today, so this costs nothing. When account
-    // deletion gets built it has to run through the Admin SDK
-    // (recompute-stats.js already has the credentials), which bypasses
-    // these rules by design.
+    // DELETE is the owner's, but ONLY as part of deleting the whole
+    // account — see the block above. It used to be flatly denied
+    // because a lone delete resets the rate-limit counter; requiring
+    // the profile document to go in the same commit keeps that true
+    // while still allowing erasure.
     match /gardens/{uid} {
       allow read:   if isSignedIn() && me() == uid;
       allow create: if isSignedIn() && me() == uid && rlOkCreate();
       allow update: if isSignedIn() && me() == uid && rlOkUpdate(rlGardenMax(), rlWindow());
-      allow delete: if false;
+      allow delete: if isSignedIn() && me() == uid
+        && gone(/databases/$(database)/documents/users/$(uid));
     }
 
     // ---- Public community counters ----
@@ -213,12 +253,17 @@ service cloud.firestore {
     // Rate limited separately from gardens even though the app always
     // writes the two together, because the app is not the only thing
     // that can write here — a hostile client could hammer this path
-    // alone. Delete denied for the same counter-reset reason.
+    // alone. Delete is account-deletion-only, same as gardens.
+    //
+    // This is the document that actually leaks if erasure is sloppy:
+    // it is the one thing in the database another person can read. It
+    // has to be gone, not merely emptied.
     match /gardenSummaries/{uid} {
       allow read:   if isSignedIn() && (me() == uid || isFriend(uid));
       allow create: if isSignedIn() && me() == uid && rlOkCreate();
       allow update: if isSignedIn() && me() == uid && rlOkUpdate(rlSummaryMax(), rlWindow());
-      allow delete: if false;
+      allow delete: if isSignedIn() && me() == uid
+        && gone(/databases/$(database)/documents/users/$(uid));
     }
 
     // ---- User profiles ----
@@ -260,7 +305,57 @@ service cloud.firestore {
              .hasOnly(resource.data.get('friends', []).concat([me()]))
         && exists(/databases/$(database)/documents/friendRequests/$(uid + '_' + me()));
 
-      allow delete: if false;
+      // Taking MYSELF off someone else's friends list. This is what
+      // makes a deleted account disappear from the people who were
+      // friends with it, and it is the second and last write anyone
+      // else may make to this document.
+      //
+      // It is deliberately narrow in both directions:
+      //   * hasOnly(['friends']) — no other field can be touched, so
+      //     the owner's rate-limit counters, username and email are
+      //     all out of reach. That is also why this branch needs no
+      //     counter of its own: there is nothing here to spend.
+      //   * the after-list must equal the before-list minus exactly
+      //     one entry, my own uid. hasOnly + hasAll together is set
+      //     equality, so nothing can be added, and nobody ELSE can be
+      //     removed. Someone trying to quietly unfriend two people who
+      //     know each other is rejected.
+      //
+      // The `hasAny([me()])` line is not decoration: without it this
+      // write would still be permitted once my uid was already gone,
+      // and an attacker could hammer a stranger's document with
+      // no-ops forever. With it, the write succeeds exactly once and
+      // every repeat is denied.
+      //
+      // Yes, this is also a one-sided unfriend, which was previously
+      // out of scope. There is no way to have erasure without it: the
+      // alternative is a deleted person's uid sitting on other
+      // people's documents indefinitely.
+      allow update: if isSignedIn()
+        && me() != uid
+        && changed().hasOnly(['friends'])
+        && resource.data.get('friends', []).hasAny([me()])
+        && request.resource.data.friends
+             .hasOnly(resource.data.friends.removeAll([me()]))
+        && request.resource.data.friends
+             .hasAll(resource.data.friends.removeAll([me()]));
+
+      // Deleting my own profile document — the hinge of the whole
+      // deletion, since every other delete rule checks that THIS one
+      // is gone. It in turn checks the garden documents and the
+      // username reservation, so the four can only ever go together.
+      //
+      // resource == null short-circuits before resource.data is
+      // touched: rules abort on a field read against a document that
+      // does not exist, and an account that never claimed a username
+      // has no usernameLower at all.
+      allow delete: if isSignedIn()
+        && me() == uid
+        && gone(/databases/$(database)/documents/gardens/$(uid))
+        && gone(/databases/$(database)/documents/gardenSummaries/$(uid))
+        && ( resource == null
+             || !('usernameLower' in resource.data)
+             || gone(/databases/$(database)/documents/usernames/$(resource.data.usernameLower)) );
     }
 
     // ---- Username reservations / public directory ----
@@ -278,10 +373,17 @@ service cloud.firestore {
     // Costs one billed document read per claim — an action taken once
     // in the life of an account.
     //
-    // Delete is now denied. It used to be allowed for the owner, but
-    // with the username frozen on the user document, deleting the
-    // reservation would strand the account: the name would be free for
-    // someone else while its former holder could never claim another.
+    // Delete releases the name, and is allowed ONLY to the account
+    // that holds it and ONLY as part of deleting that account. On its
+    // own it would strand the holder: the username is frozen on their
+    // user document, so the name would be free for someone else while
+    // they could never claim another. Requiring users/{me} to be gone
+    // in the same commit means the name is only ever released by
+    // someone who is leaving.
+    //
+    // A released name becomes claimable again by anyone. That is the
+    // honest trade for erasure — keeping it reserved forever would
+    // mean keeping a record of a deleted person.
     match /usernames/{name} {
       allow read: if isSignedIn();
 
@@ -294,7 +396,10 @@ service cloud.firestore {
              .data.get('usernameLower', '') == name;
 
       allow update: if false;                                   // no renames
-      allow delete: if false;
+
+      allow delete: if isSignedIn()
+        && resource.data.uid == me()
+        && gone(/databases/$(database)/documents/users/$(me()));
     }
 
     // ---- Friend requests ----
@@ -324,10 +429,19 @@ service cloud.firestore {
         && changed().hasOnly(['status', 'updatedAt'])
         && request.resource.data.status in ['accepted', 'declined'];
 
-      // Either side can clear it away (decline, or cancel a sent
-      // request). Not rate limited: deleting shrinks the collection,
-      // and the create side is already capped, so there is nothing
-      // here worth spending a counter on.
+      // Either side can clear it away (decline, cancel a sent request,
+      // or sweep up on the way out of a deleted account). Not rate
+      // limited: deleting shrinks the collection, and the create side
+      // is already capped, so there is nothing here worth spending a
+      // counter on.
+      //
+      // This rule needed no change for account deletion, and that is
+      // worth noticing: these documents carry BOTH uids plus the
+      // sender's username, and an accepted request is never deleted by
+      // the accept flow — it is marked `accepted` and left. So an
+      // erasure sweep has to query both directions with no status
+      // filter and delete whatever it finds, which this already
+      // permits.
       allow delete: if isSignedIn()
         && (resource.data.from == me() || resource.data.to == me());
     }

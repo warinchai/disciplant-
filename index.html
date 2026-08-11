@@ -596,6 +596,45 @@
     </div>
   </div>
 
+  <!-- ================================================
+       ACCOUNT DATA modal - download a copy, or delete the
+       account permanently. Filled by 10-account-data.js.
+
+       This is the one screen in the app where a mis-click cannot
+       be undone, so unlike the two shells above it carries the
+       full dialog semantics rather than borrowing them:
+
+         role="dialog" + aria-modal tells a screen reader it has
+         entered something that covers the page; aria-labelledby
+         points at the heading 10 writes into #accountModalBody,
+         so whatever the dialog is currently showing is what gets
+         announced.
+
+         aria-hidden="true" is on the wrapper while it is closed
+         so the dialog's contents are never reachable by a screen
+         reader's virtual cursor from the page behind it - the
+         `hidden` class alone is display:none, which most readers
+         respect, but the attribute makes it explicit and survives
+         any future CSS that animates the modal in.
+
+         #accountModalStatus is a live region OUTSIDE the body 10
+         rewrites, on purpose. A live region that gets replaced
+         mid-announcement is a live region that says nothing, and
+         every step of the deletion has to be spoken as it
+         happens.
+       ================================================ -->
+  <div id="accountModal" class="account-modal hidden" role="dialog" aria-modal="true"
+       aria-labelledby="accountModalTitle" aria-hidden="true">
+    <div class="account-modal-backdrop" id="accountModalBackdrop"></div>
+    <div class="account-modal-card" id="accountModalCard">
+      <button id="accountModalClose" class="account-modal-close" type="button" aria-label="Close">
+        <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>
+      </button>
+      <div class="account-modal-body" id="accountModalBody"></div>
+      <p id="accountModalStatus" class="account-modal-status hidden" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+
   <!-- Shared gradient/pattern store for plant skins. Skins inject
        their <defs> here once, so every plant on screen - including
        both halves of a growth-stage crossfade - can reference the
@@ -633,6 +672,13 @@
   <script src="05-stats-app.js"></script>
   <script src="06-friends.js"></script>
   <script src="07-friend-garden.js"></script>
+
+  <!-- Account data: export and permanent deletion. Numbered 10 because
+       08 and 09 were taken; loaded here, ahead of both, because unlike
+       those two this one ships. It needs every file above it: db/auth,
+       currentUserId and tasks from 01, clearPerAccountState from 02,
+       escapeHtml from 04, the friends state from 06 and 07. -->
+  <script src="10-account-data.js"></script>
 
   <!-- Community counters are switched OFF while the numbers are still
        small. This one line is the whole switch: uncomment it and the

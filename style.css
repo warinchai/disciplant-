@@ -5219,3 +5219,264 @@ body.nav-open { overflow: hidden; }
      wrapping - the button's own count already says how many. */
   .garden-grow-hint { display: none; }
 }
+
+
+/* ========================================
+   Account data modal - export + deletion
+   (10-account-data.js)
+
+   Deliberately NOT the .auth-modal shell. That card is 360px,
+   centred text, and built to hold a single button; this one is a
+   read-then-decide screen with a heading hierarchy, a list and a
+   text field, and it has to survive a phone in landscape with text
+   scaled up. Sharing the shell would have meant overriding almost
+   every property in it.
+
+   The one thing it borrows exactly is the surface language: clay
+   panel, linen card, a hard lip under every button.
+   ======================================== */
+
+.account-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10002;              /* above .auth-modal, which opens it */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.account-modal.hidden { display: none; }
+
+.account-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 5, 2, 0.66);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+/* max-height + scroll rather than a fixed height: WCAG reflow means
+   this has to stay usable at 200% text zoom on a short window, and
+   the delete button must never be the thing that falls off the
+   bottom. overscroll-behavior keeps a flick inside the card from
+   scrolling the garden underneath it. */
+.account-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--clay);
+  border: 3px solid var(--bark-deep);
+  border-radius: var(--r-lg);
+  padding: 26px 22px 22px;
+  box-shadow: var(--lip-deep) var(--bark-deep), 0 22px 60px rgba(0, 0, 0, 0.45);
+  text-align: left;
+}
+
+.account-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 6px;
+  line-height: 0;
+  opacity: 0.75;
+  border-radius: var(--r-sm);
+}
+.account-modal-close:hover:not(:disabled) { opacity: 1; }
+.account-modal-close:disabled { opacity: 0.3; cursor: default; }
+
+.account-modal-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0 0 14px;
+  padding-right: 26px;         /* clear of the close button */
+}
+/* The heading takes focus when the dialog opens so the announcement
+   starts with what this is. It is a programmatic focus target only,
+   never a tab stop, so it gets no ring of its own. */
+.account-modal-title:focus { outline: none; }
+
+.account-modal-lede {
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+  margin: 0;
+  line-height: 1.55;
+}
+
+.account-block {
+  background: var(--linen);
+  border: 2px solid var(--linen-edge);
+  border-radius: var(--r-md);
+  padding: 14px 15px 15px;
+  margin-bottom: 14px;
+}
+.account-block:last-child { margin-bottom: 0; }
+
+/* The danger card is marked three ways over - a warm border, a tinted
+   ground and the words in the heading - because a colour alone tells
+   a colour-blind user nothing at all. */
+.account-block-danger {
+  background: var(--bloom-tint);
+  border-color: var(--bloom);
+}
+
+.account-block-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-base);
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0 0 6px;
+}
+.account-block-danger .account-block-title { color: var(--bloom-deep); }
+
+.account-block-text {
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  color: var(--ink);
+  line-height: 1.55;
+  margin: 0 0 10px;
+}
+
+.account-block-note {
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+}
+
+.account-list {
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  color: var(--ink);
+  line-height: 1.5;
+  margin: 0 0 10px;
+  padding-left: 20px;
+}
+.account-list li { margin-bottom: 3px; }
+
+/* A real label, sized and spaced like one. The rest of this app has
+   none at all, which is the single biggest gap in its accessibility
+   - this is the pattern the rest of the forms should follow. */
+.account-label {
+  display: block;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--ink);
+  margin: 14px 0 6px;
+}
+
+.account-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 2px solid var(--clay-deep);
+  border-radius: var(--r-sm);
+  background: var(--linen);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);   /* 16px: anything smaller makes iOS zoom the page */
+  letter-spacing: 0.06em;
+}
+.account-input:focus { border-color: var(--bloom-deep); }
+
+.account-help {
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+  margin: 6px 0 12px;
+  line-height: 1.45;
+}
+
+.account-btn {
+  width: 100%;
+  padding: 11px 16px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: var(--bark);
+  color: var(--linen);
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  box-shadow: var(--lip) var(--bark-deep);
+  transition: transform 0.12s, box-shadow 0.12s, background 0.16s;
+}
+.account-btn:hover:not(:disabled) { background: var(--bark-light); }
+.account-btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--bark-deep);
+}
+
+/* --bloom-deep, not --bloom: the pale one carries the tint behind
+   this button and cannot also carry white text on top of it. This
+   pairing clears 4.5:1 against --linen. */
+.account-btn-danger {
+  background: var(--bloom-deep);
+  box-shadow: var(--lip) #7C3A32;
+}
+.account-btn-danger:hover:not(:disabled) { background: #8E463D; }
+.account-btn-danger:active:not(:disabled) { box-shadow: 0 1px 0 #7C3A32; }
+
+/* Off until the word is typed. Flattened as well as faded, so the
+   state reads without relying on the colour difference. */
+.account-btn:disabled {
+  background: var(--clay-deep);
+  color: var(--ink-soft);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* The live region. Sits outside the body that gets rewritten, so an
+   announcement is never cut off by the next render. */
+.account-modal-status {
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--linen);
+  border-left: 4px solid var(--leaf-deep);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  margin: 14px 0 0;
+}
+.account-modal-status.is-error {
+  color: var(--bloom-deep);
+  border-left-color: var(--bloom-deep);
+}
+.account-modal-status.hidden { display: none; }
+
+/* The quiet way in, at the foot of the auth modal. Underlined rather
+   than tinted, so it is still obviously a control in greyscale. */
+.auth-data-link {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 6px;
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+}
+.auth-data-link:hover { color: var(--ink); }
+
+@media (max-width: 480px) {
+  .account-modal { padding: 12px; }
+  .account-modal-card {
+    padding: 22px 16px 18px;
+    max-height: calc(100vh - 24px);
+  }
+}

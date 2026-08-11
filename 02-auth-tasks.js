@@ -105,6 +105,11 @@ var lastProfileSignature = null;
 function ensureUserProfileDoc(user) {
   if (!user) return;
 
+  // Same freeze as saveData(). This one fires on every ID-token
+  // refresh, so without it a deletion that straddles the hourly
+  // refresh would recreate the profile document it had just removed.
+  if (typeof accountDeletionInProgress !== 'undefined' && accountDeletionInProgress) return;
+
   // The auth observer fires on every ID-token refresh (roughly hourly),
   // not just on real identity changes. Only write when something the
   // user would actually see has changed.
@@ -465,19 +470,43 @@ function renderAuthModal() {
     ? '<p class="auth-modal-note">Your current garden stays exactly as it is - linking just adds Google sign-in on top.</p>'
     : '';
 
+  // Download-my-data and delete-my-account, behind one quiet link.
+  //
+  // Guests get it too, and that is the point rather than an oversight:
+  // an anonymous account still holds habit text, which can be health
+  // data, so the right to a copy and the right to erasure apply to it
+  // exactly as they do to a Google account. What it is gated on is
+  // currentUserId - before that there is no account and nothing to
+  // show. The typeof guard covers 10-account-data.js being absent,
+  // the same way render() guards the dev panel.
+  var dataLinkHtml = (currentUserId && typeof openAccountModal === 'function')
+    ? '<button id="authDataBtn" class="auth-data-link" type="button">' +
+        'Your data and account deletion' +
+      '</button>'
+    : '';
+
   authModalBody.innerHTML =
     '<div class="auth-modal-avatar">' + avatarHtml + '</div>' +
     '<h3 class="auth-modal-title">' + escapeHtml(titleText) + '</h3>' +
     '<p class="auth-modal-subtitle">' + escapeHtml(subtitleText) + '</p>' +
     actionHtml +
     errorHtml +
-    noteHtml;
+    noteHtml +
+    dataLinkHtml;
 
   var googleBtn = document.getElementById('authGoogleBtn');
   if (googleBtn) googleBtn.addEventListener('click', signInWithGoogle);
 
   var signOutBtn = document.getElementById('authSignOutBtn');
   if (signOutBtn) signOutBtn.addEventListener('click', signOutUser);
+
+  var dataBtn = document.getElementById('authDataBtn');
+  if (dataBtn) {
+    dataBtn.addEventListener('click', function () {
+      closeAuthModal();
+      openAccountModal();
+    });
+  }
 }
 
 // ============================================
@@ -978,6 +1007,14 @@ function isRateLimitDenial(error) {
 function saveData(rlOpensWindow, retryIndex) {
   if (!currentUserId) return;
 
+  // A deletion is under way (10-account-data.js). Every write from
+  // here on has to stop dead: the garden document is being removed,
+  // and a save that lands after it would simply create it again and
+  // quietly undo the erasure. The typeof guard is because 10 loads
+  // after this file, so on a partially-loaded page the flag does not
+  // exist yet - which is itself the answer "no deletion running".
+  if (typeof accountDeletionInProgress !== 'undefined' && accountDeletionInProgress) return;
+
   // Retries come back in already past the throttle and with a branch
   // chosen, so don't re-throttle or re-charge the client budget.
   var isRetry = (typeof retryIndex === 'number');
@@ -1207,6 +1244,10 @@ function summaryHasAudience() {
 // (the profile listener in 06 and the garden snapshot above) because
 // either can land first; gardenSummaryWritten makes the second a no-op.
 function ensureGardenSummaryPublished() {
+  // Same freeze as saveData(). The friend-visible summary is the one
+  // document other people can read, so recreating it after deletion
+  // would be the worst of the three to get wrong.
+  if (typeof accountDeletionInProgress !== 'undefined' && accountDeletionInProgress) return;
   if (!currentUserId || !authReady) return;
   if (gardenSummaryWritten) return;
   if (!summaryHasAudience()) return;
