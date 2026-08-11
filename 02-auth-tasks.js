@@ -142,29 +142,77 @@ function ensureUserProfileDoc(user) {
   // fr* fields must stay untouched here, or an ordinary profile save
   // would be charged against the social budget (see frUntouched() in
   // firestore.rules).
-  withUserRlFields(profileData, false);
+  writeUserProfileDoc(user.uid, profileData, userRlWindowLooksExpired());
+}
 
-  db.collection('users').doc(user.uid).set(profileData, { merge: true })
+// Sends the profile document, and flips rate-limit branches if the
+// rules say no.
+//
+// WHY THIS RETRY EXISTS. Reloading the page inside ten minutes of a
+// previous profile write used to be denied every single time, and
+// print an error that read like a broken ruleset. The cause is not a
+// limit being reached - it is a guess being wrong. userRlStartMs
+// resets to 0 on every load, so this write always asks to OPEN a
+// window; the rule grants that only once the last one has genuinely
+// expired. During development, where reloads come minutes apart, that
+// is most loads.
+//
+// The fix is the one saveData() already uses: a denial is not final,
+// it is information. The client just learned that its guess about the
+// window was wrong, so it sends the opposite branch. Whichever of the
+// two is right, one of them is - and the delays are there so a
+// genuine ceiling still backs off instead of hammering.
+//
+// Failing that twice over IS a real limit (20 writes per 10 minutes on
+// this document), and only then does anything get logged.
+var PROFILE_RETRY_DELAYS_MS = [400, 2000, 6000];
+
+function writeUserProfileDoc(uid, profileData, opensWindow, retryIndex) {
+  var payload = {};
+  var k;
+  for (k in profileData) payload[k] = profileData[k];
+
+  var counters = userRlFieldsForBranch(opensWindow);
+  for (k in counters) payload[k] = counters[k];
+
+  db.collection('users').doc(uid).set(payload, { merge: true })
     .catch(function (error) {
-      if (error && error.code === 'permission-denied') {
-        // Clear the signature so this is attempted again on the next
-        // ID-token refresh. Without that, the guard above would treat
-        // the change as already saved and the update would be lost.
-        //
-        // This path is realistic on a page load that happens within
-        // one window of a previous profile write: the users listener
-        // in 06 has not attached yet, so this write has no idea a
-        // window is already open and asks to start a fresh one, which
-        // the rule refuses.
-        lastProfileSignature = null;
-        console.error(
-          'DISCIPLANT: profile write denied. Either firestore.rules is not ' +
-          'published yet, or this account has hit the per-window write limit ' +
-          'on its user document. It will be retried automatically.'
-        );
+      if (!isRateLimitDenial(error)) {
+        console.error('DISCIPLANT: could not save profile doc:', error);
         return;
       }
-      console.error('DISCIPLANT: could not save profile doc:', error);
+
+      // The optimistic window this attempt recorded never actually
+      // opened, so take it back. Leaving it would mark the reading as
+      // local, and the listener in 06 only adopts the server's real
+      // rlStart while the client has no reading of its own - so a
+      // false one would keep this session guessing wrong all over
+      // again.
+      if (opensWindow) {
+        userRlStartMs      = 0;
+        userRlStartIsLocal = false;
+      }
+
+      var next = (typeof retryIndex === 'number') ? retryIndex + 1 : 0;
+      if (next < PROFILE_RETRY_DELAYS_MS.length) {
+        setTimeout(function () {
+          writeUserProfileDoc(uid, profileData, !opensWindow, next);
+        }, PROFILE_RETRY_DELAYS_MS[next]);
+        return;
+      }
+
+      // Clear the signature so this is attempted again on the next
+      // ID-token refresh. Without that, the guard in
+      // ensureUserProfileDoc() would treat the change as already saved
+      // and the update would be lost.
+      lastProfileSignature = null;
+      console.error(
+        'DISCIPLANT: profile write denied on both rate-limit branches. This ' +
+        'account has written to its user document more than the per-window ' +
+        'limit allows. Nothing is lost - the name, email and avatar on file ' +
+        'keep their previous values, and this retries on the next token ' +
+        'refresh.'
+      );
     });
 }
 
@@ -934,10 +982,19 @@ function userFrWindowLooksExpired() {
 // The rl* trio for a write to users/{uid}. Every owner write needs
 // these, including ones that only mean to change one unrelated field.
 function userRlFields() {
-  var opens = userRlWindowLooksExpired();
+  return userRlFieldsForBranch(userRlWindowLooksExpired());
+}
+
+// The same thing with the branch handed in rather than guessed, so a
+// retry can deliberately send the OTHER one. Guessing is the whole
+// problem: this client only ever learns the true server rlStart from
+// the profile listener in 06, which attaches AFTER the first profile
+// write goes out, so on every page load the first write is a guess
+// made with no information at all.
+function userRlFieldsForBranch(opensWindow) {
   var stamp = firebase.firestore.FieldValue.serverTimestamp();
 
-  if (opens) {
+  if (opensWindow) {
     userRlStartMs      = Date.now();
     userRlStartIsLocal = true;
     return { rlAt: stamp, rlStart: stamp, rlCount: 1 };
@@ -1273,11 +1330,13 @@ function saveGardenSummary(cleanTasks, rlOpensWindow) {
 // garden's keeps turning over. That drift is self-correcting: a stale
 // window only means the counter resets late, and the next time the
 // GARDEN's window expires this document gets a fresh one too.
-function writeGardenSummary(cleanTasks, rlOpensWindow) {
+function writeGardenSummary(cleanTasks, rlOpensWindow, retryIndex) {
   gardenSummaryWritten = true;
 
+  var opensWindow = (rlOpensWindow === undefined) ? rlWindowLooksExpired() : rlOpensWindow;
+
   var payload  = buildGardenSummary(cleanTasks);
-  var counters = rlFields(rlOpensWindow === undefined ? rlWindowLooksExpired() : rlOpensWindow);
+  var counters = rlFields(opensWindow);
   for (var k in counters) payload[k] = counters[k];
 
   // merge:true for the same reason as the garden write above: the
@@ -1294,18 +1353,35 @@ function writeGardenSummary(cleanTasks, rlOpensWindow) {
       // Left flagged as written even on failure would strand the
       // backstop, so clear it and let the next save or snapshot retry.
       gardenSummaryWritten = false;
-      if (error && error.code === 'permission-denied') {
-        console.error(
-          'DISCIPLANT: could not write gardenSummaries/' + currentUserId + '. ' +
-          'Either the rules are not published yet - paste firestore.rules into ' +
-          'Firebase Console -> Firestore -> Rules -> Publish - or the per-window ' +
-          'write limit for this account has been reached. ' +
-          'Your own garden is unaffected; only the friend-visible copy is stale, ' +
-          'and the next successful save republishes it.'
-        );
+
+      if (!isRateLimitDenial(error)) {
+        console.error('DISCIPLANT: error saving garden summary:', error);
         return;
       }
-      console.error('DISCIPLANT: error saving garden summary:', error);
+
+      // Same branch flip as the profile write above, and this document
+      // needs it more than any other: the client NEVER reads
+      // gardenSummaries, so it has no listener to learn the real
+      // window from and is guessing off the GARDEN's window instead.
+      // The two drift apart every time a save skips the summary
+      // because the user has no friends yet - and they drift furthest
+      // exactly when the summary is first published, which is the one
+      // write that has to land.
+      var next = (typeof retryIndex === 'number') ? retryIndex + 1 : 0;
+      if (next < PROFILE_RETRY_DELAYS_MS.length) {
+        setTimeout(function () {
+          writeGardenSummary(cleanTasks, !opensWindow, next);
+        }, PROFILE_RETRY_DELAYS_MS[next]);
+        return;
+      }
+
+      console.error(
+        'DISCIPLANT: could not write gardenSummaries/' + currentUserId + ' on ' +
+        'either rate-limit branch. Most likely the per-window write limit for ' +
+        'this account has been reached; if the rules were only just published, ' +
+        'reload once. Your own garden is unaffected - only the friend-visible ' +
+        'copy is stale, and the next successful save republishes it.'
+      );
     });
 }
 
