@@ -228,7 +228,7 @@ function renderUsernameModal() {
     : '';
 
   usernameModalBody.innerHTML =
-    '<div class="auth-modal-avatar">\uD83C\uDF31</div>' +
+    '<div class="auth-modal-avatar">' + AVATAR_SPROUT_SVG + '</div>' +
     '<h3 class="auth-modal-title">' + (myUsername ? 'Your username' : 'Choose a username') + '</h3>' +
     '<p class="auth-modal-subtitle">This is how other gardeners find you. ' +
       USERNAME_MIN + '\u2013' + USERNAME_MAX + ' characters: letters, numbers and underscores.</p>' +
@@ -1076,7 +1076,7 @@ function renderFriendsMe() {
 
   if (myUsername) {
     friendsMeEl.innerHTML =
-      '<span class="friend-name">@' + escapeHtml(myUsername) + '</span>' +
+      '<span class="friend-name">' + escapeHtml(myUsername) + '</span>' +
       '<span class="friend-sub">Share this so friends can find you</span>';
     return;
   }
@@ -1128,7 +1128,7 @@ function renderFriendsSearchResult() {
 
   friendsSearchResultEl.innerHTML =
     '<ul class="friends-list">' +
-      friendRowHtml('@' + friendsSearchResult.username, null, actionsHtml) +
+      friendRowHtml(friendsSearchResult.username, null, actionsHtml) +
     '</ul>';
 }
 
@@ -1142,7 +1142,7 @@ function renderFriendsRequests() {
         '<button class="friend-btn" type="button" data-friend-action="decline" ' +
           'data-friend-request="' + escapeHtml(request.id) + '"' +
           (friendsBusy ? ' disabled' : '') + '>Decline</button>';
-      return friendRowHtml('@' + (request.fromUsername || 'unknown'), 'wants to be friends', actions);
+      return friendRowHtml(request.fromUsername || 'unknown', 'wants to be friends', actions);
     }).join('');
   }
   if (friendsIncomingEmpty) {
@@ -1155,7 +1155,7 @@ function renderFriendsRequests() {
         '<button class="friend-btn" type="button" data-friend-action="cancel" ' +
           'data-friend-request="' + escapeHtml(request.id) + '"' +
           (friendsBusy ? ' disabled' : '') + '>Cancel</button>';
-      return friendRowHtml('@' + (request.toUsername || 'unknown'), 'waiting for a reply', actions);
+      return friendRowHtml(request.toUsername || 'unknown', 'waiting for a reply', actions);
     }).join('');
   }
   if (friendsOutgoingEmpty) {
@@ -1166,7 +1166,7 @@ function renderFriendsRequests() {
 function renderFriendsList() {
   if (friendsListEl) {
     friendsListEl.innerHTML = friendProfiles.map(function (friend) {
-      var name = friend.username ? '@' + friend.username : 'A gardener with no username';
+      var name = friend.username || 'A gardener with no username';
       // Opens the read-only garden view (07). What that page can show
       // is limited by gardenSummaries/{uid}, not by anything decided
       // here — their task text is never readable by this client.

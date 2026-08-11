@@ -149,7 +149,21 @@ var SLOT_GROUPS = {
   b: { centerMin: 16, centerMax: 84, phaseOffset: 0.5 },
 };
 var DEFAULT_BOTTOM_PCT = 40;
-var PLANT_Z_INDEX      = 3;
+// The floor of the plant band. Everything painted in the plot is
+// banded rather than interleaved, and the numbers below 10 are
+// reserved for scenery:
+//
+//   0  sky strip, lawn        3  landscape props, signpost
+//   1  grass tufts            10+ plants (this constant + depth)
+//   2  fence
+//
+// It used to be 3, sharing the range with the props, which is what let
+// a prop placed nearer the viewer than a plant - a lava smear, a
+// sandcastle - paint over that plant's label. .garden-prop-field in
+// style.css now seals the props into band 3, so this only has to clear
+// it once and every plant, and therefore every plant's label, is above
+// every prop for good.
+var PLANT_Z_INDEX      = 10;
 
 // Depth-perception tuning. bottomPct's visible range is clamped to
 // [DEPTH_BOTTOM_MIN, DEPTH_BOTTOM_MAX] by clampBottomPct() below.
@@ -1026,17 +1040,22 @@ function renderSky(track) {
 //   a depth SCALE from computeDepthScale(bottomPct), so one further
 //   up the plot is smaller;
 //   a depth Z from computeDepthZ(bottomPct), the same painter's
-//   algorithm the plants use - which is what lets a crater in the
-//   foreground correctly sit IN FRONT of a plant standing further
-//   back, instead of every prop being flatly behind every plant.
+//   algorithm the plants use, so the props order correctly among
+//   THEMSELVES - a crater in the foreground paints over one further
+//   back.
 //
-// That second one is why props are NOT wrapped in a z-indexed layer
-// the way the grass field is. A layer with its own z-index (or its
-// own filter) would be a stacking context, and every prop inside it
-// would be trapped at the layer's depth no matter what z-index it
-// carried. The field element is deliberately plain, and the night
-// dimming in style.css is applied to each prop individually for the
-// same reason.
+// That ordering stops at the edge of the layer. .garden-prop-field
+// carries z-index: 3 in style.css, which makes it a stacking context
+// and seals every prop into band 3 however high the z-index above
+// computes. That is deliberate: the props used to share the plant
+// range, so one placed nearer the viewer than a plant landed on top of
+// that plant's label. The whole plot is banded instead now (see
+// PLANT_Z_INDEX above), and a prop can no longer reach a plant, its
+// label, or anything else in the plant band.
+//
+// The layer still carries no FILTER, for a different reason: filter
+// would flatten the per-prop night dimming in style.css into one
+// blanket pass and lose each skin's own dimming numbers.
 //
 // Placement is stratified across the track and round-robined between
 // prop types, so three lava smears and three rocks come out
@@ -1976,6 +1995,7 @@ var gardenEditStartEl   = document.getElementById('gardenEditStart');
 var gardenEditActionsEl = document.getElementById('gardenEditActions');
 var gardenEditSaveEl    = document.getElementById('gardenEditSave');
 var gardenEditDiscardEl = document.getElementById('gardenEditDiscard');
+var gardenToolbarNoteEl = document.getElementById('gardenToolbarNote');
 
 function snapshotGardenPositions() {
   return tasks.map(function (t) {
@@ -2015,7 +2035,15 @@ function getPersistedPosition(task) {
 function updateGardenEditUI() {
   // Nothing to arrange in an empty garden - hide the whole bar rather
   // than offer a mode that does nothing.
-  if (gardenEditBarEl) gardenEditBarEl.classList.toggle('hidden', tasks.length === 0);
+  var plotEmpty = tasks.length === 0;
+  if (gardenEditBarEl) gardenEditBarEl.classList.toggle('hidden', plotEmpty);
+
+  // With both bars gone the toolbar row was blank, which on a new
+  // account reads as a page that failed to load rather than a garden
+  // waiting to be planted. The note takes their place and says what
+  // the missing buttons would have done, so it goes exactly where they
+  // were rather than off in a corner.
+  if (gardenToolbarNoteEl) gardenToolbarNoteEl.classList.toggle('hidden', !plotEmpty);
 
   if (gardenEditStartEl)   gardenEditStartEl.classList.toggle('hidden', gardenEditMode);
   if (gardenEditActionsEl) gardenEditActionsEl.classList.toggle('hidden', !gardenEditMode);

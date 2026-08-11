@@ -110,17 +110,79 @@ body {
   z-index: -1;
   background: linear-gradient(180deg, #0a1628 0%, #1a2a44 100%);
   overflow: hidden;
+
+  /* Diameter of the sun/moon. Was 40px of glyph. */
+  --sky-body-size: 64px;
 }
 
+/* --- The sun and the moon ------------------------------------------
+   updateSky() in 05-stats-app.js owns #skyBody: it writes a character
+   into it and walks it across the sky by setting left/top. The art
+   below is therefore a BACKGROUND IMAGE on ::before, not a child
+   element - a child would be wiped the next time updateSky() repaints
+   the glyph, whereas a background image survives any textContent write.
+   font-size: 0 on the box means whatever character 05 still writes
+   stays invisible, so none of this needs an edit in 05.
+
+   Both bodies are flat and id-free (ids would collide the moment this
+   art were ever inlined twice), with no gradients and no filters in
+   the art itself - shaded the way every bench prop is, by stacking
+   rounded shapes each nudged up-left of the one beneath.
+
+   Size is ONE knob: --sky-body-size on .sky-bg. Changing it is safe.
+   The old glyph was 2.5rem/40px on line-height 1, and an absolutely
+   positioned line box puts its TOP on 05's `top`, so the disc's centre
+   sat 20px below that point. The translate below keeps the new disc's
+   CENTRE on that same 20px line at any size, so the arc the sun and
+   the moon travel across the sky is exactly the one they travelled
+   before.
+   ------------------------------------------------------------------ */
 .sky-body {
   position: absolute;
-  font-size: var(--fs-2xl);
-  line-height: 1;
-  transform: translateX(-50%);
+  width: var(--sky-body-size);
+  height: var(--sky-body-size);
+  font-size: 0;
+  line-height: 0;
+  transform: translate(-50%, calc(20px - var(--sky-body-size) / 2));
   transition: left 62s linear, top 32s ease-in-out;
   pointer-events: none;
   user-select: none;
-  filter: drop-shadow(0 0 12px rgba(255, 220, 80, 0.6));
+  filter: drop-shadow(0 0 16px rgba(255, 206, 92, 0.55));
+}
+
+/* Daytime: a four-layer disc under twelve rays of alternating length,
+   each ray nudged a fraction off its true spoke angle and given a
+   rounded tip, so the wheel doesn't read as a machine part. */
+.sky-body::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%23E39429' d='M74.43 54.88L94.41 52.23Q98.03 51.2 94.46 49.17L74.57 45.89ZM58.11 73.55L70.39 89.31Q73.23 91.84 73.06 87.81L65.95 69.14ZM34.12 69.19L27.48 87.16Q27.41 91.24 30.15 88.65L41.98 73.58ZM25.41 46.01L6.8 49.37Q3.24 51.58 6.86 52.43L25.6 55.01ZM41.44 26.61L29.19 11.66Q25.83 9.46 26.55 13.21L33.69 31.17ZM66.57 31.4L74.52 12.62Q75.64 9.08 71.9 11.03L58.88 26.73Z'/%3E%3Cpath fill='%23EFAB35' d='M69.64 65.15L79.81 67.77Q83.46 67.6 81.08 65.44L73.38 58.3ZM45.46 74.39L47.73 86.08Q48.37 89.22 50.38 86.15L53.26 74.59ZM26.77 58.71L18.41 66.42Q16.27 68.98 19.72 68.73L30.62 65.49ZM31.04 34.01L19.92 30.31Q16.79 29.45 18.55 32.58L27.01 40.68ZM54.24 25.56L51.83 14.24Q50.86 11.11 49.17 14.2L46.44 25.45ZM73.01 40.72L80.58 33.17Q82.37 30.09 79.22 30.9L68.99 34.04Z'/%3E%3Cpath fill='%23D9812A' d='M77.82 51.1C77.79 56.73 74.66 63.52 70.95 67.92C67.24 72.33 61.15 76.42 55.56 77.51C49.97 78.59 42.31 77.36 37.41 74.46C32.51 71.56 28.1 65.53 26.15 60.11C24.21 54.69 23.82 47.24 25.75 41.95C27.69 36.66 32.8 31.25 37.77 28.36C42.74 25.47 50.01 23.66 55.57 24.62C61.13 25.58 67.43 29.71 71.13 34.12C74.84 38.54 77.85 45.47 77.82 51.1Z'/%3E%3Cpath fill='%23EFA030' d='M72.31 54.96C71.21 59.9 68.04 65.71 64.1 68.73C60.15 71.76 53.71 73.35 48.64 73.11C43.58 72.88 37.43 70.67 33.69 67.31C29.94 63.95 26.73 57.94 26.15 52.96C25.56 47.97 27.41 41.66 30.17 37.4C32.92 33.15 37.93 28.91 42.66 27.44C47.4 25.96 53.92 26.62 58.59 28.56C63.25 30.49 68.38 34.64 70.66 39.04C72.95 43.44 73.4 50.01 72.31 54.96Z'/%3E%3Cpath fill='%23F8BC42' d='M65.66 56.73C63.97 60.31 60 63.75 56.33 65.43C52.66 67.12 47.46 67.91 43.66 66.86C39.86 65.82 35.81 62.49 33.52 59.17C31.24 55.86 29.64 50.97 29.95 47C30.25 43.03 32.51 38.14 35.37 35.37C38.22 32.6 43.06 30.7 47.06 30.37C51.07 30.04 56.17 31.11 59.41 33.38C62.65 35.65 65.43 40.09 66.48 43.98C67.52 47.87 67.36 53.16 65.66 56.73Z'/%3E%3Cpath fill='%23FDD873' d='M56.82 54.79C55.24 56.87 52.45 58.85 49.9 59.44C47.35 60.04 43.83 59.59 41.53 58.34C39.23 57.1 37.09 54.42 36.09 51.97C35.1 49.52 34.76 46.09 35.56 43.63C36.36 41.17 38.65 38.61 40.89 37.21C43.12 35.81 46.39 34.88 48.97 35.2C51.56 35.53 54.66 37.2 56.39 39.16C58.13 41.11 59.3 44.33 59.37 46.94C59.44 49.54 58.4 52.71 56.82 54.79Z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+}
+
+/* Night: a real crescent - one arc of the moon's own edge and one arc
+   of the terminator, joined at the horns.
+
+   Worth not re-trying: a circle with a circular bite taken out of it
+   via fill-rule="evenodd" does NOT give a crescent. The biting circle
+   reaches past the moon's edge, so even-odd fills the part hanging
+   outside it too and the result is a ring. The second trap is the
+   shade pass - a plain offset copy underneath pokes its own two horns
+   out past the lit crescent as a pair of dark spikes, so both the
+   shade and the highlight are drawn with their horns pulled back (a
+   WIDER horn angle, which shortens the tips) and small enough that
+   the offset can't carry them past the silhouette. */
+.sky-night .sky-body::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%23B7A97C' d='M48.14 24.51A27.6 27.6 0 1 0 64.88 76.04Q12.06 64.71 48.14 24.51Z'/%3E%3Cpath fill='%23E7DDB7' d='M50.52 20A30 30 0 1 0 68.05 73.96Q6.09 64.27 50.52 20Z'/%3E%3Cpath fill='%23F8F2DC' d='M44.07 21.22A27.8 27.8 0 1 0 61.09 73.59Q0.9 64.2 44.07 21.22Z'/%3E%3C/svg%3E");
+}
+
+/* The halo is the one thing that has to change with the body: a warm
+   glow around a pale moon reads as a smudge. */
+.sky-night .sky-body {
+  filter: drop-shadow(0 0 18px rgba(176, 200, 255, 0.45));
 }
 
 .sky-ground {
@@ -439,8 +501,9 @@ body {
    scrollable garden track (see renderGrassField in script.js). Lives
    inside .garden-scene-track so it scrolls WITH the content, giving
    swipe/scroll a visible sense of motion that a flat green plane
-   couldn't. Sits behind every .garden-plant, whose z-index (3+) is
-   always higher than this layer's. */
+   couldn't. Sits behind every .garden-plant, whose z-index (10+, see
+   PLANT_Z_INDEX in 04-garden-scene.js) is always higher than this
+   layer's. */
 .grass-tuft-field {
   position: absolute;
   inset: 0;
@@ -465,16 +528,33 @@ body {
 /* Landscape props - the small things lying about in the plot, built
    by renderSkinProps() in 04-garden-scene.js from the active skin.
 
-   Note what this layer deliberately does NOT have: a z-index, and a
-   filter. Either one would turn it into a stacking context, and every
-   prop inside would then be pinned at the layer's depth regardless of
-   the z-index it carries - which would put a foreground crater behind
-   a background plant. Each prop sets its own z-index off the same
-   depth curve the plants use, so the two interleave correctly, and
-   the night dimming below is applied per prop for the same reason. */
+   This layer DOES carry a z-index, and that is load-bearing: it makes
+   the field a stacking context, so every prop inside is sealed into
+   band 3 no matter how high its own depth-derived z-index climbs. That
+   is what guarantees the rule the plot is ordered by:
+
+     scenery (0-3)  <  a plant's label  <  that plant's art
+
+   A plant's wrapper starts at PLANT_Z_INDEX (10, see 04-garden-scene.js)
+   and is itself a stacking context, so its label - even at z-index 0
+   inside it - still paints above every prop, while the art above it at
+   z-index 1 still paints above the label. Interleaving the two sets of
+   z-indices, which is what this layer used to do, meant a lava smear or
+   a sandcastle placed nearer the viewer than a plant would land on top
+   of that plant's text.
+
+   The tradeoff, accepted: a foreground prop can no longer paint in
+   front of a background plant. In practice the overlap is small, since
+   plant art grows upward from its base while nearer props sit lower on
+   screen.
+
+   The layer still must NOT take a filter - that would be a second way
+   to make a stacking context, but it would also flatten the per-prop
+   night dimming below into one blanket pass. */
 .garden-prop-field {
   position: absolute;
   inset: 0;
+  z-index: 3;
   pointer-events: none;
 }
 
@@ -594,7 +674,7 @@ body {
    toward the top (far/horizon) and widening toward the bottom
    (near/foreground), matching the far/mid/near depth rows plants
    are assigned to in script.js. Sits behind every .garden-plant
-   (which carry z-index 2–4) since this pseudo-element has no
+   (which carry z-index 10+) since this pseudo-element has no
    z-index of its own and is first in paint order. Purely decorative
    - pointer-events are already off on the whole .garden-scene. */
 /* Ground-anchored wrapper. bottom is pulled below the scene's own
@@ -644,6 +724,11 @@ body {
    as it gets bigger. */
 .plant-visual {
   position: relative;
+  /* Inside .garden-plant's own stacking context. Pairs with
+     .plant-label-tag's z-index: 0 below: the art always paints over
+     the plant's own text, so a low-hanging leaf or a skin accessory
+     covers the label rather than the other way round. */
+  z-index: 1;
   transform: scale(var(--plant-scale, 1));
   transform-origin: center 97%;
   transition: transform 1.1s cubic-bezier(0.34, 1.2, 0.4, 1), filter 0.25s ease;
@@ -720,10 +805,15 @@ body {
   }
 }
 
+/* Sits in the middle of the plant's three bands: above the ground
+   scenery outside it (which is sealed at 3, and this whole wrapper
+   starts at 10), below .plant-visual's art at 1, and above the
+   .daily-ready halo at -1. */
 .plant-label-tag {
   position: absolute;
   top: 100%;
   left: 50%;
+  z-index: 0;
   transform: translateX(-50%);
   text-align: center;
   margin-top: 7px;
@@ -1605,16 +1695,35 @@ body {
 .home-nail-br { bottom: 11px; right: 13px; }
 
 
-/* --- The paper label --------------------------------------------
-   Paper rather than wood, on purpose: three wooden things in a
-   vertical stack all read as one object. Tilted the opposite way to
-   the plank so the two do not look glued together. */
+/* --- The label ---------------------------------------------------
+   Same pale board as before - the surface, the tilt and the lip are
+   all untouched. What changed is the lettering: it is now cut into
+   the board by the same three-pass machinery as the four signs (see
+   hbCutText in 01-app-core.js) instead of being set in Nunito, so
+   the whole menu is inscribed rather than one printed line sitting
+   among four carved ones.
+
+   Two things follow from that:
+
+   1. There is no text here any more, so none of the font properties
+      that used to be on this rule survive. The wording lives in
+      HB_SIGNS and is read out by the aria-label on the host.
+
+   2. It has to be sized by WIDTH, not by cap height like the
+      buttons. The three passes are offset by a fixed fraction of the
+      cap, so a line this long left to set its own height would come
+      out with a cap about twice the buttons'. Pinning the width and
+      letting the height follow lands it at ~16px against their 16px.
+
+   Tilted the opposite way to the plank above, as before, so the two
+   do not read as one glued object. */
 
 .home-label {
   position: relative;
   z-index: 1;
+  width: calc(var(--tag-width) * 0.74);
   margin: 18px 0 0;
-  padding: 8px 20px 9px;
+  padding: 7px 16px 8px;
   border-radius: 9px 7px 9px 8px;
   transform: rotate(1deg);
   background: linear-gradient(178deg, #F8ECD5 0%, #EEDFC0 58%, #DCC79E 100%);
@@ -1622,12 +1731,12 @@ body {
     inset 0 2px 0 rgba(255, 255, 255, 0.62),
     0 4px 0 #BFA67C,
     0 11px 15px rgba(38, 20, 6, 0.32);
-  font-family: var(--font-body);
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--ink);
-  text-align: center;
+}
+
+.home-label svg {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 
@@ -1882,7 +1991,14 @@ body {
 
   .marker-greenhouse { margin-top: 15px; }
 
-  .home-label { font-size: var(--fs-xs); }
+  /* Nothing to shrink here now - the cut sizes itself off the board.
+     The board gets WIDER instead, because the line is fixed length
+     and a narrow screen is the one place it can go unreadable. */
+  .home-label {
+    width: calc(var(--tag-width) * 0.96);
+    padding-left: 10px;
+    padding-right: 10px;
+  }
 
   .prop-trowel { display: none; }
 }
@@ -4514,7 +4630,26 @@ body.nav-open { overflow: hidden; }
 
 .auth-avatar-fallback svg {
   display: block;
-  color: var(--leaf);
+}
+
+
+/* ============================================================
+   The account picture
+   ------------------------------------------------------------
+   AVATAR_SPROUT_SVG (02-auth-tasks.js) replaced the Google account
+   photo everywhere one was shown. It draws its own disc, so it needs
+   no border-radius, no overflow clip and no currentColor - it only
+   has to fill whichever round host it lands in: the 24px widget pill,
+   the 64px auth and username modals, the 56px profile header. Those
+   hosts are all flex centred, hence flex: 0 0 auto - without it the
+   SVG is a flex item that can be squeezed below its 100%.
+   ============================================================ */
+
+.avatar-sprout {
+  display: block;
+  width: 100%;
+  height: 100%;
+  flex: 0 0 auto;
 }
 
 
@@ -4549,6 +4684,29 @@ body.nav-open { overflow: hidden; }
 }
 
 .garden-toolbar .garden-edit-bar.hidden {
+  display: none;
+}
+
+/* The empty-plot stand-in for the two bars above. Matches
+   .garden-edit-hint rather than body text: it sits on the sky, so it
+   needs the same shadow the rest of this row uses to stay readable
+   over both a bright noon and a dark night. pointer-events: none
+   because .garden-toolbar re-enables clicks for its buttons, and a
+   line of text there would otherwise swallow drags aimed at the top
+   of the plot behind it. */
+.garden-toolbar-note {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--linen);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  text-align: center;
+  pointer-events: none;
+}
+
+.garden-toolbar .garden-toolbar-note.hidden {
   display: none;
 }
 
@@ -4598,7 +4756,7 @@ body.nav-open { overflow: hidden; }
   right: 0;
   bottom: 100%;          /* stands directly on top of the plot */
   height: var(--garden-sky-lift, 150vh);
-  z-index: 0;            /* under the grass field (1) and the plants (3+) */
+  z-index: 0;            /* under the grass field (1), the props (3) and the plants (10+) */
   overflow: hidden;
   pointer-events: none;
   /* Fully transparent by 73% (about 110vh down), which is above the

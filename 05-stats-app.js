@@ -423,9 +423,14 @@ function renderProfileHeader() {
   var totalActivePlants = tasks.length;
   var levelLabel = computeGardenLevel(lifetimeGrowthDays);
 
-  var avatarHtml = (!profile.isAnonymous && profile.photoURL)
-    ? '<img class="profile-avatar-img" src="' + profile.photoURL + '" alt="" />'
-    : '<div class="profile-avatar-fallback">' + (profile.isAnonymous ? '\uD83C\uDF31' : '\uD83C\uDF3B') + '</div>';
+  // The account picture is the sprout circle for everyone, signed in
+  // or not - same AVATAR_SPROUT_SVG the widget pill and both modals
+  // use (global from 02, which loads first). The Google account photo
+  // is deliberately not painted any more, and the guest/signed-in
+  // emoji pair it used to fall back to is gone with it. The host div
+  // stays: .profile-avatar-fallback is what sizes the 56px circle.
+  var avatarHtml =
+    '<div class="profile-avatar-fallback">' + AVATAR_SPROUT_SVG + '</div>';
 
   var nameText  = profile.isAnonymous ? 'Guest Gardener' : (profile.displayName || 'Gardener');
   var emailText = profile.isAnonymous ? 'Not signed in — sign in to save your garden to an account' : (profile.email || '');

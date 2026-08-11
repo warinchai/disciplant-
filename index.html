@@ -6,6 +6,20 @@
   <title>DISCIPLANT - daily discipline garden</title>
   <link rel="stylesheet" href="style.css" />
 
+  <!-- Favicon. The same sprout circle the account picture uses, drawn
+       once more in favicon.svg rather than shared with 02's
+       AVATAR_SPROUT_SVG: a tab icon is 16px, so the plant is scaled up
+       inside the disc and the haze band and soil specks are dropped -
+       at that size they were mud. Same palette and same shapes, so the
+       two still read as one mark.
+
+       apple-touch-icon.png is the 180px raster iOS wants when the site
+       is saved to a home screen; Safari ignores SVG for that one slot.
+       Both files sit next to index.html and must be deployed with it. -->
+  <link rel="icon" href="favicon.ico" sizes="32x32" />
+  <link rel="icon" href="favicon.svg?v=2" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+
   <!-- Google Analytics (gtag.js) - visitor counts for the deployed site.
        Nothing to do with Firestore: this talks to Google Analytics, not to
        the database, so it costs no reads and cannot affect the quota.
@@ -184,7 +198,12 @@
         <div class="home-tag-face" id="homeWordmark"></div>
       </div>
 
-      <p class="home-label">Tend your habits. Watch them bloom.</p>
+      <!-- The tagline. Cut into the board, not printed on it: the
+           text lives in HB_SIGNS in 01-app-core.js and is stamped in
+           by renderHomeScene, so this host is deliberately empty and
+           carries the wording for screen readers instead. -->
+      <div class="home-label" id="cutLabel" role="img"
+           aria-label="Tend your habits. Watch them bloom."></div>
 
       <!-- Community counters - CURRENTLY DORMANT.
            This markup is left in place, but 08-home-stats.js is
@@ -295,6 +314,15 @@
           <button class="cat-tab garden-edit-discard" id="gardenEditDiscard">Discard</button>
         </span>
       </div>
+
+      <!-- Stands in for both bars above on a brand new account. They
+           hide themselves when there are no tasks (there is nothing to
+           arrange and nothing that grew today), which left this row
+           empty and the page looking half-loaded. Toggled from
+           updateGardenEditUI() in 04-garden-scene.js, the same place
+           that hides them, so the row can never end up empty or show
+           two states at once. -->
+      <p class="garden-toolbar-note hidden" id="gardenToolbarNote">Add a task to grow a plant you can move around.</p>
     </div>
   </div>
 
@@ -546,7 +574,7 @@
        ================================================ -->
   <button id="authWidgetBtn" class="auth-widget-btn" title="Account">
     <img id="authAvatarImg" class="auth-avatar-img hidden" src="" alt="" />
-    <span id="authAvatarFallback" class="auth-avatar-fallback"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 22 V11" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M12 12 C12 7 8 5 4 5 C4 10 8 12 12 12 Z" fill="currentColor"/><path d="M12 14 C12 10 15 8 19 8 C19 12 15 14 12 14 Z" fill="currentColor" opacity="0.72"/></svg></span>
+    <span id="authAvatarFallback" class="auth-avatar-fallback"><svg class="avatar-sprout" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="#FAF0DC"/><path d="M0.06 34 C10 32.4 20 34.6 32 34 C44 33.4 54 31.6 63.94 34 A32 32 0 0 1 0.06 34 Z" fill="#F0DFC0"/><path d="M2.34 44 C11 42.2 17.5 44.4 24 44.6 C27.4 40.6 36.4 40.4 40 44.3 C47 44.6 54 42 61.66 44 A32 32 0 0 1 2.34 44 Z" fill="#8A6A4B"/><path d="M0.9 47.6 C12 45.4 22 49.4 32 48.4 C42 47.4 52.5 44.6 63.1 47.6 A32 32 0 0 1 0.9 47.6 Z" fill="#6B4F37"/><path d="M31.5 46.5 C31 39 33.2 33 32.9 22.6" stroke="#5C8149" stroke-width="3.2" stroke-linecap="round" fill="none"/><path d="M32.3 33.2 C27 35.4 18.2 33.6 14.6 26 C21.8 23.2 29.5 26 32.3 33.2 Z" fill="#7FA968"/><path d="M32.3 33.2 C27 35.4 18.2 33.6 14.6 26 C22 28.4 28.6 30.4 32.3 33.2 Z" fill="#6C9556"/><path d="M32.7 27.8 C38.2 29.4 47 26.2 50 18.4 C42.6 16.2 34.9 20.2 32.7 27.8 Z" fill="#93BC7A"/><path d="M32.7 27.8 C38.2 29.4 47 26.2 50 18.4 C42.7 21.2 36.2 24.4 32.7 27.8 Z" fill="#7FA968"/><path d="M17.6 51.4 C19.8 50.4 22.2 50.6 23.4 51.8 C21.4 52.7 19 52.6 17.6 51.4 Z" fill="#83644A"/><path d="M42.4 49.6 C44.2 48.8 46 49 47 50 C45.3 50.8 43.5 50.7 42.4 49.6 Z" fill="#83644A"/></svg></span>
     <span id="authWidgetLabel" class="auth-widget-label">Guest</span>
   </button>
 

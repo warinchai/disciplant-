@@ -227,7 +227,7 @@ function renderFriendGardenIfVisible() {
 // ============================================
 
 function friendGardenDisplayName() {
-  return friendGardenUsername ? '@' + friendGardenUsername : 'This gardener';
+  return friendGardenUsername || 'This gardener';
 }
 
 // Shown whenever a garden is on screen. The summary deliberately
@@ -242,7 +242,7 @@ var FRIEND_GARDEN_CAVEAT =
 function renderFriendGardenHeader() {
   if (friendGardenTitleEl) {
     friendGardenTitleEl.textContent = friendGardenUsername
-      ? '@' + friendGardenUsername + '\u2019s garden'
+      ? friendGardenUsername + '\u2019s garden'
       : 'A friend\u2019s garden';
   }
 

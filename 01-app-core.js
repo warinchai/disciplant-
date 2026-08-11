@@ -1006,7 +1006,7 @@ function hbWordmark() {
 // lettering read as a font again.
 
 // Advance width per glyph, then its strokes. Only the letters the
-// four signs actually need are here - adding a word means adding its
+// five signs actually need are here - adding a word means adding its
 // missing letters, and hbCutText will warn in the console rather than
 // silently dropping one.
 var HB_GLYPHS = {
@@ -1014,6 +1014,10 @@ var HB_GLYPHS = {
   'A': { w: 72, d: ['M7,101 C16,72 27,38 36,3',
                     'M36,3 C45,38 56,72 65,101',
                     'M18,67 C29,64 43,64 54,67'] },
+  'B': { w: 68, d: ['M11,3 C9,36 12,70 11,101',
+                    'M11,4 C33,1 56,8 56,27 C56,45 38,52 11,51',
+                    'M11,51 C38,49 61,57 61,76 C61,96 37,103 11,100'] },
+  'C': { w: 70, d: ['M62,22 C53,3 30,-1 16,14 C1,31 1,73 16,89 C31,104 55,100 63,82'] },
   'D': { w: 70, d: ['M11,3 C9,36 12,70 11,101',
                     'M11,4 C38,1 63,14 62,52 C61,90 38,103 11,100'] },
   'E': { w: 58, d: ['M13,3 C11,36 14,70 13,101',
@@ -1031,6 +1035,12 @@ var HB_GLYPHS = {
   'K': { w: 68, d: ['M11,3 C9,36 12,70 11,101',
                     'M62,3 C48,20 33,38 22,53',
                     'M29,45 C42,63 54,82 64,101'] },
+  'L': { w: 56, d: ['M13,3 C11,36 14,70 13,101',
+                    'M13,100 C27,103 43,100 55,99'] },
+  'M': { w: 88, d: ['M9,101 C7,70 10,36 9,3',
+                    'M9,4 C19,36 32,66 44,88',
+                    'M44,88 C56,66 69,36 79,4',
+                    'M79,3 C77,36 80,70 79,101'] },
   'N': { w: 72, d: ['M10,101 C8,70 11,36 10,3',
                     'M10,4 C24,36 47,72 62,100',
                     'M62,100 C60,70 63,36 62,3'] },
@@ -1041,7 +1051,20 @@ var HB_GLYPHS = {
   'S': { w: 64, d: ['M56,20 C48,4 20,0 12,18 C4,36 27,45 41,54 C57,63 60,84 45,94 C31,103 12,97 6,83'] },
   'T': { w: 62, d: ['M4,5 C20,2 43,3 58,3',
                     'M31,4 C29,36 33,70 31,101'] },
-  'U': { w: 70, d: ['M11,3 C9,28 10,52 11,68 C12,90 23,101 37,101 C51,101 61,90 62,68 C63,52 64,28 62,3'] }
+  'U': { w: 70, d: ['M11,3 C9,28 10,52 11,68 C12,90 23,101 37,101 C51,101 61,90 62,68 C63,52 64,28 62,3'] },
+  'W': { w: 92, d: ['M8,3 C13,36 18,70 25,101',
+                    'M25,101 C32,74 39,48 46,26',
+                    'M46,26 C53,48 60,74 67,101',
+                    'M67,101 C74,70 79,36 84,3'] },
+  'Y': { w: 68, d: ['M6,3 C15,20 26,38 34,52',
+                    'M62,3 C53,20 42,38 34,52',
+                    'M34,52 C32,68 35,85 34,101'] },
+
+  // The full stop is a stroke with almost no length. Because every
+  // cap and join in here is round, a 0.6-unit segment comes out as a
+  // disc the width of the cut - and it therefore picks up all three
+  // passes on its own, with no special case anywhere in hbCutPass.
+  '.': { w: 24, d: ['M11,99 L11.6,99.6'] }
 };
 
 var HB_TRACKING = 12;   // space between glyph boxes, in glyph units
@@ -1115,7 +1138,17 @@ var HB_SIGNS = [
   { hostId: 'cutGreenhouse', text: 'GREENHOUSE',
     lit: '#FBE4AF', shadow: '#563608', floor: '#8C6019' },
   { hostId: 'cutFriends',    text: 'FRIENDS',
-    lit: '#F4BAA9', shadow: '#4A1C12', floor: '#7C3B29' }
+    lit: '#F4BAA9', shadow: '#4A1C12', floor: '#7C3B29' },
+
+  // The tagline, cut into the pale board under the plank rather than
+  // printed on it. Its three colours are the odd ones out: the board
+  // is nearly white, so the lit wall can only be a shade brighter
+  // than the surface it sits on - which is exactly what a real groove
+  // in a pale board looks like. That means the FLOOR pass is what
+  // carries the reading here, where on the four painted signs the
+  // lit wall does most of the work.
+  { hostId: 'cutLabel',      text: 'Tend your habits. Watch them bloom.',
+    lit: '#FFFBF0', shadow: '#432E14', floor: '#7A5B36' }
 ];
 
 

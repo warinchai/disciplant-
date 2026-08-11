@@ -375,15 +375,16 @@ function renderAuthWidget() {
   if (!authWidgetBtn) return;
   var profile = currentUserProfile;
 
-  if (!profile.isAnonymous && profile.photoURL) {
-    authAvatarImg.src = profile.photoURL;
-    authAvatarImg.classList.remove('hidden');
-    authAvatarFallback.classList.add('hidden');
-  } else {
-    authAvatarImg.classList.add('hidden');
-    authAvatarFallback.classList.remove('hidden');
-    authAvatarFallback.innerHTML = AVATAR_SPROUT_SVG;
-  }
+  // Everyone wears the sprout now, signed in or not. The Google
+  // account photo is deliberately not painted: a stranger's face in
+  // the corner of a garden reads as a different app, and it was one
+  // more third-party request on every page. profile.photoURL is still
+  // read and stored on the user doc, it just no longer draws anything.
+  // #authAvatarImg stays in the markup, permanently hidden, so
+  // restoring the photo is one branch rather than new elements.
+  authAvatarImg.classList.add('hidden');
+  authAvatarFallback.classList.remove('hidden');
+  authAvatarFallback.innerHTML = AVATAR_SPROUT_SVG;
 
   authWidgetLabel.textContent = profile.isAnonymous
     ? 'Guest'
@@ -400,9 +401,26 @@ function closeAuthModal() {
   if (authModalEl) authModalEl.classList.add('hidden');
 }
 
-// Stands in wherever there is no profile photo.
+// The account picture, everywhere one is shown: the widget pill, the
+// auth modal, the username modal in 06 and the profile header in 05.
+// Self-contained circle - it carries its own disc, so it needs no
+// border-radius, no clip path and no currentColor from its host.
+// Drawn flat and id-free like the rest of the app's inline SVG, so
+// several copies on one page cannot collide.
 var AVATAR_SPROUT_SVG =
-  '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 22 V11" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><path d="M12 12 C12 7 8 5 4 5 C4 10 8 12 12 12 Z" fill="currentColor"/><path d="M12 14 C12 10 15 8 19 8 C19 12 15 14 12 14 Z" fill="currentColor" opacity="0.72"/></svg>';
+  '<svg class="avatar-sprout" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+  '<circle cx="32" cy="32" r="32" fill="#FAF0DC"/>' +
+  '<path d="M0.06 34 C10 32.4 20 34.6 32 34 C44 33.4 54 31.6 63.94 34 A32 32 0 0 1 0.06 34 Z" fill="#F0DFC0"/>' +
+  '<path d="M2.34 44 C11 42.2 17.5 44.4 24 44.6 C27.4 40.6 36.4 40.4 40 44.3 C47 44.6 54 42 61.66 44 A32 32 0 0 1 2.34 44 Z" fill="#8A6A4B"/>' +
+  '<path d="M0.9 47.6 C12 45.4 22 49.4 32 48.4 C42 47.4 52.5 44.6 63.1 47.6 A32 32 0 0 1 0.9 47.6 Z" fill="#6B4F37"/>' +
+  '<path d="M31.5 46.5 C31 39 33.2 33 32.9 22.6" stroke="#5C8149" stroke-width="3.2" stroke-linecap="round" fill="none"/>' +
+  '<path d="M32.3 33.2 C27 35.4 18.2 33.6 14.6 26 C21.8 23.2 29.5 26 32.3 33.2 Z" fill="#7FA968"/>' +
+  '<path d="M32.3 33.2 C27 35.4 18.2 33.6 14.6 26 C22 28.4 28.6 30.4 32.3 33.2 Z" fill="#6C9556"/>' +
+  '<path d="M32.7 27.8 C38.2 29.4 47 26.2 50 18.4 C42.6 16.2 34.9 20.2 32.7 27.8 Z" fill="#93BC7A"/>' +
+  '<path d="M32.7 27.8 C38.2 29.4 47 26.2 50 18.4 C42.7 21.2 36.2 24.4 32.7 27.8 Z" fill="#7FA968"/>' +
+  '<path d="M17.6 51.4 C19.8 50.4 22.2 50.6 23.4 51.8 C21.4 52.7 19 52.6 17.6 51.4 Z" fill="#83644A"/>' +
+  '<path d="M42.4 49.6 C44.2 48.8 46 49 47 50 C45.3 50.8 43.5 50.7 42.4 49.6 Z" fill="#83644A"/>' +
+  '</svg>';
 
 var GOOGLE_G_ICON_SVG =
   '<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">' +
@@ -417,9 +435,7 @@ function renderAuthModal() {
   if (!authModalBody) return;
   var profile = currentUserProfile;
 
-  var avatarHtml = (!profile.isAnonymous && profile.photoURL)
-    ? '<img src="' + profile.photoURL + '" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />'
-    : AVATAR_SPROUT_SVG;
+  var avatarHtml = AVATAR_SPROUT_SVG;
 
   var titleText = profile.isAnonymous
     ? 'Guest Gardener'
