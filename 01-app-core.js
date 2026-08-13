@@ -755,6 +755,69 @@ document.getElementById('btn-to-tasks').addEventListener('click',      function 
 document.getElementById('btn-to-greenhouse').addEventListener('click', function () { navigateTo('greenhouse'); });
 document.getElementById('btn-to-friends').addEventListener('click',    function () { navigateTo('friends');    });
 
+
+// ============================================
+// About panel
+// ============================================
+// The fifth sign on the bench is the only one that does not go
+// anywhere. It opens the panel sitting under the row, which explains
+// what the app is for and how it is played.
+//
+// The panel's text lives in index.html, not here. Two reasons: it is
+// the only prose on the home page, so it should still be readable if
+// this script never runs, and a search engine reading the markup has
+// nothing else on this page to go on. All that happens here is a
+// class being toggled.
+//
+// No Firestore, no account, no cost. A visitor can read the whole
+// thing and leave without an account ever being created for them,
+// which is the same promise the rest of the home page makes.
+var aboutBtnEl      = document.getElementById('btn-about');
+var aboutPanelEl    = document.getElementById('homeAbout');
+var aboutCloseEl    = document.getElementById('homeAboutClose');
+var homeInnerEl     = document.querySelector('.home-inner');
+
+function setHomeAboutOpen(open) {
+  if (!aboutBtnEl || !aboutPanelEl) return;
+  aboutPanelEl.classList.toggle('hidden', !open);
+  aboutBtnEl.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+  // Step the whole menu layer in front of the near props while the
+  // panel is open, or the soil tray and the pots lie across the text.
+  // It has to be the layer and not the panel: .home-inner is a stacking
+  // context, so nothing inside it can climb past the props on its own.
+  if (homeInnerEl) homeInnerEl.classList.toggle('is-about-open', open);
+
+  // Opening it pushes the page taller than the window, and a panel
+  // that opens below the fold reads as a button that did nothing.
+  if (open && aboutPanelEl.scrollIntoView) {
+    aboutPanelEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  // Closing hands focus back to the sign that opened it, or the
+  // keyboard is left standing at the end of the document.
+  if (!open && document.activeElement === aboutCloseEl) aboutBtnEl.focus();
+}
+
+if (aboutBtnEl && aboutPanelEl) {
+  aboutBtnEl.addEventListener('click', function () {
+    setHomeAboutOpen(aboutPanelEl.classList.contains('hidden'));
+  });
+}
+
+if (aboutCloseEl) {
+  aboutCloseEl.addEventListener('click', function () { setHomeAboutOpen(false); });
+}
+
+// Escape closes it, but only when it is the thing on screen - the nav
+// drawer listens for Escape too, and both closing on one press would
+// be a surprise.
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape' || !aboutPanelEl) return;
+  if (aboutPanelEl.classList.contains('hidden')) return;
+  if (navDrawerEl && navDrawerEl.classList.contains('is-open')) return;
+  setHomeAboutOpen(false);
+});
+
 // Tasks -> Garden in one tap. The daily loop shouldn't cost a menu.
 var plotGateEl = document.getElementById('plotGate');
 if (plotGateEl) plotGateEl.addEventListener('click', function () { navigateTo('garden'); });
@@ -1045,6 +1108,12 @@ var HB_GLYPHS = {
                     'M10,4 C24,36 47,72 62,100',
                     'M62,100 C60,70 63,36 62,3'] },
   'O': { w: 76, d: ['M38,2 C15,2 4,23 4,52 C4,81 15,101 38,101 C61,101 72,81 72,52 C72,23 61,2 38,2Z'] },
+
+  // P is R with the leg left off, and it shares R's stem and bowl on
+  // purpose - the two letters sit next to each other in DISCIPLANT
+  // and a bowl drawn to a different curve would show.
+  'P': { w: 64, d: ['M11,3 C9,36 12,70 11,101',
+                    'M11,4 C34,1 62,6 62,29 C62,48 44,54 11,52'] },
   'R': { w: 68, d: ['M11,3 C9,36 12,70 11,101',
                     'M11,4 C34,1 62,6 62,29 C62,48 44,54 11,52',
                     'M35,52 C45,68 56,85 64,101'] },
@@ -1148,6 +1217,16 @@ var HB_SIGNS = [
   // carries the reading here, where on the four painted signs the
   // lit wall does most of the work.
   { hostId: 'cutLabel',      text: 'Tend your habits. Watch them bloom.',
+    lit: '#FFFBF0', shadow: '#432E14', floor: '#7A5B36' },
+
+  // The About sign and the heading of the panel it opens. Both are
+  // cut into pale stock rather than paint, so they take the same three
+  // colours as the tagline above: on a nearly white board the lit wall
+  // can only be a shade brighter than the surface, and the FLOOR pass
+  // is what carries the reading.
+  { hostId: 'cutAbout',      text: 'ABOUT',
+    lit: '#FFFBF0', shadow: '#432E14', floor: '#7A5B36' },
+  { hostId: 'cutAboutTitle', text: 'ABOUT DISCIPLANT',
     lit: '#FFFBF0', shadow: '#432E14', floor: '#7A5B36' }
 ];
 

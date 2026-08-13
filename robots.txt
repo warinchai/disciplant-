@@ -1,0 +1,11 @@
+# Disciplant. Everything here is public and there is nothing to keep
+# crawlers out of, so this file exists mainly to point at the sitemap.
+#
+# Note this only covers the production address. Vercel serves every
+# push on its own preview URL as well, and sends X-Robots-Tag: noindex
+# on those itself, so they stay out of search without a rule here.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://disciplant.vercel.app/sitemap.xml

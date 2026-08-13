@@ -44,6 +44,22 @@ var AUTH_DOMAIN        = (firebase.app().options.authDomain || '').toLowerCase()
 var APP_HOST           = location.hostname.toLowerCase();
 var REDIRECT_IS_USABLE = AUTH_DOMAIN === APP_HOST;
 
+// ---- Switching accounts instead of linking ----
+// Set when a Google credential turns out to belong to another account
+// already (auth/credential-already-in-use). Both places that can see
+// that error tell the user to tap again, and without this flag that
+// second tap simply retries the SAME link and fails identically - the
+// session is still anonymous, so isAnon is still true. The flag is what
+// makes the retry a plain sign-in, which is the only thing that can
+// actually succeed. It matters most where redirect cannot run (any
+// origin whose host is not authDomain, which includes localhost), since
+// there the retry is the only route left.
+//
+// Cleared as soon as a sign-in lands or the user backs out, so it can
+// never quietly turn a later guest upgrade into an account switch and
+// strand the guest's plants.
+var forceAccountSwitch = false;
+
 if (!REDIRECT_IS_USABLE) {
   console.warn(
     'DISCIPLANT: authDomain (' + AUTH_DOMAIN + ') does not match this app\'s host (' +
@@ -88,7 +104,8 @@ auth.getRedirectResult().then(function (result) {
     // The guest account can't take this Google credential because another
     // account already owns it. Do NOT auto-fire another redirect here -
     // that runs with no user gesture and can loop. Ask the user instead.
-    authActionError = 'That Google account is already in use. Tap Sign in with Google again to switch to it.';
+    forceAccountSwitch = true;
+    authActionError = 'That Google account already has its own garden. Tap Sign in with Google again to open it. This guest garden will stay behind.';
   } else if (code && code !== 'auth/no-auth-event') {
     authActionError = 'Sign-in failed. Please try again.';
     console.error('DISCIPLANT: redirect sign-in failed:', error);
@@ -283,7 +300,10 @@ function signInWithGoogle() {
   renderAuthModal();
 
   var currentUser = auth.currentUser;
-  var isAnon      = !!(currentUser && currentUser.isAnonymous);
+  // A guest is upgraded by LINKING, so the plants carry over. The one
+  // exception is a retry after credential-already-in-use, where linking
+  // is exactly what cannot work.
+  var isAnon      = !!(currentUser && currentUser.isAnonymous) && !forceAccountSwitch;
 
   function startRedirectFlow() {
     try { sessionStorage.setItem('disciplant:redirectPending', '1'); } catch (e) {}
@@ -310,7 +330,8 @@ function signInWithGoogle() {
       // rather than waiting for the observer. For the anonymous-link
       // case this is what makes the name and avatar appear the moment
       // the popup closes.
-      authActionPending = false;
+      authActionPending  = false;
+      forceAccountSwitch = false;
       refreshIdentityUI((result && result.user) || auth.currentUser);
       closeAuthModal();
     })
@@ -343,9 +364,13 @@ function signInWithGoogle() {
           return auth.signInWithRedirect(googleProvider);
           // Page navigates away here - nothing after this runs.
         }
+        // The next tap carries a fresh user-activation token, so a popup
+        // can open then even though one cannot here. The flag is what
+        // makes that tap a sign-in rather than a fourth failed link.
+        forceAccountSwitch = true;
         return fail(
           'That Google account already has its own garden. Tap Sign in with ' +
-          'Google again to switch to it.',
+          'Google again to open it. This guest garden will stay behind.',
           error
         );
       }
@@ -362,7 +387,8 @@ function signInWithGoogle() {
 
       if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
         // User backed out on purpose - not an error worth showing.
-        authActionPending = false;
+        authActionPending  = false;
+        forceAccountSwitch = false;
         renderAuthModal();
         return;
       }

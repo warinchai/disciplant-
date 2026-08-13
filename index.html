@@ -20,6 +20,28 @@
   <link rel="icon" href="favicon.svg?v=2" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 
+  <!-- Search engines and link previews.
+
+       This page is drawn, not typed: the wordmark is a set of SVG
+       paths (HB_LETTERS) and every button label is carved lettering
+       (HB_GLYPHS), so a crawler that only reads text sees almost
+       nothing here. The description below and the About panel further
+       down are the two places real sentences live, which is why both
+       sit in the markup rather than being built by script.
+
+       The canonical tag names one address as the real one. Vercel also
+       serves this app on per-push preview URLs, and without this a
+       crawler that found one could treat it as a separate site. -->
+  <meta name="description" content="Disciplant is a free habit tracker that grows a garden. Every habit you keep becomes a plant, and it gets bigger on each day you tick the habit off." />
+  <link rel="canonical" href="https://disciplant.vercel.app/" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://disciplant.vercel.app/" />
+  <meta property="og:title" content="Disciplant, a habit tracker that grows a garden" />
+  <meta property="og:description" content="Every habit you keep becomes a plant. Tick it off on a day you did it and the plant grows." />
+  <meta property="og:image" content="https://disciplant.vercel.app/apple-touch-icon.png" />
+  <meta name="twitter:card" content="summary" />
+
   <!-- Google Analytics (gtag.js) - visitor counts for the deployed site.
        Nothing to do with Firestore: this talks to Google Analytics, not to
        the database, so it costs no reads and cannot affect the quota.
@@ -158,6 +180,13 @@
        ================================================ -->
   <div id="page-home" class="page page-home">
 
+    <!-- The one real heading on the page. The visible title is drawn
+         as paths, so without this there is no <h1> at all - nothing
+         for a screen reader to announce as the name of the page, and
+         nothing for a search engine to read. .sr-only keeps it out of
+         sight without hiding it from either. -->
+    <h1 class="sr-only">Disciplant, a habit tracker that grows a garden</h1>
+
     <!-- Layer 0: the table. Boards, then the marks in the
          boards, then the pool of light across them. -->
     <div class="bench" aria-hidden="true">
@@ -252,6 +281,84 @@
         <button class="marker marker-sm marker-red marker-friends" id="btn-to-friends" aria-label="Friends">
           <span class="marker-face" id="cutFriends"></span>
         </button>
+
+        <!-- Opens the panel below rather than navigating anywhere, so
+             it is the one sign on the bench that is not a destination.
+             Painted in the pale board colour of the tagline and the
+             panel it opens, which is what marks it as the odd one out
+             without adding a fifth paint to the row. -->
+        <button class="marker marker-sm marker-cream marker-about" id="btn-about"
+                aria-label="About Disciplant" aria-expanded="false" aria-controls="homeAbout">
+          <span class="marker-face" id="cutAbout"></span>
+        </button>
+      </div>
+
+      <!-- ABOUT PANEL
+
+           A board of the same pale stock the tagline is cut into,
+           dropped into a bark frame so it belongs on the bench. The
+           heading is carved by the same three-pass machinery as the
+           signs (hbCutText in 01-app-core.js). The answers are set in
+           type, because eleven paragraphs of hand-drawn glyphs would
+           be unreadable and enormous.
+
+           The wording is REAL TEXT IN THIS FILE and not built by
+           script, on purpose. It is the only prose on the home page,
+           so it is what a search engine has to go on, and it stays
+           readable if the JS never runs. Being inside a .hidden
+           element does not hide it from a crawler.
+
+           Closed on load. 01-app-core.js owns the toggle. -->
+      <div class="home-about hidden" id="homeAbout">
+        <div class="home-about-face">
+
+          <button type="button" class="home-about-close" id="homeAboutClose"
+                  aria-label="Close the about panel">
+            <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+              <path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor" stroke-width="2.4"
+                    stroke-linecap="round" fill="none"/>
+            </svg>
+          </button>
+
+          <h2 class="home-about-title">
+            <span class="sr-only">About Disciplant</span>
+            <span class="home-about-cut" id="cutAboutTitle" aria-hidden="true"></span>
+          </h2>
+
+          <h3 class="home-about-q">What it is for</h3>
+          <p class="home-about-a">Disciplant is a habit tracker where every habit you keep grows a plant. Tick a habit off on a day you did it and that plant gets a little bigger. Miss a day and nothing is destroyed. The plant just waits for you.</p>
+
+          <h3 class="home-about-q">Why a garden instead of a number</h3>
+          <p class="home-about-a">A streak counter resets to zero and takes the evidence with it. A plant keeps the months you already put in, so a bad week costs you a number rather than the thing you have been growing.</p>
+
+          <h3 class="home-about-q">How to start</h3>
+          <p class="home-about-a">Press Tasks and write down one habit. Press Enter garden to see it planted. You do not need an account to try this. If you want the garden to survive a new phone or a cleared browser, sign in with Google and it follows you.</p>
+
+          <h3 class="home-about-q">How a plant grows</h3>
+          <p class="home-about-a">Size comes from the total number of days you have ticked that habit off, counted across its whole life. A current streak adds a small flourish on top, so breaking one never shrinks a plant back down.</p>
+
+          <h3 class="home-about-q">When plants change shape</h3>
+          <p class="home-about-a">Each plant is redrawn at 2 days, 15 days and 60 days. In between it keeps getting slowly bigger, so most days are a small change rather than a jump.</p>
+
+          <h3 class="home-about-q">The show today’s growth button</h3>
+          <p class="home-about-a">It sits above the garden. Pressing it rolls your plot back by the single day you earned today and then lets it grow into that day while you watch. Nothing is spent and nothing is saved, so you can press it as often as you like.</p>
+
+          <h3 class="home-about-q">Rearranging the plot</h3>
+          <p class="home-about-a">Press Edit garden, drag your plants wherever you want them, then save. Outside that mode nothing moves, so you cannot knock a plant over by scrolling past it.</p>
+
+          <h3 class="home-about-q">The greenhouse</h3>
+          <p class="home-about-a">This is where looks live. Every plant has a set of skins and the garden itself has a set of landscapes. The landscapes are all open from the start. Plant skins unlock as you go, two of them once you have 3 and then 7 friends, one from a 10 day streak on that plant, one from 30 days of growth on it.</p>
+
+          <h3 class="home-about-q">Friends</h3>
+          <p class="home-about-a">Pick a username, add someone by theirs, and you can visit each other’s gardens. A friend sees your plants and how far along each one is, which does show roughly what kind of habit it is. A friend never sees what you actually wrote.</p>
+
+          <h3 class="home-about-q">Who can read my habits</h3>
+          <p class="home-about-a">Only you. Habit text is stored under your own account and is never part of what a friend loads. If you want all of it gone, the account menu has a delete option that removes your garden, your profile and your username together.</p>
+
+          <h3 class="home-about-q">How often to use it</h3>
+          <p class="home-about-a">Once a day is the whole loop. Open it, tick what you did, look at the plot for a moment, close it. Under a minute is the target.</p>
+
+        </div>
       </div>
     </div>
 

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  One page, because the app is one page. Every screen in Disciplant
+  (garden, tasks, greenhouse, friends) is the same document with a
+  different section shown, so there is no second URL to list.
+
+  Update lastmod when the home page's wording changes. It is a hint
+  about content, not about deployments, so there is no need to touch
+  it on every push.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://disciplant.vercel.app/</loc>
+    <lastmod>2026-08-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
