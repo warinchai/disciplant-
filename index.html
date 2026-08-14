@@ -42,25 +42,48 @@
   <meta property="og:image" content="https://disciplant.vercel.app/apple-touch-icon.png" />
   <meta name="twitter:card" content="summary" />
 
-  <!-- Google Analytics (gtag.js) - visitor counts for the deployed site.
-       Nothing to do with Firestore: this talks to Google Analytics, not to
-       the database, so it costs no reads and cannot affect the quota.
+  <!-- Google Analytics USED TO LOAD HERE, on every visit, for everyone.
+       It no longer does. The tag is fetched by 11-consent.js and only
+       after the visitor has actively said yes; a visitor who says no,
+       or who has not answered yet, never opens a connection to Google
+       Analytics at all.
 
-       The ID below is the measurementId already sitting in
-       firebase-config.js - Firebase created the Analytics property when the
-       project was set up, so there was no separate signup. Reports live at
-       analytics.google.com under the same Google account.
+       Do not put a gtag snippet back on this page. Anything added here
+       runs before the banner has been drawn, let alone answered, which
+       is the exact defect the banner exists to fix. The measurement ID
+       (the measurementId from firebase-config.js) lives in
+       11-consent.js as CONSENT_GA_ID.
 
-       This fires on localhost too, so dev sessions land in the numbers.
-       Not worth filtering at this scale, but that's why the first visitors
-       are mostly you. -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q64R6MP546"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-Q64R6MP546');
-  </script>
+       App Check and reCAPTCHA are deliberately NOT behind the banner -
+       see the note at the top of 11-consent.js for why. -->
+
+  <!-- Vercel Web Analytics. Loads for EVERYONE, including people who
+       declined above, and that is deliberate rather than an oversight.
+
+       It writes nothing to the device - no cookie, no localStorage. A
+       visitor is recognised by a hash Vercel computes server-side from
+       the incoming request, and that hash is thrown away after 24
+       hours. The consent rule the banner exists to satisfy is about
+       storing or reading information on someone's device, so a system
+       that stores nothing there does not engage it; the processing
+       itself runs on legitimate interest instead.
+
+       Practical effect: Vercel gives an honest headcount of everyone,
+       Google Analytics gives behaviour for the subset who opted in.
+       Gating this behind the banner would leave the decliners
+       uncounted, which is the entire reason it is here.
+
+       Say so out loud. It is in the banner copy and in the privacy
+       policy on purpose - "we counted you through a different system
+       after you said no" is fine when disclosed up front and looks
+       like a dodge when discovered later.
+
+       Same-origin, so the existing script-src 'self' and connect-src
+       'self' already cover it and vercel.json needs no CSP change. The
+       path is served by Vercel's edge, not by a file in this repo, and
+       only once Web Analytics is switched on for the project - until
+       then this 404s harmlessly. -->
+  <script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body>
 
@@ -357,6 +380,31 @@
 
           <h3 class="home-about-q">How often to use it</h3>
           <p class="home-about-a">Once a day is the whole loop. Open it, tick what you did, look at the plot for a moment, close it. Under a minute is the target.</p>
+
+          <!-- The withdrawal half of the consent banner. Consent that is
+               harder to take back than it was to give is not consent, so
+               this has to be somewhere a person can actually find it -
+               and About is where every other "what does this do with my
+               data" answer already lives.
+
+               openConsentSettings() is a global defined in
+               11-consent.js. Inline onclick rather than a listener
+               because that file is loaded last and knows nothing about
+               this markup; keeping the wiring here means the two can be
+               edited independently. -->
+          <h3 class="home-about-q">Cookies and analytics</h3>
+          <p class="home-about-a">Signing in and saving your garden need storage on your device, so those are not optional. Google Analytics is: it counts visits, and it only ever loads if you said yes when asked. Nothing about your habits is sent to it either way.</p>
+          <p class="home-about-a">
+            <button type="button" class="home-about-link" onclick="openConsentSettings()">Cookie settings</button>
+          </p>
+
+          <h3 class="home-about-q">The legal bit</h3>
+          <p class="home-about-a">The terms cover what this is and is not - in particular that it is a habit tracker and not a health service, whatever you happen to be tracking with it. The privacy policy covers what is stored and who can see it.</p>
+          <p class="home-about-a">
+            <a class="home-about-link" href="terms.html">Terms of Service</a>
+            &nbsp;&middot;&nbsp;
+            <a class="home-about-link" href="privacy.html">Privacy Policy</a>
+          </p>
 
         </div>
       </div>
@@ -786,6 +834,13 @@
        currentUserId and tasks from 01, clearPerAccountState from 02,
        escapeHtml from 04, the friends state from 06 and 07. -->
   <script src="10-account-data.js"></script>
+
+  <!-- Analytics consent. Loaded LAST and depends on nothing above it -
+       it only needs the DOM. This is the file that decides whether
+       Google Analytics is fetched at all, so it must ship on the
+       public site: without it, nothing ever loads the tag and the
+       numbers quietly stop. -->
+  <script src="11-consent.js"></script>
 
   <!-- Community counters are switched OFF while the numbers are still
        small. This one line is the whole switch: uncomment it and the

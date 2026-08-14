@@ -544,6 +544,27 @@ function renderAuthModal() {
     ? '<p class="auth-modal-note">Your current garden stays exactly as it is - linking just adds Google sign-in on top.</p>'
     : '';
 
+  // Sign-in-wrap consent. This sits directly under the Google button,
+  // in the same eyeline as the gesture it attaches to, because that is
+  // what makes the terms bind. A link in a footer nobody scrolls to is
+  // browsewrap and courts routinely refuse to enforce it; a notice next
+  // to the button the user actually presses is the arrangement that has
+  // survived challenge.
+  //
+  // Shown to guests only, next to the button. Someone already signed in
+  // agreed at the moment they pressed it, and repeating the notice on
+  // every visit to the account panel would be noise. The links stay
+  // reachable from About regardless.
+  //
+  // target="_blank" on purpose: opening the terms must never cost
+  // someone a half-finished guest garden by navigating away from it.
+  var termsHtml = profile.isAnonymous
+    ? '<p class="auth-modal-terms">By signing in you agree to our ' +
+        '<a href="terms.html" target="_blank" rel="noopener">Terms</a> and ' +
+        '<a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.' +
+      '</p>'
+    : '';
+
   // Download-my-data and delete-my-account, behind one quiet link.
   //
   // Guests get it too, and that is the point rather than an oversight:
@@ -564,6 +585,7 @@ function renderAuthModal() {
     '<h3 class="auth-modal-title">' + escapeHtml(titleText) + '</h3>' +
     '<p class="auth-modal-subtitle">' + escapeHtml(subtitleText) + '</p>' +
     actionHtml +
+    termsHtml +
     errorHtml +
     noteHtml +
     dataLinkHtml;

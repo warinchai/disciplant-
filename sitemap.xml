@@ -1,12 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  One page, because the app is one page. Every screen in Disciplant
-  (garden, tasks, greenhouse, friends) is the same document with a
-  different section shown, so there is no second URL to list.
+  Three pages now. The app itself is still one document - every screen
+  in Disciplant (garden, tasks, greenhouse, friends) is the same page
+  with a different section shown, so there is no second URL for any of
+  those. The two additions are genuinely separate files.
 
-  Update lastmod when the home page's wording changes. It is a hint
-  about content, not about deployments, so there is no need to touch
-  it on every push.
+  The legal pages are listed without the .html, matching cleanUrls in
+  vercel.json and the canonical tag inside each file. All three
+  spellings have to agree or Search Console reports the pages as
+  duplicates of one another.
+
+  Low priority and yearly on those two on purpose: they should be
+  findable and indexed, but they are not what anyone is searching for,
+  and a legal page that changes often is a legal page with a problem.
+
+  Update lastmod when the wording changes. It is a hint about content,
+  not about deployments, so there is no need to touch it on every push.
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
@@ -14,5 +23,17 @@
     <lastmod>2026-08-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://disciplant.vercel.app/privacy</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://disciplant.vercel.app/terms</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
 </urlset>

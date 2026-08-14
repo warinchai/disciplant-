@@ -5658,3 +5658,335 @@ body.nav-open { overflow: hidden; }
   .home-about-cut { width: min(210px, 66%); }
   .marker-about   { margin-top: 10px; }
 }
+
+/* ========================================
+   Consent banner - analytics opt-in
+   (11-consent.js)
+
+   A board resting on the bottom edge of the
+   screen rather than a dialog floating over
+   the middle of it. The garden stays fully
+   usable underneath: this asks a question,
+   it does not hold the app hostage, and
+   there is no backdrop for that reason.
+
+   Same surface language as the account
+   modal - clay panel, bark frame, a hard
+   lip under every button.
+   ======================================== */
+
+.consent-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10003;              /* above .account-modal, which is 10002 */
+  display: flex;
+  justify-content: center;
+  padding: 14px;
+  pointer-events: none;        /* the gutter either side stays clickable */
+}
+
+.consent-banner.hidden { display: none; }
+
+.consent-card {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 28px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--clay);
+  border: 3px solid var(--bark-deep);
+  border-radius: var(--r-lg);
+  padding: 18px 20px 16px;
+  box-shadow: var(--lip-deep) var(--bark-deep), 0 18px 48px rgba(0, 0, 0, 0.38);
+  text-align: left;
+}
+
+.consent-title {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--ink);
+  outline: none;               /* it is focused on open, not clicked */
+}
+
+.consent-text {
+  margin: 0 0 8px;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.consent-text-quiet {
+  color: var(--ink-soft);
+  font-size: var(--fs-xs);
+  margin-bottom: 14px;
+}
+
+.consent-link {
+  color: var(--ink-soft);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.consent-link:hover { color: var(--ink); }
+
+/* Two equal columns, and they stay equal. The refusal must not be
+   made quieter, narrower or lighter than the acceptance - an
+   asymmetric pair here is the most commonly enforced defect in this
+   whole area of law. If you restyle one of these, restyle both. */
+.consent-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.consent-btn {
+  padding: 11px 16px;
+  border: none;
+  border-radius: var(--r-sm);
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s, background 0.16s;
+}
+
+.consent-btn:active {
+  transform: translateY(3px);
+  box-shadow: none;
+}
+
+/* Both buttons carry a lip of the same depth. The only difference
+   between them is hue, which is decoration, not hierarchy. */
+.consent-btn-yes {
+  background: var(--leaf-deep);
+  color: var(--linen);
+  box-shadow: var(--lip) var(--leaf-dark);
+}
+
+.consent-btn-no {
+  background: var(--bark);
+  color: var(--linen);
+  box-shadow: var(--lip) var(--bark-deep);
+}
+
+/* Stacked below the width where two labels stop fitting on one line
+   each. Refusal goes on TOP in this arrangement, so the thumb does
+   not have to travel past the accept button to reach it. */
+@media (max-width: 380px) {
+  .consent-actions { grid-template-columns: 1fr; }
+  .consent-btn-no  { order: -1; }
+}
+
+/* A <button> that reads as a link. It has to be a
+   button and not an <a href="#"> - there is nowhere
+   to navigate to, and a hash link would scroll the
+   About panel back to the top on the way. Reset the
+   UA button chrome so it sits in the paragraph flow
+   like ordinary text. */
+.home-about-link {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  line-height: 1.64;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.home-about-link:hover { color: var(--ink); }
+
+/* ========================================
+   Legal pages - privacy.html, terms.html
+
+   Long-form reading, which the rest of this
+   stylesheet never has to do. The app is a
+   garden seen from a distance; these are a
+   sheet of paper held close, so the surface
+   is linen rather than clay and the measure
+   is capped at 68ch - past that the eye
+   loses the line on the way back.
+
+   Same tokens, same fonts, no new palette.
+   These pages must feel like the same place,
+   not a lawyer's annexe.
+   ======================================== */
+
+.legal-page {
+  min-height: 100vh;
+  background: var(--clay);
+  padding: 20px 16px 64px;
+}
+
+.legal-sheet {
+  max-width: 720px;
+  margin: 0 auto;
+  background: var(--linen);
+  border: 3px solid var(--bark-deep);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lip-deep) var(--bark-deep);
+  padding: 30px 26px 34px;
+}
+
+.legal-back {
+  display: inline-block;
+  margin-bottom: 20px;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+.legal-back:hover { color: var(--ink); }
+.legal-back::before { content: "\2190\00a0"; }
+
+.legal-body {
+  max-width: 68ch;
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  line-height: 1.68;
+  color: var(--ink);
+}
+
+.legal-body h1 {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.legal-body h2 {
+  margin: 34px 0 10px;
+  padding-top: 16px;
+  border-top: 2px solid var(--linen-edge);
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.legal-body h3 {
+  margin: 22px 0 6px;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--bark-deep);
+}
+
+.legal-body p  { margin: 0 0 14px; }
+.legal-body ul { margin: 0 0 14px; padding-left: 22px; }
+.legal-body li { margin-bottom: 6px; }
+
+.legal-body a {
+  color: var(--leaf-dark);
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+
+.legal-body hr {
+  margin: 26px 0;
+  border: none;
+  border-top: 2px solid var(--linen-edge);
+}
+
+.legal-body strong { font-weight: 800; }
+
+/* Callouts. Every blockquote in these documents
+   is a note to the operator, not to the reader -
+   they are all flagged DRAFT NOTE and they all
+   have to come out before publication. Loud on
+   purpose. */
+.legal-body blockquote {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  background: var(--bloom-tint);
+  border-left: 4px solid var(--bloom-deep);
+  border-radius: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+.legal-body blockquote p:last-child { margin-bottom: 0; }
+
+/* Unfilled placeholders. Rendered as something
+   impossible to miss so a draft cannot be
+   published with [LEGAL NAME] still in it. */
+.legal-body code {
+  padding: 1px 6px;
+  background: var(--sun);
+  border-radius: 4px;
+  font-family: var(--font-body);
+  font-size: 0.92em;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.legal-table-wrap { overflow-x: auto; margin: 0 0 18px; }
+
+.legal-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.legal-body th,
+.legal-body td {
+  padding: 8px 10px;
+  border: 1px solid var(--linen-edge);
+  text-align: left;
+  vertical-align: top;
+}
+
+.legal-body th {
+  background: var(--clay);
+  font-weight: 800;
+}
+
+.legal-updated {
+  margin-top: 30px;
+  padding-top: 14px;
+  border-top: 2px solid var(--linen-edge);
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+}
+
+.legal-updated a { color: var(--ink-soft); font-weight: 700; }
+
+@media (max-width: 480px) {
+  .legal-page  { padding: 12px 10px 40px; }
+  .legal-sheet { padding: 22px 18px 26px; border-radius: var(--r-md); }
+  .legal-body h1 { font-size: var(--fs-xl); }
+  .legal-body h2 { font-size: var(--fs-lg); }
+}
+
+/* The sign-in-wrap notice under the Google button
+   (02-auth-tasks.js). Quiet, but present in the
+   same eyeline as the button - that adjacency is
+   the whole point of it. */
+.auth-modal-terms {
+  margin: 10px 0 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.auth-modal-terms a {
+  color: var(--ink-soft);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.auth-modal-terms a:hover { color: var(--ink); }
