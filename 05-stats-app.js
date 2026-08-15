@@ -79,7 +79,7 @@ function computeOverallDayStats(dateStr) {
   var total     = tasks.length;
   var completed = 0;
   tasks.forEach(function (t) {
-    if (t.history && t.history[dateStr]) completed++;
+    if (histGet(t.history, dateStr)) completed++;
   });
   var percent = total > 0 ? (completed / total) * 100 : 0;
   return { completed: completed, total: total, percent: percent };
@@ -189,7 +189,7 @@ function renderIndividualHeatmap(taskId) {
     container,
     weeks,
     function (dateStr) {
-      var done = !!hist[dateStr];
+      var done = histGet(hist, dateStr);
       return { stage: done ? 3 : 0, data: { done: done } };
     },
     function (dateStr, info) {
@@ -219,8 +219,8 @@ function computeOverallStats() {
     currentMaxStreak = Math.max(currentMaxStreak, t.streak || 0);
 
     var hist = t.history || {};
-    last7.forEach(function (d)  { if (hist[d]) weeklyGrowth++; });
-    last30.forEach(function (d) { if (hist[d]) monthlyGrowth++; });
+    last7.forEach(function (d)  { if (histGet(hist, d)) weeklyGrowth++; });
+    last30.forEach(function (d) { if (histGet(hist, d)) monthlyGrowth++; });
   });
 
   return {
@@ -261,8 +261,8 @@ function computeIndividualStats(taskId) {
     heightMeters:    heightMeters,
     streak:          streak,
     maxStreak:       maxStreak,
-    weekCompletions:  last7.filter(function (d) { return hist[d]; }).length,
-    monthCompletions: last30.filter(function (d) { return hist[d]; }).length,
+    weekCompletions:  last7.filter(function (d) { return histGet(hist, d); }).length,
+    monthCompletions: last30.filter(function (d) { return histGet(hist, d); }).length,
   };
 }
 

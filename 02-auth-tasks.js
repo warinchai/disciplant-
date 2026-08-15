@@ -802,7 +802,13 @@ auth.onIdTokenChanged(function (user) {
               // Powers the Stats page heatmaps; only starts recording
               // from whenever this field was introduced, so days
               // before that won't have an entry.
-              history:           (t.history && typeof t.history === 'object') ? t.history : {},
+              // Converts the old one-key-per-day shape to the packed
+              // year strings, and passes an already-packed one
+              // through untouched. See the block in 01-app-core.js.
+              // The next ordinary save writes the new shape; because
+              // `tasks` is an array, that save also clears the old
+              // keys rather than merging alongside them.
+              history:           migrateHistory(t.history),
               // Manual placement override - set when the user drags
               // this plant to a spot themselves. null/undefined means
               // "use the automatic layout" (see computePlantLayout).
@@ -1496,7 +1502,7 @@ function toggleTask(taskId, newChecked) {
     // heatmaps).
     task.streak          = (task.streak || 0) + 1;
     task.totalGrowthDays = (task.totalGrowthDays || 0) + 1;
-    task.history[getTodayString()] = true;
+    histSet(task.history, getTodayString(), true);
     task.maxStreak        = Math.max(task.maxStreak || 0, task.streak);
     // Banked, and never given back - see the field's note on load.
     task.maxGrowthDays    = Math.max(task.maxGrowthDays || 0, task.totalGrowthDays);
@@ -1505,7 +1511,7 @@ function toggleTask(taskId, newChecked) {
     // remove today's history entry so the heatmap reflects reality.
     task.streak          = Math.max(0, (task.streak || 0) - 1);
     task.totalGrowthDays = Math.max(0, (task.totalGrowthDays || 0) - 1);
-    delete task.history[getTodayString()];
+    histSet(task.history, getTodayString(), false);
   }
 
   saveData();

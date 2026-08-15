@@ -1617,6 +1617,184 @@ function dayGap(earlierDate, laterDate) {
 
 
 // ============================================
+// Packed per-day history
+//
+// WHAT CHANGED AND WHY
+// A task's history used to be one map entry per completed day:
+//
+//     history: { '2026-08-15': true, '2026-08-14': true, ... }
+//
+// Firestore charges a map key as its UTF-8 length + 1 and a boolean
+// as 1 byte, so each of those cost 12 bytes. Six habits over a year
+// came to about 26 KB, and it only ever grew.
+//
+// Storage was never the problem. The problem is that the ENTIRE
+// gardens/{uid} document is rewritten on every tick, and Firestore's
+// watch stream sends whole documents back rather than deltas - so
+// the garden listener in 02 re-downloads the full history on every
+// single save. At year three with ten habits that is ~130 KB per
+// tick, in both directions. Fifteen ticks a day is about 2 MB of
+// egress per user per day, which is the wall the free plan actually
+// hits, long before the 1 MiB document ceiling.
+//
+// So history is now one string per year, one character per day:
+//
+//     history: { '2026': '0010111...' }
+//
+// Index 0 is 1 January. Six habits come to ~2.2 KB a year instead of
+// 26 KB - roughly a twelvefold saving, which puts a ten-year,
+// ten-habit garden at about 37 KB and takes the whole question off
+// the table for the life of the app.
+//
+// WHAT IS SAFE TO ASSUME ABOUT THIS DATA
+// Nothing is derived from history. streak, totalGrowthDays,
+// maxStreak and maxGrowthDays are all their own stored fields, so
+// even a total loss here cannot shrink a plant or reset a streak -
+// it would only blank the Stats heatmaps. That is the reason this
+// change was safe to make at all.
+//
+// The heatmaps read at most the last 371 days (buildYearGrid in 05)
+// and the summary cards read the last 7 and 30. The ONLY consumer
+// that wants every date is the account export in 10, which calls
+// histDates() below.
+//
+// TRAILING ZEROS ARE TRIMMED, and that is load-bearing rather than
+// tidy: a year in progress is only as long as its last completed
+// day, and charAt() past the end of a string returns '' - which is
+// falsy - so histGet needs no bounds check for short rows.
+//
+// EVERYTHING HERE IS UTC. These functions only ever parse and format
+// 'YYYY-MM-DD' strings that were already built in local time by
+// getTodayString(); doing the arithmetic in UTC means no date can
+// shift by a day across a daylight-saving boundary. Do not "fix"
+// this by switching to the local Date constructors - that
+// reintroduces exactly the off-by-one this avoids.
+// ============================================
+
+// 0-based day of the year. 1 January -> 0, 31 December -> 364 or 365.
+function dayOfYear(dateStr) {
+  var p = String(dateStr).split('-');
+  return Math.round(
+    (Date.UTC(+p[0], +p[1] - 1, +p[2]) - Date.UTC(+p[0], 0, 1)) / 86400000
+  );
+}
+
+// The inverse. Used only when expanding history back out for export.
+function dateFromDayOfYear(year, index) {
+  return new Date(Date.UTC(year, 0, 1 + index)).toISOString().slice(0, 10);
+}
+
+// Was this date completed? Safe against a missing history, a missing
+// year, and a row shorter than the index asked for.
+function histGet(hist, dateStr) {
+  var row = hist && hist[String(dateStr).slice(0, 4)];
+  return !!row && row.charAt(dayOfYear(dateStr)) === '1';
+}
+
+// Set or clear one day, in place.
+//
+// THE TWO GUARDS ARE NOT THEORETICAL, and the second one exists
+// because the first was not enough. A malformed key parses without
+// complaint and rolls over: '2026-13-45' becomes a date in 2027,
+// which the bounds check catches, but '2026-02-99' becomes
+// 2026-05-10, whose index is perfectly valid - so it would have been
+// silently recorded as a completion on a day that was never ticked.
+// The round-trip check is the real test: a date string is only
+// accepted if formatting the parsed index back out reproduces it
+// exactly. The bounds check stays as a cheap early-out, since
+// without it a far-future rollover would pad hundreds of junk
+// characters onto the row before anything else looked at it.
+//
+// Nothing in the app writes such a key - histSet is only ever called
+// with getTodayString(), which is always well-formed and zero-padded
+// - but migrateHistory() below runs over whatever is actually in the
+// database, which is a different standard of trust. Note the strict
+// consequence: an unpadded '2026-8-15' is rejected rather than
+// repaired, which is the right direction for a one-way conversion.
+function histSet(hist, dateStr, on) {
+  if (!hist) return;
+  var key  = String(dateStr);
+  var year = key.slice(0, 4);
+  var i    = dayOfYear(key);
+  if (!(i >= 0 && i <= 365)) return;
+  if (dateFromDayOfYear(+year, i) !== key) return;
+
+  var row = hist[year] || '';
+  while (row.length < i) row += '0';
+  row = (row.slice(0, i) + (on ? '1' : '0') + row.slice(i + 1))
+          .replace(/0+$/, '');
+
+  if (row) hist[year] = row;
+  else delete hist[year];
+}
+
+// Every completed date, ascending, as 'YYYY-MM-DD' strings.
+//
+// This is the exact inverse of the packing, and it is what keeps the
+// account export byte-for-byte identical to what it produced before
+// this change - same field, same shape, same order.
+function histDates(hist) {
+  var out = [];
+  if (!hist || typeof hist !== 'object') return out;
+
+  for (var year in hist) {
+    if (!Object.prototype.hasOwnProperty.call(hist, year)) continue;
+    var row = hist[year];
+    if (typeof row !== 'string') continue;
+    for (var i = 0; i < row.length; i++) {
+      if (row.charAt(i) === '1') out.push(dateFromDayOfYear(+year, i));
+    }
+  }
+  return out.sort();
+}
+
+// Accepts either shape and always returns the packed one.
+//
+// Called from the garden snapshot handler in 02, so an existing
+// garden converts the first time it loads and the next ordinary save
+// writes the new shape. A mixed document - part migrated, part not,
+// which is what a save interrupted mid-flight would leave - is
+// handled too, because both branches feed the same output.
+//
+// THE OLD KEYS DO NOT LINGER. That is worth stating plainly, because
+// saveData() writes with merge:true and the note there warns that
+// dropped fields survive a merge. They do - but only for top-level
+// and nested MAP fields. `tasks` is an ARRAY, and Firestore replaces
+// array values whole rather than merging into them, so the first
+// save after migration removes every old date key on its own. No
+// FieldValue.delete() is needed, and none would work here anyway.
+//
+// One-way, with no undo once that save lands. The round-trip test in
+// verify-history.js is what stands in for the undo.
+function migrateHistory(raw) {
+  var packed = {};
+  if (!raw || typeof raw !== 'object') return packed;
+
+  for (var k in raw) {
+    if (!Object.prototype.hasOwnProperty.call(raw, k)) continue;
+
+    // Already packed: a four-digit year mapping to a row string.
+    if (/^\d{4}$/.test(k) && typeof raw[k] === 'string') {
+      var row = raw[k].replace(/0+$/, '');
+      if (row) packed[k] = row;
+      continue;
+    }
+
+    // Old shape: 'YYYY-MM-DD' -> true. Only truthy values carried
+    // over, which matches what the heatmaps treated as completed.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(k) && raw[k]) {
+      histSet(packed, k, true);
+    }
+
+    // Anything else is silently dropped. There should be nothing
+    // else; if there is, it was not readable by the old code either.
+  }
+  return packed;
+}
+
+
+
+// ============================================
 // Category helpers
 // ============================================
 function getCategoryById(catId) {

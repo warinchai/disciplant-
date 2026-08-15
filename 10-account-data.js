@@ -157,7 +157,12 @@ function buildAccountExport() {
         longest_streak:     t.maxStreak,
         days_grown:         t.totalGrowthDays,
         most_days_grown:    t.maxGrowthDays,
-        completed_on:       Object.keys(t.history || {}).sort(),
+        // Expanded back out of the packed year strings, so this
+        // field is identical to what it was before history was
+        // packed: same name, same 'YYYY-MM-DD' strings, same order.
+        // An export taken before that change and one taken after
+        // are the same document.
+        completed_on:       histDates(t.history),
       };
     }),
 
