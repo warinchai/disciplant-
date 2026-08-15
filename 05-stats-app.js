@@ -177,24 +177,90 @@ function renderHeatmapGrid(containerEl, weeks, cellInfoFn, tooltipFn) {
   containerEl.appendChild(grid);
 }
 
+// Places the tooltip near the cursor without letting it leave the
+// viewport.
+//
+// It used to sit unconditionally at (clientX + 14, clientY + 14),
+// which is fine until the cursor is near an edge: the label is
+// position:fixed and white-space:nowrap, so hovering the last few
+// columns of the heatmap pushed it off the right side of the screen
+// and the text was simply cut off. December was unreadable.
+//
+// Nudging it further left would only move where that happens - the
+// label would then clip on the LEFT when hovering January. So the
+// side is chosen instead of fixed: preferred position is below-right
+// of the cursor, and it flips to the other side of the pointer when
+// there is not room. Flipping rather than sliding is what keeps the
+// label clear of the cursor; sliding would eventually park it under
+// the pointer, which on a grid of 3px cells means covering the very
+// thing being inspected.
+//
+// Measured with offsetWidth/offsetHeight, which forces a layout - so
+// this is called only while a tooltip is actually visible, and the
+// element is unhidden BEFORE measuring or both come back zero.
+//
+// The final clamp is the backstop for the case flipping cannot solve:
+// a label wider than the viewport itself, which can happen on a
+// narrow phone. It keeps the left edge on screen so the start of the
+// text is always readable, and the CSS lets the label wrap at that
+// width rather than run off.
+var HEATMAP_TIP_GAP    = 14;   // distance from the cursor
+var HEATMAP_TIP_MARGIN = 8;    // smallest gap to a viewport edge
+
+function positionHeatmapTooltip(clientX, clientY) {
+  if (!heatmapTooltipEl) return;
+
+  var vw = document.documentElement.clientWidth;
+  var vh = document.documentElement.clientHeight;
+  var w  = heatmapTooltipEl.offsetWidth;
+  var h  = heatmapTooltipEl.offsetHeight;
+
+  var left = clientX + HEATMAP_TIP_GAP;
+  if (left + w > vw - HEATMAP_TIP_MARGIN) left = clientX - HEATMAP_TIP_GAP - w;
+  if (left < HEATMAP_TIP_MARGIN)          left = HEATMAP_TIP_MARGIN;
+
+  var top = clientY + HEATMAP_TIP_GAP;
+  if (top + h > vh - HEATMAP_TIP_MARGIN)  top = clientY - HEATMAP_TIP_GAP - h;
+  if (top < HEATMAP_TIP_MARGIN)           top = HEATMAP_TIP_MARGIN;
+
+  heatmapTooltipEl.style.left = left + 'px';
+  heatmapTooltipEl.style.top  = top  + 'px';
+}
+
 // Hooks up hover tooltips for a heatmap container once — uses event
 // delegation so it keeps working after renderHeatmapGrid() replaces
 // the container's children on every re-render.
 function initHeatmapTooltips(containerEl) {
   if (!containerEl || !heatmapTooltipEl) return;
+
   containerEl.addEventListener('mouseover', function (e) {
     var cell = e.target.closest('.heatmap-cell');
     if (!cell || !cell.dataset.tooltip) return;
     heatmapTooltipEl.textContent = cell.dataset.tooltip;
     heatmapTooltipEl.classList.remove('hidden');
+    // Positioned here too, not only on mousemove. Without this the
+    // label appears for one frame wherever the PREVIOUS one was left,
+    // which reads as a flicker across the page when moving between
+    // two distant cells - and never corrects itself at all if the
+    // pointer arrives on a cell and stops dead.
+    positionHeatmapTooltip(e.clientX, e.clientY);
   });
+
   containerEl.addEventListener('mousemove', function (e) {
     if (heatmapTooltipEl.classList.contains('hidden')) return;
-    heatmapTooltipEl.style.left = (e.clientX + 14) + 'px';
-    heatmapTooltipEl.style.top  = (e.clientY + 14) + 'px';
+    positionHeatmapTooltip(e.clientX, e.clientY);
   });
+
   containerEl.addEventListener('mouseout', function (e) {
     if (!e.target.closest('.heatmap-cell')) return;
+    heatmapTooltipEl.classList.add('hidden');
+  });
+
+  // Leaving the grid entirely. mouseout above fires per cell and is
+  // enough in normal use, but it can be missed when the pointer exits
+  // fast or the page scrolls out from under it, stranding the label
+  // on screen with nothing under the cursor.
+  containerEl.addEventListener('mouseleave', function () {
     heatmapTooltipEl.classList.add('hidden');
   });
 }

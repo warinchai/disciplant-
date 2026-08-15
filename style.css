@@ -2580,6 +2580,20 @@ body {
   font-weight: 700;
   white-space: nowrap;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+
+  /* The JS flips this label to the other side of the cursor when it
+     would run off an edge (positionHeatmapTooltip in 05-stats-app.js).
+     Flipping cannot help with a label WIDER than the viewport, which
+     is reachable on a narrow phone, so cap the width as well. */
+  max-width: calc(100vw - 16px);
+}
+
+/* nowrap is what keeps the date and the figures on one line on a
+   desktop, where there is room. Below this width there is not, and a
+   single line that cannot fit would overflow the max-width above
+   rather than being clipped by it - so let it wrap instead. */
+@media (max-width: 560px) {
+  .heatmap-tooltip { white-space: normal; }
 }
 
 .stats-cards-grid {
