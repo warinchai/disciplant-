@@ -117,7 +117,7 @@ If you decline, or have not answered yet, Google Analytics is **never loaded at 
 
 The practical effect is that declining hides you from Google, not from a visitor count. If that is not acceptable to you, no amount of banner-clicking will change it, and the only real remedy is not to use the site.
 
-You can change your answer at any time via **`[Cookie settings — WIRE THIS LINK]`**. Withdrawing is as easy as giving, which is the legal standard as well as the decent one.
+You can change your answer at any time via **[Cookie settings](/#cookies)**. Withdrawing is as easy as giving, which is the legal standard as well as the decent one.
 
 ---
 
@@ -193,7 +193,7 @@ You can:
 - **Get a copy.** Account → Your data → Download my data produces a JSON file of everything we hold, straight away and without asking us.
 - **Correct it.** Edit habits and your display name in the app; email us for anything you cannot reach.
 - **Delete it.** Account → Delete this account removes your habits, history, garden, username, profile, friend connections, friend requests and sign-in. There is no undo and no recovery period.
-- **Withdraw consent**, where consent is the basis. For analytics, use `[Cookie settings]`; the change takes effect immediately. For sensitive habit text, edit the habit or delete your account.
+- **Withdraw consent**, where consent is the basis. For analytics, use [Cookie settings](/#cookies); the change takes effect immediately. For sensitive habit text, edit the habit or delete your account.
 - **Object** to processing based on legitimate interests.
 - **Complain.** In Thailand, to the Personal Data Protection Committee. In the EEA or UK, to your national supervisory authority. You do not have to come to us first, though we would rather you did.
 

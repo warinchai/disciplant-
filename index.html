@@ -391,7 +391,14 @@
                11-consent.js. Inline onclick rather than a listener
                because that file is loaded last and knows nothing about
                this markup; keeping the wiring here means the two can be
-               edited independently. -->
+               edited independently.
+
+               The privacy policy cannot use this button - that page
+               loads no scripts at all - so it links to /#cookies
+               instead, which 11-consent.js catches on arrival: it
+               opens this panel and puts the banner up in one step.
+               Deliberately NOT given id="cookies" - the browser would
+               try to scroll to it while the panel is still hidden. -->
           <h3 class="home-about-q">Cookies and analytics</h3>
           <p class="home-about-a">Signing in and saving your garden need storage on your device, so those are not optional. Google Analytics is: it counts visits, and it only ever loads if you said yes when asked. Nothing about your habits is sent to it either way.</p>
           <p class="home-about-a">

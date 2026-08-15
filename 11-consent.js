@@ -278,3 +278,51 @@ function openConsentSettings() {
 
   if (decision.analytics) loadAnalytics();
 })();
+
+
+// ============================================
+// Reaching this from somewhere without scripts
+//
+// privacy.html and terms.html load no JavaScript at all - not
+// Firebase, not this file, nothing. That is deliberate: they are two
+// static sheets of paper and there is nothing on them to audit. It
+// does mean a "Cookie settings" button cannot live there, because
+// openConsentSettings() does not exist on those pages.
+//
+// So the policy links to the home page with #cookies on the end
+// instead, and this is the half that honours it: it opens the About
+// panel (where the same button lives, so the route is discoverable
+// afterwards) and puts the banner straight up, which makes it one
+// click from the sentence in the policy rather than a treasure hunt.
+//
+// WHY IT LIVES HERE rather than beside the other hash-less navigation
+// in 01: this file is loaded last, so both halves of the job are in
+// scope by the time it runs - setHomeAboutOpen() from 01 and
+// showConsentBanner() from above. Doing it in 01 would mean calling a
+// function that has not been declared yet.
+//
+// The hash is wiped afterwards with replaceState, so a reload or a
+// bookmark does not re-open the banner over and over, and the back
+// button still goes where the visitor expects. The hashchange
+// listener covers arriving at #cookies while already on the page -
+// back/forward, or a second click on the same link.
+// ============================================
+function handleCookiesHash() {
+  if (location.hash !== '#cookies') return;
+
+  // Drop the hash before anything is shown, so the state this leaves
+  // behind is a plain home page rather than one that re-fires.
+  if (history.replaceState) {
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+
+  // The About panel is optional here on purpose - if the markup ever
+  // moves or 01 fails to find it, the banner still opens, which is
+  // the part the policy actually promises.
+  if (typeof setHomeAboutOpen === 'function') setHomeAboutOpen(true);
+
+  showConsentBanner();
+}
+
+handleCookiesHash();
+window.addEventListener('hashchange', handleCookiesHash);
