@@ -1,232 +1,176 @@
 # Disciplant — Privacy Policy
 
-**Draft for review. Not legal advice. Every `[SQUARE BRACKET]` is a decision you have to make before this goes live.**
-
-**Effective date:** `[DATE]`
-**Last updated:** `[DATE]`
+**Effective date:** 15 August 2026
+**Last updated:** 15 August 2026
 
 ---
 
-## 1. Who we are
+## 1. Controller and contact
 
-Disciplant is a free habit tracker at `[https://disciplant.vercel.app]`. Completing a habit grows a plant in your garden.
+Disciplant is a free habit tracker operated at https://disciplant.vercel.app. Completing a habit grows a plant in your garden.
 
-The data controller — the party that decides why and how your information is used — is:
+The controller of the personal data described in this policy is Warinchai Suwannoppadol, an individual established in Thailand. All correspondence concerning this policy, including requests to exercise the rights set out in section 8, should be sent to disciplant@gmail.com. A postal address will be supplied on request to any data subject or supervisory authority.
 
-`[LEGAL NAME OR REGISTERED COMPANY NAME]`
-`[REGISTERED ADDRESS OR SERVICE ADDRESS]`
-`[COUNTRY]`
+We aim to respond substantively within 30 days of receipt.
 
-Contact for anything in this policy, including requests about your data: **`[privacy@yourdomain]`**
-
-We aim to reply within `[30]` days.
-
-> **Note on jurisdiction.** The service is operated from Thailand, so this is written primarily against the Personal Data Protection Act B.E. 2562 (PDPA), with GDPR-equivalent language where the two overlap. Users elsewhere are expected, and being outside Thailand does not reduce your rights — where the GDPR or another local law gives you more, that law applies to us in respect of your data regardless of where we are. If you incorporate outside Thailand, sections 8, 9 and 12 need revisiting.
+Disciplant is operated from Thailand and this policy is written primarily against the Personal Data Protection Act B.E. 2562 (PDPA), with equivalent provision under the General Data Protection Regulation (GDPR) where the two overlap. Users outside Thailand are expected. Where the GDPR, the UK GDPR or another applicable law affords you greater rights than the PDPA, that law governs our processing of your data.
 
 ---
 
-## 2. The short version
+## 2. Summary
 
-- Your habit names are private. They are never shown to other users, and they are not used for advertising.
-- Friends can see your garden — which means they can see the **category** of each habit (a sunflower means an exercise habit), your streaks, and your growth totals. They cannot see what any habit is called.
-- You can download everything we hold at any time, and you can delete your account permanently from inside the app.
-- We do not sell your data. We do not run ads.
-- Google and Vercel process data on our behalf. Details in section 6.
+Habit text is private to you. It is never shown to another user and is never used for advertising. Friends can see the category of each habit, your streaks and your growth totals, but not what any habit is called. You may download everything we hold at any time and delete your account permanently from within the application. We do not sell personal data and we do not display advertising. Google and Vercel process data on our behalf; section 6 identifies them.
 
-The full version follows, because the short version is not a substitute for it.
+This summary does not replace the sections that follow.
 
 ---
 
-## 3. What we collect
+## 3. Information we collect
 
 ### 3.1 Account information
 
-**If you use Disciplant as a guest,** we create an anonymous account. We hold only a randomly generated account identifier. We do not know who you are, and we cannot recover a guest account if you lose it.
+If you use Disciplant as a guest, we create an anonymous account and hold only a randomly generated account identifier. We do not know who you are and we cannot recover a guest account that is lost.
 
-**If you sign in with Google,** Google passes us:
+If you sign in with Google, Google provides us with your account identifier, email address, display name and profile picture URL. We store these so that your garden is available across devices and so that friends can identify you.
 
-- your account identifier
-- your email address
-- your display name
-- your profile picture URL
+If you claim a username, we store the username together with a lowercase copy used to enforce uniqueness. Usernames are searchable by any signed-in user.
 
-We store these so your garden follows you between devices and so friends can recognise you.
+### 3.2 Habits and garden data
 
-**If you claim a username,** we store the username and a lowercase copy of it used to check that no two people take the same one. Your username is searchable by any other user.
+For each habit we store the text you enter, the category you select, the plant skin applied, its completion state for the current day, your current and longest streak, total and best-ever days grown, every date on which the habit was marked complete, and the plant's position in your garden. We also store the landscape skin applied to your garden and the date of your last daily reset.
 
-### 3.2 Your habits and garden
+### 3.3 Sensitive information
 
-For each habit you create, we store:
+Habit text is a free-text field and users enter real matters into it. Entries such as physiotherapy, medication, recovery meetings or religious observance constitute sensitive personal data under section 26 of the PDPA and Article 9 of the GDPR, being data concerning health or religious belief.
 
-- the text you typed
-- the category you chose
-- the plant skin selected
-- whether it is ticked off today
-- your current and longest streak
-- total days grown and your best-ever total
-- **every date on which you ticked it off**
-- where you dragged the plant in your garden
+We neither require nor want that level of detail. Neutral wording — "appointment", "meds", "meeting", "practice" — produces identical streaks and identical plants. Where you do enter sensitive information, you provide your explicit consent to our storing it for the purpose of operating the service for you, and you may withdraw that consent at any time by editing the habit or deleting your account.
 
-We also store which landscape skin your garden is wearing and the date of your last daily reset.
+### 3.4 Friends
 
-> **Please read this part.** Habit text is free text, and people put real things in it. "Physio for my knee", "take my medication", "AA meeting" and "morning prayer" are all ordinary things to track, and all of them count as **sensitive personal data** under PDPA section 26 and Article 9 GDPR — data about health, or about religious belief.
->
-> We do not want or need that level of detail. If you would rather not give it to us, use neutral wording: "appointment", "meds", "meeting", "practice". Your streaks and your plant work exactly the same either way.
->
-> If you do choose to enter sensitive information, you are giving your explicit consent for us to store it in order to run the service for you. You can withdraw that at any time by editing the habit or deleting your account.
+If you use the friends feature we store your friends list as account identifiers, the friend requests you have sent or received together with their status, and a garden summary — the version of your garden that friends are permitted to load.
 
-### 3.3 Friends
+The garden summary contains each plant's identifier, category, skin, streak, total growth days, completion state as at your last save, and position. It contains neither your habit text nor your day-by-day history. It is written only once you have at least one friend, because until that point no account is permitted to read it.
 
-If you use the friends feature we store:
+### 3.5 Technical and usage information
 
-- your friends list, as account identifiers
-- friend requests you have sent or received, and their status
-- a **garden summary** for you, which is the version of your garden your friends can load
+Vercel Web Analytics counts visits and pages viewed. It sets no cookies and stores nothing on your device; returning visitors are identified by a hash computed on Vercel's servers and discarded after 24 hours. It operates for every visitor.
 
-The garden summary contains: each plant's identifier, its category, its skin, its streak, its total growth days, whether it was ticked off as of your last save, and its position. **It does not contain your habit text or your day-by-day history.**
+Google Analytics records visits, pages viewed, approximate location derived from IP address, and device and browser type. It operates only where you have consented, as described in section 3.6.
 
-The summary is only written once you have at least one friend, because until then nobody on earth is permitted to read it.
+Vercel, as our host, records standard server logs including IP address, user agent and requested URL.
 
-### 3.4 Technical and usage data
+Firebase App Check and reCAPTCHA collect device and behavioural signals in order to confirm that requests originate from the application rather than an automated client.
 
-- **Vercel Web Analytics** counts visits and pages viewed. It sets no cookies and stores nothing on your device: Vercel works out whether you are a returning visitor by hashing the incoming request on its own servers, and throws that hash away after 24 hours. It runs for every visitor.
-- **Google Analytics** records visits, pages viewed, approximate location derived from IP, device and browser type. It runs **only if you agreed** — see 3.5.
-- **Vercel**, our host, records standard web server logs including IP address, user agent and requested URL.
-- **Firebase App Check and reCAPTCHA** collect device and behavioural signals to confirm requests come from the real app rather than an automated script.
-- **Rate-limit counters** on your account record when your current write window opened, to stop one account overwhelming the database.
+Rate-limit counters held against your account record when your current write window opened, in order to prevent a single account from overwhelming the database.
 
-### 3.5 Cookies and on-device storage
+### 3.6 Cookies and on-device storage
 
-**Without asking you**, because they are strictly necessary to deliver the app you asked for:
+The following are stored on your device without your consent because they are strictly necessary to deliver the service you have requested: your Firebase sign-in token, which maintains your session; a cached copy of your own garden, which allows the application to function offline; your claimed username, cached to avoid a database read; a display preference; and your answer to the cookie question, which must be retained in order that a refusal is not put to you again on every visit.
 
-- your Firebase sign-in token, which is what keeps you signed in
-- a cached copy of your own garden, so the app works offline
-- your claimed username, cached to save a database read
-- a display preference (`disciplant:dailyGrowth`)
-- **your answer to the cookie question below** — we have to remember a "no", or we would ask you again on every visit
+None of these are shared with any third party and none are used to track you across other websites.
 
-None of these are shared with anyone, and none of them are used to track you across other websites.
+Google Analytics cookies, which set an identifier by which Google recognises a returning visitor, are stored only if you accept when asked. If you decline, or have not yet answered, Google Analytics is not loaded at all: no request is made and no connection to it is opened.
 
-**Only if you say yes**, when the banner asks on your first visit:
+Vercel Web Analytics is not covered by that question and operates whether or not you accept. It writes nothing to your device and identifies a returning visitor only by a server-side hash discarded after a day. The consent requirement exists to govern the storing of information on, or access to information already stored on, your device; a system that stores nothing there does not engage it, and it accordingly operates on the basis of legitimate interests. Declining therefore withholds you from Google Analytics but not from a visitor count. The only complete remedy is not to use the site.
 
-- Google Analytics cookies, which set an identifier Google uses to recognise a returning visitor
-
-If you decline, or have not answered yet, Google Analytics is **never loaded at all** — not loaded and switched off, but never fetched. No connection to Google Analytics is opened.
-
-**Not covered by the banner, and we would rather tell you than have you find out:** our host counts your visit whether or not you accept. Vercel Web Analytics writes nothing to your device — no cookie, no stored identifier — and recognises a returning visitor only via a hash computed on Vercel's servers and discarded after a day. The permission rule the banner exists to satisfy is about storing or reading things on your device, so a system that stores nothing there does not engage it, and it runs on legitimate interests instead.
-
-The practical effect is that declining hides you from Google, not from a visitor count. If that is not acceptable to you, no amount of banner-clicking will change it, and the only real remedy is not to use the site.
-
-You can change your answer at any time via **[Cookie settings](/#cookies)**. Withdrawing is as easy as giving, which is the legal standard as well as the decent one.
+You may change your answer at any time through [Cookie settings](/#cookies). Withdrawal is as straightforward as giving, which is both the legal standard and the proper one.
 
 ---
 
-## 4. Why we use it, and on what legal basis
+## 4. Purposes and legal bases
 
-| What we do | Why | Legal basis (GDPR) | Legal basis (PDPA) |
-|---|---|---|---|
-| Store your habits, streaks and garden | It is the service | Performance of a contract | Necessary for a contract, s.24(3) |
-| Sign you in and keep you signed in | So your garden is yours | Performance of a contract | Necessary for a contract |
-| Store sensitive habit text, where you enter it | Only because you typed it | Explicit consent, Art. 9(2)(a) | Explicit consent, s.26 |
-| Publish a garden summary to friends | You asked to add that friend | Performance of a contract | Necessary for a contract |
-| App Check, reCAPTCHA, rate limits | Stopping abuse and runaway cost | Legitimate interests | Legitimate interest, s.24(5) |
-| Vercel Web Analytics | Knowing how many people use the app at all | Legitimate interests — no device storage | Legitimate interest, s.24(5) |
-| Google Analytics | Understanding *how* the app is used | Consent, freely given and withdrawable | Consent, s.19 |
-| Keeping backups | Recovering from failure | Legitimate interests | Legitimate interest |
+Performance of our contract with you (GDPR Article 6(1)(b); PDPA section 24(3)) is the basis on which we store your habits, streaks and garden, sign you in and maintain your session, and publish your garden summary to friends whose requests you have accepted.
 
-Analytics is the only thing here that rests on consent, and it is the only thing that waits for you to say yes. Everything else in this table is either the service itself or the security around it, and none of it can be switched off while you have an account — if you want none of it, the answer is to delete the account.
+Our legitimate interests (GDPR Article 6(1)(f); PDPA section 24(5)) are the basis for App Check, reCAPTCHA and rate limiting, which exist to prevent abuse and uncontrolled database cost; for Vercel Web Analytics, which stores nothing on your device; and for the retention of backups against failure.
+
+Consent (GDPR Articles 6(1)(a) and 9(2)(a); PDPA sections 19 and 26) is the basis for Google Analytics and for any sensitive information you elect to enter as habit text. Both may be withdrawn at any time, by the cookie settings and by editing the habit respectively.
+
+Analytics is the only processing that awaits your agreement. Everything else described above constitutes either the service itself or the security surrounding it, and cannot be disabled while an account subsists; the remedy, if you object to it, is to delete the account.
 
 ---
 
-## 5. Who can see what
+## 5. Disclosure
 
-**Nobody but you** sees your habit text, your day-by-day completion history, or your email address.
+Your habit text, your day-by-day completion history and your email address are disclosed to no one.
 
-**Your accepted friends** can see your username, display name, profile picture, and your garden summary — which discloses the **category** of every habit you keep, along with streaks and growth totals. If you keep a habit whose category you would rather not reveal, either choose a different category or do not add that person as a friend.
+Friends whose requests you have accepted may see your username, display name, profile picture and garden summary. The summary discloses the category of every habit you keep, together with streaks and growth totals. Where the category of a habit is itself something you would prefer not to disclose, select a different category or do not add that person.
 
-**Any signed-in user** can find you by searching your exact username, and can see your username and display name in the result.
+Any signed-in user may locate you by searching your exact username and will see your username and display name in the result.
 
-**Nobody** can see anything if you never claim a username and never add a friend.
+If you never claim a username and never add a friend, no other user can see anything.
 
-**Aggregate counters** on the home page — total gardeners, total plants, total days grown — are plain integers. They name nobody and cannot be traced to any account.
-
----
-
-## 6. Who processes data for us
-
-| Provider | Role | What they get | Where |
-|---|---|---|---|
-| Google (Firebase Authentication, Cloud Firestore, App Check) | Accounts, database, abuse prevention | Everything in section 3.1–3.3 | `[FIRESTORE REGION]` |
-| Google Analytics | Usage measurement | Section 3.4 | Google's global infrastructure |
-| Google (reCAPTCHA) | Bot detection | Device and interaction signals | Google's global infrastructure |
-| Vercel Inc. | Hosting and Web Analytics | Section 3.4 server logs and visit counts | `[VERCEL REGION]` |
-
-These are processors acting on our instructions, not independent recipients. We do not sell personal data, and we have never disclosed personal data to any third party for their own purposes.
-
-**International transfer.** Both providers operate outside Thailand and outside the EEA. Transfers rely on `[Google Cloud's Standard Contractual Clauses / your chosen mechanism]` and, for PDPA purposes, on `[the adequacy or safeguard route you are relying on under s.28–29]`.
+The aggregate counters shown on the home page are plain integers. They identify no one and cannot be traced to any account.
 
 ---
 
-## 7. How long we keep it
+## 6. Processors and international transfers
 
-| Data | Retention |
-|---|---|
-| Your account, habits, history, garden | Until you delete your account |
-| Garden summary, friends list, friend requests | Deleted with your account, immediately |
-| Your username reservation | Released on deletion, free for others to claim |
-| Firestore backups | For as long as Google retains them, currently `[X]` days |
-| Google Analytics | `[2 / 14]` months, per our retention setting |
-| Vercel server logs | `[X]` days, per Vercel's retention policy |
-| Vercel Web Analytics visitor hash | 24 hours, then discarded |
-| Aggregate counters | Indefinitely — they contain no personal data |
+Google LLC and its affiliates provide Firebase Authentication, Cloud Firestore and App Check, and accordingly process the data described in sections 3.1 to 3.4. Firestore data is held in the asia-southeast3 region (Bangkok, Thailand). Google Analytics and reCAPTCHA operate on Google's global infrastructure. Vercel Inc. provides hosting, server logging and Web Analytics, with our project served primarily from the sin1 region (Singapore).
 
-Accounts are kept indefinitely, including guest accounts that are never opened again. We do not delete a garden for inactivity — come back after three years and your plants are where you left them. Deleting your account yourself is the only thing that removes it.
+Each acts as a processor on our instructions and not as an independent recipient. We do not sell personal data and we have not disclosed personal data to any third party for that party's own purposes.
 
-> **`[REVISIT WHEN YOU HAVE A CLEANUP JOB.]`** Indefinite retention is the hardest version of storage limitation to defend, and abandoned guest accounts are the weak point — nobody can reach one again, including the person who created it. The reason it is written this way is that you currently have no scheduled process that could carry out an expiry, and promising a deletion you cannot perform is worse than admitting the retention. See the matching note in section 4.3 of the Terms.
+Because the database is located in Thailand, the core of your account data is not transferred abroad. Hosting, server logs, analytics and bot detection do involve processing outside Thailand, and we rely for those transfers on the Standard Contractual Clauses incorporated into Google's and Vercel's respective data processing terms, and on section 28 of the PDPA on the basis that the transfer is necessary for the performance of our contract with you.
+
+If you are in the EEA or the United Kingdom, your data is transferred to Thailand, in respect of which the European Commission has issued no adequacy decision. We rely for that transfer on Article 49(1)(b) of the GDPR, the transfer being necessary for the performance of the contract between us.
+
+---
+
+## 7. Retention
+
+Your account, habits, completion history and garden are retained until you delete your account. Your garden summary, friends list and friend requests are deleted with it, immediately and in the same operation. Your username reservation is released on deletion and becomes available to others.
+
+Data removed from our live systems persists for a period in our providers' backup systems. Google commits to deleting customer data within a maximum of approximately 180 days. Vercel retains runtime logs for one hour on the plan we use.
+
+Google Analytics retains event data for 2 months and user-associated data for 14 months, in accordance with the retention settings we have configured.
+
+The Vercel Web Analytics visitor hash is discarded after 24 hours. The aggregate counters are retained indefinitely and contain no personal data.
+
+Accounts are retained indefinitely, including guest accounts that are never opened again. We do not delete a garden for inactivity. Deleting your account is the only thing that removes it.
 
 ---
 
 ## 8. Your rights
 
-You can:
+You may obtain a copy of your data at any time through Account → Your data → Download my data, which produces a JSON file of everything we hold without any request to us.
 
-- **Get a copy.** Account → Your data → Download my data produces a JSON file of everything we hold, straight away and without asking us.
-- **Correct it.** Edit habits and your display name in the app; email us for anything you cannot reach.
-- **Delete it.** Account → Delete this account removes your habits, history, garden, username, profile, friend connections, friend requests and sign-in. There is no undo and no recovery period.
-- **Withdraw consent**, where consent is the basis. For analytics, use [Cookie settings](/#cookies); the change takes effect immediately. For sensitive habit text, edit the habit or delete your account.
-- **Object** to processing based on legitimate interests.
-- **Complain.** In Thailand, to the Personal Data Protection Committee. In the EEA or UK, to your national supervisory authority. You do not have to come to us first, though we would rather you did.
+You may correct your data by editing your habits and display name within the application, and by writing to us in respect of anything not reachable there.
 
-Your data export deliberately excludes other people's account identifiers. Your friends list is as much a fact about them as about you, and a portability right is not a licence to hand out identifiers for other accounts. The count is included instead.
+You may delete your data through Account → Delete this account, which removes your habits, history, garden, username, profile, friend connections, friend requests and sign-in. There is no undo and no recovery period.
+
+You may withdraw consent where consent is the basis of processing. For analytics, use [Cookie settings](/#cookies); the change takes effect immediately. For sensitive habit text, edit the habit or delete your account.
+
+You may object to processing carried out on the basis of our legitimate interests.
+
+You may complain to a supervisory authority: in Thailand, the Personal Data Protection Committee; in the EEA or the United Kingdom, your national authority. You are not required to approach us first, although we would prefer that you did.
+
+Your export deliberately excludes the account identifiers of other users. Your friends list is as much a fact about them as about you, and the right to portability does not extend to disclosing identifiers for other accounts. The number of friends is given instead.
 
 ---
 
 ## 9. Children
 
-Disciplant is not for anyone under **13**. We do not knowingly collect data from children below that age. If you believe a child has created an account, email `[privacy@yourdomain]` and we will delete it.
+Disciplant is not intended for anyone under 13 and we do not knowingly collect data from children below that age. If you believe that a child has created an account, write to disciplant@gmail.com and we will delete it.
 
-> **`[FLAG — read this before launch.]`** Thirteen is the right floor for US COPPA purposes and it is what most habit trackers use. It is not automatically enough in Europe: GDPR lets each member state set the age of valid digital consent anywhere from 13 to 16, and several — Germany, the Netherlands, Ireland — set it above 13. Because almost everything Disciplant does runs on contract rather than consent, the practical exposure is narrow: it is the **analytics consent** a 13-year-old in Germany cannot validly give. Under Thailand's PDPA, consent from anyone under 10 must come from a parent, and consent from a minor may need parental backing depending on what is being agreed to. Options, in ascending order of caution: leave it at 13 and accept the narrow gap; raise it to 16; or suppress the analytics banner for self-declared under-16s so the question is never asked of someone who cannot answer it.
+Thirteen satisfies the requirements of the United States Children's Online Privacy Protection Act. It sits below the age of valid digital consent in several EEA member states, which may set it as high as 16. Because our processing rests almost entirely on contract rather than consent, the practical effect is confined to the analytics consent described in section 3.6.
 
 ---
 
 ## 10. Security
 
-Access to your data is enforced by server-side database rules, not by the app on your screen. A friend can load your garden summary only while the server agrees you are friends; nobody can read your habit text but you. Account deletion runs as a single atomic operation, so a half-deleted account is not a state that can exist.
+Access to your data is enforced by server-side database rules rather than by the application running on your device. A friend may load your garden summary only for so long as the server accepts that you are friends, and no account other than yours may read your habit text. Account deletion executes as a single atomic operation, so a partially deleted account is not a state that can arise.
 
-No system is perfect. If we discover a breach affecting your personal data we will notify the relevant authority within 72 hours where required, and notify you directly where the risk to you is high.
+No system is without fault. If we discover a breach affecting your personal data we will notify the relevant authority within 72 hours where required to do so, and will notify you directly where the risk to you is high.
 
 ---
 
 ## 11. Changes
 
-We will post any change here and update the date at the top. If a change materially affects how we use your data, we will tell you in the app before it takes effect.
+Any change to this policy will be published here and the date at the head of the document updated. Where a change materially affects our use of your data, we will give notice within the application before it takes effect.
 
 ---
 
 ## 12. Contact
 
-`[LEGAL NAME OR COMPANY NAME]`
-`[ADDRESS]`
-**`[privacy@yourdomain]`**
-
-`[If you have EEA or UK users at any scale, you may need a representative under Art. 27 GDPR — check this before launching to those markets.]`
+Warinchai Suwannoppadol
+Thailand
+disciplant@gmail.com
