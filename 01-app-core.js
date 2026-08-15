@@ -1748,6 +1748,40 @@ function histDates(hist) {
   return out.sort();
 }
 
+// The earliest day this habit was ever completed, or null if it never
+// has been.
+//
+// Used by the Overall heatmap to work out roughly when a habit came
+// into existence, so a habit added last week does not drag down the
+// percentage on every day of the preceding year. See the note on
+// computeOverallDayStats() in 05-stats-app.js for why that is an
+// inference rather than a fact - the app has never recorded creation
+// dates, and adding one now would not help the gardens that already
+// exist.
+//
+// Cheap BECAUSE the history is packed. It walks the year keys, of
+// which there are a handful, and finds the first '1' in the earliest
+// one that has any - it never expands a year into dates. Calling
+// histDates()[0] would produce the same answer by building the entire
+// list first, and is the version to avoid.
+function firstCompletedDate(hist) {
+  if (!hist || typeof hist !== 'object') return null;
+
+  var years = [];
+  for (var y in hist) {
+    if (!Object.prototype.hasOwnProperty.call(hist, y)) continue;
+    if (!/^\d{4}$/.test(y)) continue;
+    if (typeof hist[y] !== 'string') continue;
+    if (hist[y].indexOf('1') === -1) continue;
+    years.push(y);
+  }
+  if (!years.length) return null;
+
+  years.sort();
+  return dateFromDayOfYear(+years[0], hist[years[0]].indexOf('1'));
+}
+
+
 // Accepts either shape and always returns the packed one.
 //
 // Called from the garden snapshot handler in 02, so an existing

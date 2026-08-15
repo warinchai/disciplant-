@@ -96,6 +96,23 @@ function histDates(hist) {
   return out.sort();
 }
 
+function firstCompletedDate(hist) {
+  if (!hist || typeof hist !== 'object') return null;
+
+  var years = [];
+  for (var y in hist) {
+    if (!Object.prototype.hasOwnProperty.call(hist, y)) continue;
+    if (!/^\d{4}$/.test(y)) continue;
+    if (typeof hist[y] !== 'string') continue;
+    if (hist[y].indexOf('1') === -1) continue;
+    years.push(y);
+  }
+  if (!years.length) return null;
+
+  years.sort();
+  return dateFromDayOfYear(+years[0], hist[years[0]].indexOf('1'));
+}
+
 function migrateHistory(raw) {
   var packed = {};
   if (!raw || typeof raw !== 'object') return packed;
@@ -144,7 +161,8 @@ function extractFn(src, name) {
 (function checkDrift() {
   const APP_FILE = process.env.DISCIPLANT_CORE || '01-app-core.js';
   const NAMES = ['dayOfYear', 'dateFromDayOfYear', 'histGet',
-                 'histSet', 'histDates', 'migrateHistory'];
+                 'histSet', 'histDates', 'migrateHistory',
+                 'firstCompletedDate'];
 
   let appSrc, selfSrc;
   try {
@@ -312,6 +330,44 @@ const u = {};
 histSet(u, '2026-03-03', false);
 check('clearing an unset day is harmless',
   histDates(u), ['2026-01-01', '2026-06-15', '2026-12-31']);
+
+// ---- Case 8b: firstCompletedDate -------------------------------
+// The Overall heatmap's denominator leans on this: a habit counts on
+// a given day only if it had already been completed by then. Getting
+// it wrong shifts the shading of a whole year, so it is checked
+// against the same round-tripped data as everything else.
+//
+// It must always agree with histDates()[0], while never expanding the
+// history to get there.
+function firstSeenCase(label, dates, expected) {
+  const packed = migrateHistory(dates.reduce((m, d) => (m[d] = true, m), {}));
+  check(label, firstCompletedDate(packed), expected);
+  check(label + ' agrees with histDates', firstCompletedDate(packed), histDates(packed)[0] || null);
+}
+
+firstSeenCase('single day',            ['2026-08-15'], '2026-08-15');
+firstSeenCase('earliest of several',   ['2026-08-15', '2026-01-02', '2026-12-31'], '2026-01-02');
+firstSeenCase('earliest across years', ['2026-01-01', '2024-11-30', '2025-06-01'], '2024-11-30');
+firstSeenCase('leap day first',        ['2024-02-29', '2024-03-01'], '2024-02-29');
+firstSeenCase('Jan 1 first',           ['2026-01-01', '2026-07-04'], '2026-01-01');
+
+check('never completed',   firstCompletedDate(migrateHistory({})),        null);
+check('null history',      firstCompletedDate(null),                      null);
+check('undefined history', firstCompletedDate(undefined),                 null);
+check('non-object',        firstCompletedDate('nope'),                    null);
+// An all-zero row cannot survive migrateHistory (it trims), but a
+// hand-edited document could carry one. It must not be read as a
+// completion on 1 January.
+check('all-zero row',      firstCompletedDate({ '2026': '0000' }),        null);
+check('non-string row',    firstCompletedDate({ '2026': 12345 }),         null);
+check('junk year key',     firstCompletedDate({ 'garbage': '1' }),        null);
+check('junk beside real',  firstCompletedDate({ 'x': '1', '2026': '01' }), '2026-01-02');
+
+// The dense two-year habit from Case 4, as a realistic check.
+check('dense habit first day',
+  firstCompletedDate(migrateHistory(dense.reduce((m, d) => (m[d] = true, m), {}))),
+  dense[0]);
+
 
 // ---- Case 9: size, for the record -----------------------------
 // Not an assertion, just the number that motivated the change.

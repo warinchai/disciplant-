@@ -12,8 +12,10 @@
 //
 // Two view modes, switched via #statsViewSelect:
 //  - Overall Garden Overview: a 371-day (53-week) heatmap where each
-//    day's intensity is the % of all current tasks completed that
-//    day, plus garden-wide summary cards.
+//    day's intensity is the % of the habits believed to have existed
+//    on that day which were completed on it, plus garden-wide summary
+//    cards. "Believed to have existed" is doing real work in that
+//    sentence - see computeOverallDayStats() below.
 //  - Individual Plant View: the same grid for one selected task,
 //    binary (completed / not), plus that task's own summary cards.
 //
@@ -72,17 +74,70 @@ function buildYearGrid() {
 
 // ---- Overall (all-tasks) day stats ----
 
-// "Total active tasks" is simplified to the current task count for
-// every date, since the app doesn't track how many tasks existed on
-// any given past day — see the module note above.
-function computeOverallDayStats(dateStr) {
-  var total     = tasks.length;
+// WHAT THE DENOMINATOR IS, AND WHY IT IS A GUESS
+//
+// A cell's colour is completed/total for that day. The numerator is
+// exact: history records precisely which days each habit was ticked.
+// The denominator is not, because the app has never stored how many
+// habits existed on any given past day - only how many exist now.
+//
+// Using the live count for every date, which is what this did until
+// now, has one loud failure. Add a habit today and every cell in the
+// preceding year dilutes: a day where you completed three of three
+// was a full-strength cell, and becomes three of four, then three of
+// five. Your history visibly fades every time you take up something
+// new, which is precisely backwards as an encouragement.
+//
+// So `firstSeen` stands in for a creation date: a habit is counted on
+// a given day only if it had already been completed at least once by
+// then. That is an INFERENCE, and it is wrong in a knowable
+// direction - a habit created in January but first ticked in March is
+// left out of January and February, making those days look better
+// than they were. The error is bounded by the gap between creating a
+// habit and first keeping it, which for a habit anyone sticks with is
+// short, and it errs toward flattering the past rather than erasing
+// it. The alternative is storing a per-day active count, which means
+// a new field on a document that is rewritten on every tick - the
+// exact cost the packed history was introduced to remove.
+//
+// A habit that has never been completed has no first date to infer
+// from, so it counts from today onward: it plainly exists now, and
+// nothing can be said about when it started.
+//
+// firstSeen is built ONCE per render by renderOverallHeatmap() and
+// passed in, not recomputed per cell - there are 371 cells and this
+// would otherwise walk every habit's history 371 times. Omitting it
+// falls back to the old behaviour, so the function still works
+// standalone.
+function computeOverallDayStats(dateStr, firstSeen) {
+  var total     = 0;
   var completed = 0;
+
   tasks.forEach(function (t) {
+    if (firstSeen) {
+      var since = firstSeen[t.id];
+      // String comparison is safe and intended: 'YYYY-MM-DD' sorts
+      // lexicographically in the same order it sorts chronologically,
+      // which is the whole reason the format is used throughout.
+      if (!since || dateStr < since) return;   // not yet in the garden
+    }
+    total++;
     if (histGet(t.history, dateStr)) completed++;
   });
+
   var percent = total > 0 ? (completed / total) * 100 : 0;
   return { completed: completed, total: total, percent: percent };
+}
+
+// One pass over the habits, giving each the day it is assumed to have
+// entered the garden. Built per render and thrown away.
+function buildFirstSeenMap() {
+  var today = getTodayString();
+  var map   = {};
+  tasks.forEach(function (t) {
+    map[t.id] = firstCompletedDate(t.history) || today;
+  });
+  return map;
 }
 
 function heatStageForPercent(percent) {
@@ -149,15 +204,23 @@ function renderOverallHeatmap() {
   if (!container) return;
   var weeks = buildYearGrid();
 
+  // Once, not once per cell. See computeOverallDayStats().
+  var firstSeen = buildFirstSeenMap();
+
   renderHeatmapGrid(
     container,
     weeks,
     function (dateStr) {
-      var d = computeOverallDayStats(dateStr);
+      var d = computeOverallDayStats(dateStr, firstSeen);
       return { stage: heatStageForPercent(d.percent), data: d };
     },
     function (dateStr, info) {
       var d = info.data;
+      // total can legitimately be zero now: on a day before the oldest
+      // habit was first completed, there is nothing to have completed.
+      // '0% of tasks completed (0/0 tasks)' would read as a failure
+      // rather than as an absence, so say the true thing instead.
+      if (!d.total) return dateStr + ': no habits tracked yet';
       return dateStr + ': ' + Math.round(d.percent) + '% of tasks completed (' +
         d.completed + '/' + d.total + ' tasks)';
     }
