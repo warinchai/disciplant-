@@ -6,19 +6,53 @@
   <title>DISCIPLANT - daily discipline garden</title>
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Favicon. The same sprout circle the account picture uses, drawn
+  <!-- Icons. The same sprout circle the account picture uses, drawn
        once more in favicon.svg rather than shared with 02's
        AVATAR_SPROUT_SVG: a tab icon is 16px, so the plant is scaled up
        inside the disc and the haze band and soil specks are dropped -
        at that size they were mud. Same palette and same shapes, so the
        two still read as one mark.
 
-       apple-touch-icon.png is the 180px raster iOS wants when the site
-       is saved to a home screen; Safari ignores SVG for that one slot.
-       Both files sit next to index.html and must be deployed with it. -->
-  <link rel="icon" href="favicon.ico" sizes="32x32" />
-  <link rel="icon" href="favicon.svg?v=2" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+       Every raster here is generated from favicon.svg, so the SVG is
+       the only file to edit if the mark ever changes. Regenerate the
+       rest from it rather than touching them by hand.
+
+       Why five lines rather than two:
+
+         favicon.ico     16/32/48 in one file, for old browsers and
+                         for anything that requests /favicon.ico
+                         blindly without reading this markup.
+         icon-192.png    what Google Search reads. Its guidance is a
+                         square PNG well above 48px; the .ico is 32
+                         and SVG support in the favicon crawler is not
+                         something to bet the search listing on, so a
+                         plain large PNG is declared explicitly.
+         favicon.svg     what modern browsers actually draw in the
+                         tab. Sharp at every zoom level.
+         apple-touch-icon.png
+                         the 180px raster iOS wants for a home-screen
+                         shortcut. Flattened onto the cream disc
+                         colour, because iOS composites this one onto
+                         white and ignores the alpha channel.
+         site.webmanifest
+                         Android home-screen and install icons, which
+                         come from the manifest rather than from any
+                         link tag.
+
+       Root-absolute paths on purpose. cleanUrls serves the legal
+       pages at /privacy and /terms, and a relative href resolves
+       against a different base there than it does here.
+
+       All of these files sit next to index.html and must be deployed
+       with it. A missing icon file is not a visible error anywhere -
+       the tab just falls back to a blank page glyph and the search
+       listing to a grey globe - so check they are present after a
+       deploy rather than assuming. -->
+  <link rel="icon" href="/favicon.ico" sizes="32x32" />
+  <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
+  <link rel="icon" href="/favicon.svg?v=3" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
 
   <!-- Search engines and link previews.
 
@@ -39,8 +73,68 @@
   <meta property="og:url" content="https://disciplant.vercel.app/" />
   <meta property="og:title" content="Disciplant, a habit tracker that grows a garden" />
   <meta property="og:description" content="Every habit you keep becomes a plant. Tick it off on a day you did it and the plant grows." />
-  <meta property="og:image" content="https://disciplant.vercel.app/apple-touch-icon.png" />
+  <!-- og:image is a 1200x1200 square: twitter:card is "summary",
+       which crops to a square, and every other platform accepts one.
+       It is NOT apple-touch-icon.png any more - that file is 180px,
+       below the 200px floor several scrapers apply, and it is meant
+       for a home screen rather than a link preview. -->
+  <meta property="og:image" content="https://disciplant.vercel.app/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="1200" />
+  <meta property="og:image:alt" content="A sprout growing in a patch of soil, the Disciplant mark." />
+  <meta property="og:site_name" content="Disciplant" />
   <meta name="twitter:card" content="summary" />
+
+  <!-- Structured data. Separate from the favicon and doing a
+       different job: the favicon is the small square beside the
+       search result, while the logo named here is what Google may
+       use where it shows a publisher larger - knowledge panels and
+       some rich results. Neither is guaranteed to appear, and this
+       block is cheap to carry, so both are declared.
+
+       Keep the URLs absolute. Structured data is read out of context
+       by consumers that have no base to resolve against. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://disciplant.vercel.app/#organization",
+        "name": "Disciplant",
+        "url": "https://disciplant.vercel.app/",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://disciplant.vercel.app/icon-512.png",
+          "width": 512,
+          "height": 512
+        }
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://disciplant.vercel.app/#website",
+        "name": "Disciplant",
+        "url": "https://disciplant.vercel.app/",
+        "publisher": { "@id": "https://disciplant.vercel.app/#organization" }
+      },
+      {
+        "@type": "WebApplication",
+        "name": "Disciplant",
+        "url": "https://disciplant.vercel.app/",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Any modern web browser",
+        "image": "https://disciplant.vercel.app/icon-512.png",
+        "description": "A free habit tracker that grows a garden. Every habit you keep becomes a plant, and it gets bigger on each day you tick the habit off.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "publisher": { "@id": "https://disciplant.vercel.app/#organization" }
+      }
+    ]
+  }
+  </script>
 
   <!-- Google Analytics USED TO LOAD HERE, on every visit, for everyone.
        It no longer does. The tag is fetched by 11-consent.js and only

@@ -1545,7 +1545,7 @@ function resizePlantForToggle(task) {
   // belongs on the plants that still have something to show.
   wrap.classList.toggle('daily-ready', !dailyGrowthShown);
 
-  // A day that crosses a milestone (day 2, 15 or 60) is drawn as a
+  // A day that crosses a milestone (day 1, 7 or 30) is drawn as a
   // different plant, and previewing the growth has to preview that
   // too - otherwise the one day that changes the most shows the least.
   var stageIdx = getStageIndexForDays(days);

@@ -1863,10 +1863,10 @@ function getCategoryById(catId) {
 // It reaches only as far as SIZE. The two other things a day count
 // drives are left alone on purpose:
 //
-//   the art stages    STAGE_MILESTONES below still turn over on days
-//                     2, 15 and 60, so each of the four drawings is
-//                     worn for just as long as before - just at a
-//                     larger size.
+//   the art stages    STAGE_MILESTONES below turns them over on
+//                     days 1, 7 and 30, on its own schedule - see
+//                     the note there. It is not derived from this
+//                     number and changing this one will not move it.
 //   the hover height  untouched. That number answers "how much has
 //                     this grown"; it is read straight from the day
 //                     count in computeHeightMeters()
@@ -1884,13 +1884,20 @@ var GROWTH_SPEEDUP = 4.125;
 // stage (seed → sprout → young → mature). Matches the 4 SVG stages
 // already defined per category in PLANT_SVG_DATA.
 //
-// Deliberately NOT divided by GROWTH_SPEEDUP. The speedup applies to
-// size only: a plant swells toward its full scale in a third of the
-// time, but it still earns the right to redraw itself as a sprout on
-// day 2, a young plant on day 15 and a mature one on day 60. So the
-// four pieces of art are each worn for longer, at larger sizes, rather
-// than being raced through in three weeks.
-var STAGE_MILESTONES = [0, 2, 15, 60];
+// Hand-picked, NOT derived from GROWTH_SPEEDUP. The speedup is a
+// property of the size curve and these are a property of the art, so
+// they are set independently and either can be moved without the
+// other. A plant is a sprout on day 1, a young plant on day 7 and a
+// mature one on day 30: the seed is gone after a single tick, the
+// first week is the sprout's, the first month the young plant's, and
+// everything past a month is the mature drawing.
+//
+// Was [0, 2, 15, 60]. Every stage now arrives at roughly half the day
+// count, so the mature art - the one most worth reaching - is reached
+// in a month rather than two. The tradeoff is that the middle two
+// drawings are each worn for a shorter stretch, and the seed for one
+// day only.
+var STAGE_MILESTONES = [0, 1, 7, 30];
 
 // scale = 1 + GROWTH_SCALE_K * totalGrowthDays^0.7 - unbounded, no
 // ceiling.
