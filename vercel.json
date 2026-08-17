@@ -1,6 +1,15 @@
 {
   "cleanUrls": true,
 
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "disciplant.vercel.app" }],
+      "destination": "https://disciplant.com/:path*",
+      "permanent": true
+    }
+  ],
+
   "rewrites": [
     {
       "source": "/__/auth/:path*",
