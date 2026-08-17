@@ -25,7 +25,7 @@ const firebaseConfig = {
   // authorized JavaScript origin and a redirect URI ending in
   // /__/auth/handler
   // ---------------------------------------------------------------
-  authDomain: "disciplant.vercel.app",
+  authDomain: "disciplant.com",
   projectId: "disciplant-e3bb7",
   storageBucket: "disciplant-e3bb7.firebasestorage.app",
   messagingSenderId: "239835244723",
@@ -81,7 +81,7 @@ const APPCHECK_SITE_KEY = '6LfRnXwtAAAAAM1n1kB22kAXn8yGixz8rDGyxZ4U';
 // this machine only.
 //
 // The hostname gate is load-bearing. A debug token reaching
-// disciplant.vercel.app would hand anyone a way to skip attestation
+// disciplant.com would hand anyone a way to skip attestation
 // entirely, which is the whole thing being bought here. It is an
 // exact-match list rather than a substring test on purpose — a
 // hostile domain like "localhost.example.com" must not switch it on.
