@@ -69,6 +69,26 @@
   <meta name="description" content="Disciplant is a free habit tracker that grows a garden. Every habit you keep becomes a plant, and it gets bigger on each day you tick the habit off." />
   <link rel="canonical" href="https://disciplant.vercel.app/" />
 
+  <!-- Google Search Console ownership. This is the HTML TAG method,
+       deliberately, rather than the HTML file method Google offers
+       first.
+
+       The file method does not work on this site. It asks Google to
+       fetch googlee4f6b77f1e5b76bb.html at exactly that path, and
+       cleanUrls in vercel.json answers any request ending in .html
+       with a 308 to the extensionless version. Google sees a
+       redirect where it wanted the file and reports it missing. That
+       verification file is still in the repo - it costs nothing and
+       Google sometimes finds it anyway - but this tag is what
+       actually holds the property.
+
+       Do not remove this tag. Google re-checks ownership periodically
+       and silently drops the property when the check fails, which
+       takes the Search Console data and the ability to request
+       indexing with it. The token is public by design; it appears in
+       this page source for anyone who looks. -->
+  <meta name="google-site-verification" content="4T_TTPXbH9_IP3AxXvw-chgrJBJWHi4BrJybY3KzPcE" />
+
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://disciplant.vercel.app/" />
   <meta property="og:title" content="Disciplant, a habit tracker that grows a garden" />
