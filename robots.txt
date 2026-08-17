@@ -8,4 +8,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://disciplant.vercel.app/sitemap.xml
+Sitemap: https://disciplant.com/sitemap.xml
