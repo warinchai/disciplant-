@@ -3,6 +3,12 @@
 
   "redirects": [
     {
+      "source": "/",
+      "has": [{ "type": "host", "value": "disciplant.vercel.app" }],
+      "destination": "https://disciplant.com/",
+      "permanent": true
+    },
+    {
       "source": "/:path*",
       "has": [{ "type": "host", "value": "disciplant.vercel.app" }],
       "destination": "https://disciplant.com/:path*",
