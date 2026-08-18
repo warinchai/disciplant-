@@ -1864,7 +1864,7 @@ function getCategoryById(catId) {
 // drives are left alone on purpose:
 //
 //   the art stages    STAGE_MILESTONES below turns them over on
-//                     days 1, 7 and 30, on its own schedule - see
+//                     days 2, 7 and 30, on its own schedule - see
 //                     the note there. It is not derived from this
 //                     number and changing this one will not move it.
 //   the hover height  untouched. That number answers "how much has
@@ -1887,17 +1887,15 @@ var GROWTH_SPEEDUP = 4.125;
 // Hand-picked, NOT derived from GROWTH_SPEEDUP. The speedup is a
 // property of the size curve and these are a property of the art, so
 // they are set independently and either can be moved without the
-// other. A plant is a sprout on day 1, a young plant on day 7 and a
-// mature one on day 30: the seed is gone after a single tick, the
-// first week is the sprout's, the first month the young plant's, and
-// everything past a month is the mature drawing.
+// other. A plant is a sprout on day 2, a young plant on day 7 and a
+// mature one on day 30: the seed lasts the first two days, the rest
+// of the first week is the sprout's, the first month the young
+// plant's, and everything past a month is the mature drawing.
 //
-// Was [0, 2, 15, 60]. Every stage now arrives at roughly half the day
-// count, so the mature art - the one most worth reaching - is reached
-// in a month rather than two. The tradeoff is that the middle two
-// drawings are each worn for a shorter stretch, and the seed for one
-// day only.
-var STAGE_MILESTONES = [0, 1, 7, 30];
+// Was [0, 1, 7, 30]. The seed stage now gets a second day before it
+// hands off to the sprout, on the same day 7 / day 30 schedule as
+// before.
+var STAGE_MILESTONES = [0, 2, 7, 30];
 
 // scale = 1 + GROWTH_SCALE_K * totalGrowthDays^0.7 - unbounded, no
 // ceiling.
