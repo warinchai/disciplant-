@@ -27,8 +27,14 @@
 //                      and would have to start from zero at launch.
 //                      This one is exactly true every time it's run.
 //   habitsCompleted  — the sum of every task's totalGrowthDays, i.e.
-//                      habit-days ticked off across all time. Survives
+//                      habit-days earned across all time. Survives
 //                      task deletion only for the days already banked.
+//                      NOT a count of checkbox ticks: that field is a
+//                      POINT total now (see the growth block in
+//                      01-app-core.js) and an assignment rated as a
+//                      fortnight of work contributes fourteen. One
+//                      point is one day of an ordinary habit, so
+//                      "days completed" still reads true.
 //
 // /gardens and /users are owner-only and stay that way — the script
 // reads them server-side, publishes only these totals, and never

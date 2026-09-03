@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Our Story - Disciplant</title>
+  <meta name="description" content="Why Disciplant exists, how it started, who's behind it, and where it's headed." />
+
+  <!-- DRAFT PAGE. Not linked from index.html nav, not in sitemap.xml,
+       noindex below on purpose. Remove the noindex tag (and add real
+       nav links + sitemap entry) only once this is actually ready to
+       ship - see impact-planner.md for open items (names/roles still
+       needed, origin-story tone not finalized). -->
+  <meta name="robots" content="noindex, nofollow" />
+
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="story.css" />
+
+  <link rel="icon" href="/favicon.ico" sizes="32x32" />
+  <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
+  <link rel="icon" href="/favicon.svg?v=3" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+</head>
+<body class="story-page">
+
+  <!-- Depth layer, matching the home page's bench-light / bench-props
+       / bench-vignette stack (style.css:1483+) so this page reads as
+       a lit space rather than a flat color. Fixed to the viewport,
+       same as the home page's version, so it stays put while the
+       cards scroll past it. z-index order: light (0) < content (2)
+       < back props (1, behind content but above light) < vignette
+       (5, on top of everything, unclickable). -->
+  <div class="story-light" aria-hidden="true"></div>
+  <div class="story-props" aria-hidden="true">
+
+    <!-- Watering can: body, base-shadow, spout, handle, then a lit
+         highlight stripe and a rim ellipse - the same "base + shadow
+         + highlight" layering as the home page's can prop, not a
+         flat silhouette. -->
+    <svg class="story-prop story-prop-can" viewBox="0 0 64 56">
+      <ellipse cx="24" cy="42" rx="17" ry="6" fill="var(--bark-deep)" opacity="0.5"/>
+      <path d="M9 20 C9 34 15 44 24 44 C33 44 39 34 39 20 C39 12 32 8 24 8 C16 8 9 12 9 20 Z" fill="var(--bark)"/>
+      <path d="M9 20 C9 34 15 44 24 44 C29 44 33 40 36 34 C30 38 20 37 14 28 C11 25 9 22 9 20 Z" fill="var(--bark-deep)"/>
+      <path d="M39 18 C48 15 58 17 61 24 C56 24 47 23 39 24 Z" fill="var(--bark)"/>
+      <path d="M39 18 C48 15 58 17 61 24 C55 21 46 20 39 21 Z" fill="var(--bark-light)"/>
+      <path d="M18 8 C18 2 30 2 30 8" stroke="var(--bark)" stroke-width="4" fill="none"/>
+      <path d="M14 16 C14 26 18 34 24 36" stroke="var(--bark-light)" stroke-width="2.4" stroke-linecap="round" fill="none" opacity="0.7"/>
+    </svg>
+
+    <!-- Pot with soil: body, base-shadow, rim highlight, soil mound
+         with two dirt-clod flecks. -->
+    <svg class="story-prop story-prop-pot" viewBox="0 0 40 46">
+      <ellipse cx="20" cy="42" rx="15" ry="4" fill="var(--bark-deep)" opacity="0.4"/>
+      <path d="M6 18 C6 32 12 40 20 40 C28 40 34 32 34 18 Z" fill="var(--bark)"/>
+      <path d="M6 18 C6 32 12 40 20 40 C24 40 28 37 31 31 C24 34 13 32 8 24 C7 22 6 20 6 18 Z" fill="var(--bark-deep)"/>
+      <path d="M3 15 C9 18 31 18 37 15 C33 11 7 11 3 15 Z" fill="var(--bark-light)"/>
+      <path d="M9 16.5 C15 18.4 25 18.4 31 16.5 C25 19 15 19 9 16.5 Z" fill="var(--leaf-dark)"/>
+      <circle cx="14" cy="14.5" r="1.6" fill="var(--leaf-deep)"/>
+      <circle cx="24" cy="15" r="1.3" fill="var(--leaf-deep)"/>
+    </svg>
+
+    <!-- Flower: five layered petals (base + shaded half each) around
+         a two-tone center, on a short stem with one leaf. -->
+    <svg class="story-prop story-prop-flower" viewBox="0 0 44 60">
+      <path d="M22 58 C21 44 23 34 22 22" stroke="var(--leaf-deep)" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+      <path d="M22 40 C16 42 8 39 6 31 C13 29 20 33 22 40 Z" fill="var(--leaf)"/>
+      <path d="M22 40 C16 42 8 39 6 31 C12 34 18 37 22 40 Z" fill="var(--leaf-deep)"/>
+      <g transform="translate(22 16)">
+        <path d="M0 0 C4 -8 4 -14 0 -18 C-4 -14 -4 -8 0 0 Z" fill="var(--sun)"/>
+        <path d="M0 0 C4 -8 4 -14 0 -18 C1 -12 1 -6 0 0 Z" fill="var(--sun-deep)"/>
+        <path d="M0 0 C8 -3 14 -3 18 1 C14 5 8 5 0 0 Z" fill="var(--sun)"/>
+        <path d="M0 0 C8 -3 14 -3 18 1 C12 1.5 6 1 0 0 Z" fill="var(--sun-deep)"/>
+        <path d="M0 0 C-4 8 -4 14 0 18 C4 14 4 8 0 0 Z" fill="var(--sun)"/>
+        <path d="M0 0 C-4 8 -4 14 0 18 C-1 12 -1 6 0 0 Z" fill="var(--sun-deep)"/>
+        <path d="M0 0 C-8 3 -14 3 -18 -1 C-14 -5 -8 -5 0 0 Z" fill="var(--sun)"/>
+        <path d="M0 0 C-8 3 -14 3 -18 -1 C-12 -1.5 -6 -1 0 0 Z" fill="var(--sun-deep)"/>
+        <path d="M0 0 C6 -6 10 -10 8 -14 C2 -12 -2 -6 0 0 Z" fill="var(--sun)" opacity="0.9"/>
+        <circle r="5" fill="var(--sun-deep)"/>
+        <circle r="5" fill="none" stroke="var(--bloom-deep)" stroke-width="1" opacity="0.4"/>
+      </g>
+    </svg>
+
+    <!-- Single leaf: base + shadow half + a highlight streak + vein,
+         the same construction as the mission-card badge but bigger. -->
+    <svg class="story-prop story-prop-leaf" viewBox="0 0 40 40">
+      <path d="M20 4 C31 8 35 21 20 36 C5 21 9 8 20 4 Z" fill="var(--leaf)"/>
+      <path d="M20 4 C31 8 35 21 20 36 C25 24 27 12 20 4 Z" fill="var(--leaf-deep)"/>
+      <path d="M11 14 C10 20 12 27 17 31" stroke="#B7D9A1" stroke-width="1.6" stroke-linecap="round" fill="none" opacity="0.6"/>
+      <path d="M20 9 L20 31 M20 16 L14 13 M20 22 L27 19" stroke="var(--leaf-dark)" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+    </svg>
+
+    <!-- Sprout: reused from the mission card badge set, unchanged. -->
+    <svg class="story-prop story-prop-sprout" viewBox="0 0 40 40">
+      <path d="M20 34 C19 24 21 17 20.5 8" stroke="var(--leaf-deep)" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+      <path d="M20.3 17.5 C15.5 19.4 8.5 17.8 5.5 11.2 C11.8 8.8 18.4 11.2 20.3 17.5 Z" fill="var(--leaf)"/>
+      <path d="M20.3 17.5 C15.5 19.4 8.5 17.8 5.5 11.2 C11.4 13.3 16.9 15.1 20.3 17.5 Z" fill="var(--leaf-deep)"/>
+      <path d="M20.6 13 C25.4 14.4 32.6 11.8 34.5 5.6 C28.4 3.7 22.2 7 20.6 13 Z" fill="#93BC7A"/>
+      <path d="M20.6 13 C25.4 14.4 32.6 11.8 34.5 5.6 C29 8 24 10.6 20.6 13 Z" fill="var(--leaf)"/>
+    </svg>
+  </div>
+  <div class="story-vignette" aria-hidden="true"></div>
+
+  <main class="story-wrap">
+    <a class="legal-back story-back" href="index.html">Back to the garden</a>
+
+    <header class="story-hero">
+      <!-- Hero sprout - the same mark as favicon.svg (sprout in a clay
+           pot on the cream disc), redrawn bigger here rather than
+           <img>-scaled so the stroke stays crisp and the colors can
+           reuse style.css's tokens directly instead of favicon.svg's
+           own hardcoded hex values. -->
+      <div class="story-hero-mark" aria-hidden="true">
+        <svg viewBox="0 0 64 64" width="120" height="120">
+          <circle cx="32" cy="32" r="32" fill="var(--linen)" />
+          <path d="M2.34 44 C11 42.2 17.5 44.4 24 44.6 C27.4 40.6 36.4 40.4 40 44.3 C47 44.6 54 42 61.66 44 A32 32 0 0 1 2.34 44 Z" fill="var(--clay-edge)" />
+          <path d="M0.9 47.6 C12 45.4 22 49.4 32 48.4 C42 47.4 52.5 44.6 63.1 47.6 A32 32 0 0 1 0.9 47.6 Z" fill="var(--bark)" />
+          <g transform="translate(32 47) scale(1.18) translate(-32 -47)">
+            <path d="M31.5 46.5 C31 39 33.2 33 32.9 22.6" stroke="var(--leaf-deep)" stroke-width="3.2" stroke-linecap="round" fill="none" />
+            <path d="M32.3 33.2 C27 35.4 18.2 33.6 14.6 26 C21.8 23.2 29.5 26 32.3 33.2 Z" fill="var(--leaf)" />
+            <path d="M32.3 33.2 C27 35.4 18.2 33.6 14.6 26 C22 28.4 28.6 30.4 32.3 33.2 Z" fill="var(--leaf-deep)" />
+            <path d="M32.7 27.8 C38.2 29.4 47 26.2 50 18.4 C42.6 16.2 34.9 20.2 32.7 27.8 Z" fill="#93BC7A" />
+            <path d="M32.7 27.8 C38.2 29.4 47 26.2 50 18.4 C42.7 21.2 36.2 24.4 32.7 27.8 Z" fill="var(--leaf)" />
+          </g>
+        </svg>
+      </div>
+      <p class="story-kicker">Our Story</p>
+      <h1 class="story-title">Why Disciplant grows the way it does</h1>
+    </header>
+
+    <!-- Mission card -->
+    <section class="story-card story-card--mission" style="--tilt: -0.6deg;">
+      <span class="story-card-badge story-card-badge--leaf" aria-hidden="true">
+        <svg viewBox="0 0 40 40" width="40" height="40">
+          <path d="M20 4 C31 8 35 21 20 36 C5 21 9 8 20 4 Z" fill="var(--leaf)" />
+          <path d="M20 4 C31 8 35 21 20 36 C25 24 27 12 20 4 Z" fill="var(--leaf-deep)" />
+          <path d="M20 9 L20 31 M20 16 L14 13 M20 22 L27 19" stroke="var(--leaf-dark)" stroke-width="1.4" stroke-linecap="round" fill="none" />
+        </svg>
+      </span>
+      <h2 class="story-carved">
+        <span class="sr-only">The mission</span>
+        <span class="story-carved-cut" id="storyCutMission" role="img" aria-hidden="true"></span>
+      </h2>
+      <p>Everyone's chasing something different — better grades, getting into their dream university, saving up for something big, just getting more sleep. But whatever the goal, it isn't just about wanting it — it's about building it well enough to actually act on.</p>
+      <p>Discipline is invisible while it's happening: a day of studying, a workout, an early night — none of it <em>looks</em> like anything, so it's easy to skip, and easy to lose faith in, long before the goal it was building toward ever shows up.</p>
+      <p>Disciplant fixes that by giving every goal a garden behind it. Set what you're working toward, build the daily habits that get you there, and watch the effort itself grow, one day at a time, into something you can actually see. But it doesn't just track that growth — it helps drive it: suggesting what to actually do in each part of your life, helping you get better at it as you go, and keeping you motivated on the days that resolve alone wouldn't be enough.</p>
+    </section>
+
+    <!-- Origin card -->
+    <section class="story-card story-card--origin" style="--tilt: 0.5deg;">
+      <span class="story-card-badge story-card-badge--sprout" aria-hidden="true">
+        <svg viewBox="0 0 40 40" width="40" height="40">
+          <path d="M20 34 C19 24 21 17 20.5 8" stroke="var(--leaf-deep)" stroke-width="2.6" stroke-linecap="round" fill="none" />
+          <path d="M20.3 17.5 C15.5 19.4 8.5 17.8 5.5 11.2 C11.8 8.8 18.4 11.2 20.3 17.5 Z" fill="var(--leaf)" />
+          <path d="M20.3 17.5 C15.5 19.4 8.5 17.8 5.5 11.2 C11.4 13.3 16.9 15.1 20.3 17.5 Z" fill="var(--leaf-deep)" />
+          <path d="M20.6 13 C25.4 14.4 32.6 11.8 34.5 5.6 C28.4 3.7 22.2 7 20.6 13 Z" fill="#93BC7A" />
+          <path d="M20.6 13 C25.4 14.4 32.6 11.8 34.5 5.6 C29 8 24 10.6 20.6 13 Z" fill="var(--leaf)" />
+        </svg>
+      </span>
+      <h2 class="story-carved">
+        <span class="sr-only">How it started</span>
+        <span class="story-carved-cut" id="storyCutOrigin" role="img" aria-hidden="true"></span>
+      </h2>
+      <p>Disciplant didn't start as a business idea. It started as a question: why is it so hard to keep doing the things we already know are good for us?</p>
+      <p>The answer we kept landing on was that discipline doesn't give you anything back in the moment. You can study for an hour and feel exactly the same as before you started. You can skip that same hour and feel exactly the same too. Nothing about the experience tells you it mattered — so over time, it stops feeling worth doing, even when you know it is.</p>
+      <p>The idea was simple: what if it <em>did</em> give you something back — something small, but real, every single day? A garden made sense almost immediately. A plant doesn't grow because you had a good day. It grows because you showed up, quietly, over and over, even on days that felt like nothing. That's exactly what discipline actually is — and it felt like the right thing to make visible.</p>
+      <p>That idea became Disciplant: every habit becomes a plant, every goal gets a garden, and every day of effort — even the boring, invisible ones — makes something bigger.</p>
+    </section>
+
+    <!-- People -->
+    <section class="story-people">
+      <h2 class="story-carved story-carved--center">
+        <span class="sr-only">Who we are</span>
+        <span class="story-carved-cut" id="storyCutPeople" role="img" aria-hidden="true"></span>
+      </h2>
+      <div class="story-people-grid">
+        <article class="story-person" style="--tilt: -0.8deg; --accent: var(--leaf); --accent-deep: var(--leaf-deep);">
+          <span class="story-person-avatar" aria-hidden="true">
+            <svg viewBox="0 0 40 40" width="26" height="26">
+              <path d="M20 33 C19.3 26 20.6 21 20.3 14.5" stroke="var(--linen)" stroke-width="2.4" stroke-linecap="round" fill="none" />
+              <path d="M20.2 20.5 C16.3 22 10.8 20.6 8.4 15.4 C13.4 13.4 18.7 15.4 20.2 20.5 Z" fill="var(--linen)" />
+              <path d="M20.5 17 C24.4 18.1 29.9 16 31.8 11 C27.1 9.5 22.3 12 20.5 17 Z" fill="var(--linen)" opacity="0.85" />
+            </svg>
+          </span>
+          <p class="story-person-name">[Your Name]</p>
+          <p class="story-person-role">[role / what you focus on]</p>
+          <p class="story-person-line">[Optional line: why this matters to you personally.]</p>
+        </article>
+        <article class="story-person" style="--tilt: 0.9deg; --accent: var(--sun); --accent-deep: var(--sun-deep);">
+          <span class="story-person-avatar" aria-hidden="true">
+            <svg viewBox="0 0 40 40" width="26" height="26">
+              <path d="M20 33 C19.3 26 20.6 21 20.3 14.5" stroke="var(--linen)" stroke-width="2.4" stroke-linecap="round" fill="none" />
+              <path d="M20.2 20.5 C16.3 22 10.8 20.6 8.4 15.4 C13.4 13.4 18.7 15.4 20.2 20.5 Z" fill="var(--linen)" />
+              <path d="M20.5 17 C24.4 18.1 29.9 16 31.8 11 C27.1 9.5 22.3 12 20.5 17 Z" fill="var(--linen)" opacity="0.85" />
+            </svg>
+          </span>
+          <p class="story-person-name">[Co-founder's Name]</p>
+          <p class="story-person-role">[role / what they focus on]</p>
+          <p class="story-person-line">[Optional line: why this matters to them personally.]</p>
+        </article>
+      </div>
+      <p class="story-todo">TODO before shipping: swap in real names, roles and (optional) personal lines. See impact-planner.md.</p>
+    </section>
+
+    <!-- Closer -->
+    <section class="story-closer" style="--tilt: -0.3deg;">
+      <svg class="story-closer-leaf story-closer-leaf--left" viewBox="0 0 40 40" width="30" height="30" aria-hidden="true">
+        <path d="M20 4 C31 8 35 21 20 36 C5 21 9 8 20 4 Z" fill="var(--linen)" opacity="0.9" />
+        <path d="M20 9 L20 31" stroke="var(--leaf-deep)" stroke-width="1.2" stroke-linecap="round" />
+      </svg>
+      <p>Let's grow, and achieve those goals, together.</p>
+      <svg class="story-closer-leaf story-closer-leaf--right" viewBox="0 0 40 40" width="30" height="30" aria-hidden="true">
+        <path d="M20 4 C31 8 35 21 20 36 C5 21 9 8 20 4 Z" fill="var(--linen)" opacity="0.9" />
+        <path d="M20 9 L20 31" stroke="var(--leaf-deep)" stroke-width="1.2" stroke-linecap="round" />
+      </svg>
+    </section>
+
+  </main>
+
+  <!-- Carves the three section headings into wood, the same
+       technique the home page wordmark/tagline use - see
+       story-carve.js. DRAFT/local like the rest of this page. -->
+  <script src="story-carve.js"></script>
+</body>
+</html>

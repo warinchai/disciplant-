@@ -152,11 +152,33 @@ function buildAccountExport() {
         habit:              t.text,
         category:           t.categoryId,
         plant_skin:         t.skinId,
+        // 'habit' repeats; 'once' is a one-off assignment, which
+        // holds no streak and never unticks itself overnight.
+        type:               t.kind || 'habit',
+        // null means every day. Otherwise seven characters, Sunday
+        // first, one per weekday.
+        schedule:           t.schedule || null,
+        // Inferred from the first completed day for habits that
+        // predate the field, so it is a best estimate rather than a
+        // record for anything planted before September 2026.
+        planted_on:         t.createdAt || null,
+        due_on:             t.due || null,
+        finished_on:        t.doneAt || null,
+        notes:              t.notes || '',
+        steps:              (t.subtasks || []).map(function (s) {
+          return { step: s.text, done: !!s.done };
+        }),
         done_today:         !!t.completed,
         current_streak:     t.streak,
         longest_streak:     t.maxStreak,
         days_grown:         t.totalGrowthDays,
         most_days_grown:    t.maxGrowthDays,
+        // Only assignments carry one, and it is what finishing this
+        // was worth in growth days. Exported because it is something
+        // the person told the app about their own work, which is
+        // exactly the kind of thing an export exists to hand back.
+        impact:             (t.kind === 'once')
+                              ? normalizeImpact(t.impact) : null,
         // Expanded back out of the packed year strings, so this
         // field is identical to what it was before history was
         // packed: same name, same 'YYYY-MM-DD' strings, same order.

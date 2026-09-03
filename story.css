@@ -1,0 +1,717 @@
+/* ============================================================
+   story.css - DRAFT page-only styles for story.html
+   ------------------------------------------------------------
+   Deliberately kept out of style.css: this page is a local
+   draft (see story.html's noindex tag and impact-planner.md),
+   and the shared stylesheet is 170KB+ of production styling for
+   every other page. Isolating new, still-changing rules here
+   means iterating on this page can never regress anything else.
+
+   Reuses tokens defined in style.css (colors, fonts, --lip,
+   --wood-grain, --r-*) - this file only adds new component
+   rules, not new tokens, so the page stays visually part of the
+   same system rather than inventing a second one.
+   ============================================================ */
+
+/* Only for the home-page mission plaque's engraved lettering - a
+   trophy-plate look needs a formal inscriptional face (Cinzel, cut
+   from Roman capital letterforms) and a curvier companion for body
+   copy (Playfair Display italic), neither of which exist in the
+   Baloo 2 / Nunito pairing style.css already loads. */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Playfair+Display:ital,wght@1,500;1,600&display=swap');
+
+.story-page {
+  /* Same idea as .page-home's --light-x/--light-y (style.css:1344):
+     one lamp position that the light pool, the vignette and the
+     background props all agree with, so they read as one lit room
+     instead of independent effects stacked on top of each other. */
+  --light-x: 50%;
+  --light-y: 10%;
+  position: relative;
+  min-height: 100vh;
+  background: var(--clay);
+  padding: 20px 16px 72px;
+  overflow-x: hidden;
+}
+
+.story-wrap {
+  position: relative;
+  z-index: 2;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+/* ---- Depth layer: light pool, background props, vignette ----
+   Fixed to the viewport (not the document), same as the home page's
+   bench-light/bench-props/bench-vignette, so the "room" stays put
+   while the cards scroll past it instead of scrolling away with
+   them. */
+.story-light {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      120% 70% at var(--light-x) var(--light-y),
+      rgba(255, 236, 200, 0.40) 0%,
+      rgba(255, 224, 178, 0.18) 30%,
+      rgba(255, 210, 160, 0.05) 54%,
+      rgba(0, 0, 0, 0) 72%
+    );
+}
+
+.story-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      130% 110% at var(--light-x) 30%,
+      rgba(60, 38, 16, 0) 46%,
+      rgba(60, 38, 16, 0.10) 72%,
+      rgba(48, 30, 12, 0.24) 100%
+    );
+}
+
+/* Dim, desaturated, sitting behind the content (z-index 1, between
+   the light at 0 and the cards at 2) - the same "back prop" trick as
+   .bench-props-back: smaller and quieter than anything in the
+   foreground, there to fill the room rather than draw the eye. */
+.story-props {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Below this width there isn't enough margin between the viewport
+   edge and .story-wrap's 760px content column to fit a prop of any
+   real size without it re-invading the text - which is exactly what
+   happened at the previous attempt's shared "- 420px" offset (it
+   only accounted for the anchor point, not the prop's own width
+   eating back toward center from that anchor). Simplest fix that's
+   actually correct at every width in between: don't render the layer
+   at all until there's room, rather than shrinking it into
+   irrelevance or risking overlap on a laptop-width window. */
+@media (min-width: 1100px) {
+  .story-props { display: block; }
+}
+
+.story-prop {
+  position: absolute;
+  display: block;
+  filter: saturate(0.78) brightness(0.94);
+  opacity: 0.42;
+}
+
+/* Each offset is tuned to ITS OWN prop's max width - content half
+   width (380px) + that prop's own max clamp width + a ~20px gap -
+   so the prop's far edge (which grows back toward center from the
+   anchor) still lands outside .story-wrap instead of just the
+   anchor point doing so. */
+.story-prop-can {
+  top: 6vh;
+  left: max(1vw, calc(50% - 590px));
+  width: clamp(110px, 12vw, 170px);
+  transform: rotate(-4deg);
+}
+
+.story-prop-pot {
+  top: 28vh;
+  right: max(1vw, calc(50% - 510px));
+  width: clamp(72px, 8vw, 110px);
+  transform: rotate(4deg);
+}
+
+.story-prop-flower {
+  top: 54vh;
+  left: max(1vw, calc(50% - 490px));
+  width: clamp(60px, 6.5vw, 90px);
+  transform: rotate(-6deg);
+}
+
+.story-prop-leaf {
+  bottom: 22vh;
+  right: max(1vw, calc(50% - 510px));
+  width: clamp(70px, 7.5vw, 110px);
+  transform: rotate(24deg);
+}
+
+.story-prop-sprout {
+  bottom: 4vh;
+  left: max(1vw, calc(50% - 490px));
+  width: clamp(58px, 6.5vw, 90px);
+  transform: rotate(-10deg);
+}
+
+.story-back {
+  margin-bottom: 8px;
+}
+
+.story-hero {
+  text-align: center;
+  padding: 18px 10px 30px;
+}
+
+.story-hero-mark {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.story-hero-mark svg {
+  display: block;
+  filter: drop-shadow(0 6px 10px rgba(34, 18, 5, 0.22));
+}
+
+.story-kicker {
+  margin: 0 0 6px;
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: var(--fs-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--leaf-dark);
+}
+
+.story-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-2xl);
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+/* ---- Card recipe shared by mission / origin sections ----
+   Same bark-frame-around-linen-panel construction used by the
+   home "About" panel (.home-about-face) and the legal sheet, so
+   this reads as the same physical object language as the rest
+   of the app - just applied to narrative content instead of a
+   FAQ or legal text. The --tilt custom property (set per
+   section in the markup) gives each card its own slight,
+   independent rotation so the page doesn't look like a stack of
+   identical rectangles. */
+.story-card {
+  --tilt: 0deg;
+  position: relative;
+  margin: 0 0 26px;
+  padding: 4px;
+  width: 100%;
+  border-radius: 20px 17px 19px 16px;
+  background-color: var(--bark);
+  background-image: var(--wood-grain);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.22),
+    0 7px 0 var(--bark-deep),
+    0 16px 24px rgba(34, 18, 5, 0.30);
+  transform: rotate(var(--tilt));
+}
+
+.story-card-title,
+.story-card > p {
+  position: relative;
+  margin-left: clamp(18px, 3.4vw, 30px);
+  margin-right: clamp(18px, 3.4vw, 30px);
+}
+
+.story-card > .story-card-title {
+  margin-top: clamp(20px, 3.6vw, 30px);
+}
+
+/* Wax-seal style badge, stamped half over the card's top edge. The
+   badge span is position:absolute (out of flow) so it never disturbs
+   the :first-child-free margin rule above, and it sits at a higher
+   z-index than the card's own ::after linen panel so it always
+   reads as sitting ON TOP of the card, not behind it. */
+.story-card-badge {
+  position: absolute;
+  top: -16px;
+  left: 20px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 52% 48% 58% 42% / 55% 62% 40% 50%;
+  background: var(--linen);
+  box-shadow:
+    0 3px 0 var(--bark-deep),
+    0 6px 10px rgba(34, 18, 5, 0.28);
+  transform: rotate(-6deg);
+}
+
+.story-card > p:last-child {
+  margin-bottom: clamp(20px, 3.6vw, 30px);
+}
+
+/* Inner linen panel, inset from the bark frame by the 4px padding
+   set on .story-card above. */
+.story-card {
+  isolation: isolate;
+}
+
+.story-card::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  z-index: -1;
+  border-radius: 16px 13px 15px 12px;
+  background: linear-gradient(178deg, #F8ECD5 0%, #EEDFC0 58%, #DCC79E 100%);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.08);
+}
+
+.story-card--origin::after {
+  background: linear-gradient(178deg, #EFDCB8 0%, #E7CDA6 58%, #D4B58A 100%);
+}
+
+/* ---- Carved section headings ----
+   Same "pale board with lettering cut into it" recipe as .home-label
+   on the home page (style.css:1721) - deliberately copied rather than
+   reused via class-sharing, since .home-label is sized against
+   --tag-width, a variable that only exists on #page-home. The SVG
+   itself is filled in at runtime by story-carve.js, which reuses the
+   real HB_GLYPHS letterforms from 01-app-core.js so both pages carve
+   from the same alphabet. */
+.story-carved {
+  display: inline-block;
+  margin: clamp(20px, 3.6vw, 30px) clamp(18px, 3.4vw, 30px) 14px;
+  padding: 8px 18px 9px;
+  border-radius: 9px 7px 9px 8px;
+  transform: rotate(-1deg);
+  background: linear-gradient(178deg, #F8ECD5 0%, #EEDFC0 58%, #DCC79E 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.62),
+    0 4px 0 #BFA67C,
+    0 11px 15px rgba(38, 20, 6, 0.28);
+}
+
+.story-carved--center {
+  transform: rotate(1deg);
+}
+
+.story-carved-cut {
+  display: block;
+  height: 28px;
+}
+
+.story-carved-cut svg {
+  display: block;
+  height: 100%;
+  width: auto;
+}
+
+.story-card-title {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-lg);
+  color: var(--bark-deep);
+}
+
+.story-card p {
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  line-height: 1.68;
+  color: var(--ink);
+}
+
+.story-card p em {
+  font-style: normal;
+  font-weight: 800;
+  color: var(--leaf-dark);
+}
+
+/* ---- People ---- */
+.story-people {
+  margin: 6px 0 30px;
+  text-align: center;
+}
+
+.story-people-title {
+  color: var(--ink);
+  margin-bottom: 16px;
+}
+
+.story-people-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 18px;
+  text-align: left;
+}
+
+.story-person {
+  --tilt: 0deg;
+  --accent: var(--leaf);
+  position: relative;
+  padding: 20px 18px 18px;
+  background: var(--linen);
+  border: 3px solid var(--bark-deep);
+  border-radius: 18px 15px 17px 14px;
+  box-shadow: var(--lip) var(--bark-deep);
+  transform: rotate(var(--tilt));
+}
+
+.story-person-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 10px;
+  border-radius: 52% 48% 58% 42% / 55% 62% 40% 50%;
+  background: linear-gradient(160deg, var(--accent) 0%, var(--accent-deep, var(--accent)) 100%);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.14), inset 0 2px 0 rgba(255, 255, 255, 0.22);
+}
+
+.story-person-avatar svg { display: block; }
+
+.story-person-name {
+  margin: 0 0 2px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-base);
+  color: var(--ink);
+}
+
+.story-person-role {
+  margin: 0 0 8px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+.story-person-line {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.story-todo {
+  margin: 14px auto 0;
+  max-width: 46ch;
+  padding: 8px 12px;
+  border: 2px dashed var(--bloom-deep);
+  border-radius: var(--r-sm);
+  background: var(--bloom-tint);
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--bloom-deep);
+}
+
+/* ---- Closer ---- */
+.story-closer {
+  --tilt: 0deg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 8px auto 0;
+  max-width: 480px;
+  padding: 20px 26px;
+  text-align: center;
+  background: var(--leaf);
+  border-radius: 52% 48% 58% 42% / 30% 30% 30% 30%;
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.16),
+    0 10px 20px rgba(34, 18, 5, 0.24);
+  transform: rotate(var(--tilt));
+}
+
+.story-closer p {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-lg);
+  line-height: 1.35;
+  color: var(--linen);
+}
+
+.story-closer-leaf {
+  flex: 0 0 auto;
+}
+
+.story-closer-leaf--left  { transform: rotate(-18deg); }
+.story-closer-leaf--right { transform: rotate(18deg) scaleX(-1); }
+
+@media (max-width: 480px) {
+  .story-closer-leaf { display: none; }
+}
+
+@media (max-width: 480px) {
+  .story-title { font-size: var(--fs-xl); }
+  .story-closer { border-radius: var(--r-lg); }
+}
+
+/* ---- Home-page mission plaque ----
+   v4: flat silver, one color, no brush texture, no gradient sweep -
+   per feedback that v3 rendered at a photorealistic level of detail
+   the rest of the bench (flat-shaded, "bubbly") doesn't operate at.
+   Shine is now ONE blob highlight, same technique as the trowel's
+   blade highlight in hbTrowel() (01-app-core.js:1392) - a soft
+   rounded shape at partial opacity sitting on part of the surface,
+   not a reflective gradient. */
+
+.mission-plate {
+  --tilt: 0deg;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  z-index: 1;
+  width: min(var(--tag-width), 100%);
+  margin: 26px 0 0;
+  padding: clamp(20px, 3.6vw, 30px) clamp(22px, 4vw, 34px) clamp(22px, 3.8vw, 32px);
+  border-radius: 10px 8px 9px 7px;
+  text-align: center;
+  transform: rotate(var(--tilt));
+  background: #C6C9CD;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -3px 0 rgba(40, 42, 46, 0.24),
+    0 6px 0 #8B8E92,
+    0 14px 18px rgba(20, 20, 24, 0.30);
+}
+
+/* One soft highlight blob in the top-left, same construction as the
+   trowel blade's shine path: a rounded shape, flat white fill, low
+   opacity - not a directional light sweep across the whole plate. */
+.mission-plate-shine {
+  position: absolute;
+  top: -8%;
+  left: -6%;
+  z-index: 0;
+  width: 46%;
+  height: 40%;
+  pointer-events: none;
+  background: #FFFFFF;
+  opacity: 0.30;
+  border-radius: 46% 54% 58% 42% / 52% 48% 55% 45%;
+}
+
+/* Corner screws - flathead, metallic, each rotated a few degrees off
+   true so they read as actually driven in rather than a repeated
+   stamp. Same "shaded disc" construction as .home-nail but with a
+   cooler, more reflective palette and a visible slot. */
+.mission-screw {
+  position: absolute;
+  z-index: 2;
+  width: clamp(12px, 1.6vw, 16px);
+  height: clamp(12px, 1.6vw, 16px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, #FCFDFD 0%, #DCDEE1 30%, #97999D 62%, #55575A 100%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.85),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.55),
+    0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.mission-screw::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 15%;
+  width: 70%;
+  height: 1.4px;
+  background: rgba(35, 36, 40, 0.75);
+  box-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.3);
+}
+
+.mission-screw-tl { top: 10px;    left: 12px;    transform: rotate(-18deg); }
+.mission-screw-tr { top: 10px;    right: 12px;   transform: rotate(24deg);  }
+.mission-screw-bl { bottom: 10px; left: 12px;    transform: rotate(32deg);  }
+.mission-screw-br { bottom: 10px; right: 12px;   transform: rotate(-9deg);  }
+
+.mission-plate-title {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 10px;
+  font-family: 'Cinzel', var(--font-display), serif;
+  font-weight: 700;
+  font-size: clamp(1.15rem, 3.4vw, var(--fs-xl));
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #6B6D71;
+  /* Engraved/debossed: a dark groove-shadow up-left, a bright
+     catch-light down-right - the metal equivalent of the wood-carve
+     technique used elsewhere on this page (story-carve.js), done
+     with text-shadow instead of separate SVG passes since this is
+     ordinary typeset text, not custom lettering. */
+  text-shadow:
+    -1px -1.5px 1px rgba(30, 31, 34, 0.55),
+    1px 1.5px 0.5px rgba(255, 255, 255, 0.75);
+}
+
+.mission-plate-line {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 14px;
+  font-family: 'Playfair Display', var(--font-body), serif;
+  font-style: italic;
+  font-weight: 600;
+  font-size: clamp(1rem, 2.6vw, var(--fs-lg));
+  line-height: 1.45;
+  color: #55575B;
+  text-shadow:
+    -0.6px -1px 0.5px rgba(30, 31, 34, 0.4),
+    0.6px 1px 0.4px rgba(255, 255, 255, 0.7);
+}
+
+.mission-plate-link {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  font-family: 'Playfair Display', var(--font-body), serif;
+  font-style: italic;
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: #4A4C50;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(74, 76, 80, 0.45);
+  text-shadow:
+    -0.5px -0.8px 0.4px rgba(30, 31, 34, 0.35),
+    0.5px 0.8px 0.3px rgba(255, 255, 255, 0.65);
+}
+
+.mission-plate-link:hover {
+  border-bottom-color: rgba(74, 76, 80, 0.85);
+}
+
+/* ---- Home-page mission plaque, v5: wood ----
+   Same bark/wood-grain recipe as .home-tag (style.css:1645, the
+   wordmark plank just above this on the page) - not a new material,
+   the actual plank the app already uses. Two drilled holes + a rope
+   loop per side suggest it's tied to something behind the scene.
+   Heading is carved via story-carve.js (STORY_WOOD_PLATE colors,
+   same HB_GLYPHS letterforms as the button signs); body copy and the
+   link are plain Baloo 2 / Nunito - no borrowed fonts this round. */
+.mission-plate-wood {
+  --tilt: 0deg;
+  position: relative;
+  isolation: isolate;
+  z-index: 1;
+  width: min(var(--tag-width), 100%);
+  margin: 44px 0 0;
+  padding: 22px clamp(18px, 4vw, 34px) 24px;
+  border-radius: 18px 16px 17px 15px;
+  text-align: center;
+  transform: rotate(var(--tilt));
+  background-color: #C08D5A;
+  background-image:
+    repeating-linear-gradient(
+      88.6deg,
+      rgba(96, 62, 30, 0)      0px,  rgba(96, 62, 30, 0)      5px,
+      rgba(96, 62, 30, 0.13)   5px,  rgba(96, 62, 30, 0.13)   6px,
+      rgba(96, 62, 30, 0)      6px,  rgba(96, 62, 30, 0)     17px,
+      rgba(255, 232, 190, 0.07) 17px, rgba(255, 232, 190, 0.07) 19px,
+      rgba(96, 62, 30, 0)     19px,  rgba(96, 62, 30, 0)     31px
+    ),
+    linear-gradient(176deg, #CE9B66 0%, #BC8853 52%, #A87343 100%);
+  box-shadow:
+    inset 0 3px 0 rgba(255, 231, 190, 0.34),
+    inset 0 -5px 0 rgba(80, 50, 24, 0.34),
+    0 7px 0 #7A5333,
+    0 20px 28px rgba(38, 20, 6, 0.44);
+}
+
+/* Drilled holes, upper-height on each side. Dark recess + a thin
+   rim highlight, kept simple/flat rather than a photographic drilled
+   cavity - matching the rest of the bench's rendering level. */
+.mission-wood-hole {
+  position: absolute;
+  top: 30px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #201206;
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.7),
+    0 1px 0 rgba(255, 226, 184, 0.22);
+}
+
+.mission-wood-hole-l { left: 22px; }
+.mission-wood-hole-r { right: 22px; }
+
+/* Rope loops, each anchored at its hole and curving up and off the
+   TOP of the plate - as if tied off to something behind/above the
+   scene rather than just decorating the surface. Two overlaid
+   strokes (solid + dashed, slightly different browns) fake a twisted
+   -fiber texture without needing a repeating pattern fill. */
+.mission-wood-rope {
+  position: absolute;
+  top: -40px;
+  width: 30px;
+  height: 56px;
+  pointer-events: none;
+}
+
+.mission-wood-rope-l { left: 8px; }
+.mission-wood-rope-r { right: 8px; }
+
+.mission-wood-title {
+  margin: 4px 0 10px;
+}
+
+.mission-wood-cut {
+  display: inline-block;
+  height: 26px;
+}
+
+.mission-wood-cut svg {
+  display: block;
+  height: 100%;
+  width: auto;
+}
+
+.mission-wood-line {
+  margin: 0 0 12px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  color: #FBF1DC;
+  text-shadow: 0 1px 1px rgba(60, 36, 12, 0.4);
+}
+
+.mission-wood-link {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: var(--fs-xs);
+  color: #FFE9BE;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 233, 190, 0.5);
+  text-underline-offset: 2px;
+}
+
+.mission-wood-link:hover {
+  text-decoration-color: rgba(255, 233, 190, 0.9);
+}
+
+/* The bottom bench props (soil, pot, trowel - see .prop-soil etc. in
+   style.css) are position:fixed to the VIEWPORT at z-index 3, not to
+   the scrolling document, so anything in .home-inner (z-index 2) that
+   scrolls down that far gets covered by them. style.css already has
+   a fix for exactly this - .home-inner.is-about-open bumps to
+   z-index 4 while the About panel is open (clears the props at 3,
+   stays under the .bench-vignette lamp effect at 5). The mission
+   card needs the same clearance, but permanently rather than on
+   toggle, since it's always visible instead of opened on demand.
+   Scoped to #page-home so this can't affect any other page's
+   stacking. */
+#page-home .home-inner {
+  z-index: 4;
+}

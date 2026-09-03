@@ -55,13 +55,36 @@ function dayOfYear(dateStr) {
   );
 }
 
+var EFFORT_LEVELS = [
+  null,
+  { value: 1, label: 'Steady',  mult: 1,   hint: 'an ordinary day' },
+  { value: 2, label: 'Hard',    mult: 1.5, hint: 'it cost you' },
+  { value: 3, label: 'All out', mult: 2,   hint: 'as much as you had' },
+];
+
+var EFFORT_DEFAULT = 1;
+
 function dateFromDayOfYear(year, index) {
   return new Date(Date.UTC(year, 0, 1 + index)).toISOString().slice(0, 10);
 }
 
+function normalizeEffort(value) {
+  var n = Math.floor(Number(value));
+  if (!isFinite(n) || n < 1 || n >= EFFORT_LEVELS.length) return EFFORT_DEFAULT;
+  return n;
+}
+
 function histGet(hist, dateStr) {
   var row = hist && hist[String(dateStr).slice(0, 4)];
-  return !!row && row.charAt(dayOfYear(dateStr)) === '1';
+  if (!row) return false;
+  var c = row.charAt(dayOfYear(dateStr));
+  return c !== '' && c !== '0';
+}
+
+function histLevel(hist, dateStr) {
+  if (!histGet(hist, dateStr)) return 0;
+  var row = hist[String(dateStr).slice(0, 4)];
+  return normalizeEffort(row.charAt(dayOfYear(dateStr)));
 }
 
 function histSet(hist, dateStr, on) {
@@ -72,9 +95,13 @@ function histSet(hist, dateStr, on) {
   if (!(i >= 0 && i <= 365)) return;
   if (dateFromDayOfYear(+year, i) !== key) return;
 
+  var ch = '0';
+  if (on === true)          ch = String(EFFORT_DEFAULT);
+  else if (on && on !== '0') ch = String(normalizeEffort(on));
+
   var row = hist[year] || '';
   while (row.length < i) row += '0';
-  row = (row.slice(0, i) + (on ? '1' : '0') + row.slice(i + 1))
+  row = (row.slice(0, i) + ch + row.slice(i + 1))
           .replace(/0+$/, '');
 
   if (row) hist[year] = row;
@@ -90,7 +117,7 @@ function histDates(hist) {
     var row = hist[year];
     if (typeof row !== 'string') continue;
     for (var i = 0; i < row.length; i++) {
-      if (row.charAt(i) === '1') out.push(dateFromDayOfYear(+year, i));
+      if (row.charAt(i) !== '0') out.push(dateFromDayOfYear(+year, i));
     }
   }
   return out.sort();
@@ -104,13 +131,13 @@ function firstCompletedDate(hist) {
     if (!Object.prototype.hasOwnProperty.call(hist, y)) continue;
     if (!/^\d{4}$/.test(y)) continue;
     if (typeof hist[y] !== 'string') continue;
-    if (hist[y].indexOf('1') === -1) continue;
+    if (!/[^0]/.test(hist[y])) continue;
     years.push(y);
   }
   if (!years.length) return null;
 
   years.sort();
-  return dateFromDayOfYear(+years[0], hist[years[0]].indexOf('1'));
+  return dateFromDayOfYear(+years[0], hist[years[0]].search(/[^0]/));
 }
 
 function migrateHistory(raw) {
@@ -121,7 +148,10 @@ function migrateHistory(raw) {
     if (!Object.prototype.hasOwnProperty.call(raw, k)) continue;
 
     if (/^\d{4}$/.test(k) && typeof raw[k] === 'string') {
-      var row = raw[k].replace(/0+$/, '');
+      var row = raw[k].replace(/[^0-9]/g, '1').replace(/0+$/, '');
+      row = row.replace(/[0-9]/g, function (c) {
+        return c === '0' ? '0' : String(normalizeEffort(c));
+      });
       if (row) packed[k] = row;
       continue;
     }
@@ -160,9 +190,9 @@ function extractFn(src, name) {
 
 (function checkDrift() {
   const APP_FILE = process.env.DISCIPLANT_CORE || '01-app-core.js';
-  const NAMES = ['dayOfYear', 'dateFromDayOfYear', 'histGet',
-                 'histSet', 'histDates', 'migrateHistory',
-                 'firstCompletedDate'];
+  const NAMES = ['dayOfYear', 'dateFromDayOfYear', 'normalizeEffort',
+                 'histGet', 'histLevel', 'histSet', 'histDates',
+                 'migrateHistory', 'firstCompletedDate'];
 
   let appSrc, selfSrc;
   try {
@@ -230,6 +260,26 @@ check('Dec 31 common is 364',    dayOfYear('2026-12-31'), 364);
 check('Dec 31 leap is 365',      dayOfYear('2024-12-31'), 365);
 check('inverse of index 0',      dateFromDayOfYear(2026, 0),   '2026-01-01');
 check('inverse of index 365',    dateFromDayOfYear(2024, 365), '2024-12-31');
+
+// ---- Case 1b: effort levels share the slot (C1) ----------------
+// The point of the whole design: an effort digit is a completed day
+// everywhere a ' + chr(39) + '1' + chr(39) + ' was, so nothing that reads history needs to
+// know the feature exists.
+check('a hard day round-trips as a date',
+  histDates(migrateHistory({ '2026': '0020' })), ['2026-01-03']);
+check('mixed levels all round-trip',
+  histDates(migrateHistory({ '2026': '1230' })),
+  ['2026-01-01', '2026-01-02', '2026-01-03']);
+check('and the levels themselves survive',
+  migrateHistory({ '2026': '1230' })['2026'], '123');
+check('an unreadable digit becomes Steady, not a lost day',
+  migrateHistory({ '2026': '0090' })['2026'], '001');
+check('a non-digit becomes Steady too',
+  migrateHistory({ '2026': '00z0' })['2026'], '001');
+check('an old boolean map still migrates to Steady',
+  migrateHistory({ '2026-01-03': true })['2026'], '001');
+check('effort does not change the row length',
+  migrateHistory({ '2026': '333' })['2026'].length, 3);
 
 // ---- Case 2: daylight saving ----------------------------------
 // The days either side of a DST transition in a northern and a

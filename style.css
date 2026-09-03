@@ -788,6 +788,22 @@ body {
   z-index: 5;
 }
 
+/* Two lines when there is a gain to report. The delta is the point of
+   the tag now, so it gets the accent and the absolute height steps
+   back to being context. */
+.plant-height-tag .plant-height-main {
+  display: block;
+}
+
+.plant-height-tag .plant-height-gain {
+  display: block;
+  margin-top: 1px;
+  color: var(--leaf);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
 .garden-plant:hover .plant-height-tag {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
@@ -2141,117 +2157,11 @@ body {
   padding: 12px 18px 72px;
 }
 
-/* Add-task form section - sits flush under the nav */
-.task-add-section {
-  margin: 0 14px 14px;
-  padding: 10px;
-  background-color: var(--bark);
-  background-image: var(--wood-grain);
-  border: 2px solid var(--bark-deep);
-  border-radius: var(--r-lg);
-  box-shadow: var(--lip) var(--bark-deep);
-}
-
-
-/* ========================================
-   Task form
-   ======================================== */
-
-.task-form {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 10px;
-  background: var(--clay);
-  border: 2px solid var(--clay-deep);
-  border-radius: var(--r-md);
-}
-
-.task-form input[type="text"] {
-  flex: 1 1 140px;
-  padding: 11px 13px;
-  border: 2px solid var(--clay-deep);
-  border-radius: var(--r-sm);
-  font-family: var(--font-body);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  background: var(--linen);
-  color: var(--ink);
-  transition: border-color 0.18s, box-shadow 0.18s;
-}
-
-.task-form input[type="text"]::placeholder {
-  color: var(--ink-faint);
-  font-weight: 400;
-}
-
-.task-form input[type="text"]:focus {
-  outline: none;
-  border-color: var(--leaf);
-  box-shadow: 0 0 0 3px rgba(127, 169, 104, 0.35);
-}
-
-.cat-select {
-  padding: 11px 10px;
-  border: 2px solid var(--clay-deep);
-  border-radius: var(--r-sm);
-  font-family: var(--font-body);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  background: var(--linen);
-  color: var(--ink);
-  cursor: pointer;
-  transition: border-color 0.18s, box-shadow 0.18s;
-}
-
-.cat-select:focus {
-  outline: none;
-  border-color: var(--leaf);
-  box-shadow: 0 0 0 3px rgba(127, 169, 104, 0.35);
-}
-
-.task-form button {
-  padding: 11px 20px;
-  border: 2px solid var(--leaf-dark);
-  border-radius: var(--r-sm);
-  background: var(--leaf-deep);
-  color: var(--linen);
-  font-family: var(--font-display);
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-  letter-spacing: 0.03em;
-  box-shadow: var(--lip) var(--leaf-dark);
-  transition: transform 0.1s, box-shadow 0.1s, filter 0.16s;
-}
-
-.task-form button:hover {
-  filter: brightness(1.07);
-}
-
-.task-form button:active {
-  transform: translateY(3px);
-  box-shadow: 0 1px 0 var(--leaf-dark);
-}
-
-
-/* ========================================
-   Category sub-nav
-   ======================================== */
-
-.cat-subnav {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 0 14px 8px;
-  margin-bottom: 14px;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.cat-subnav::-webkit-scrollbar {
-  display: none;
+/* Wide enough for two columns of rows to breathe. Below the
+   two-column breakpoint the page stays at its original width, so
+   nothing about the phone layout moves. */
+@media (min-width: 760px) {
+  .tasks-content { max-width: 940px; }
 }
 
 .cat-tab {
@@ -2282,135 +2192,6 @@ body {
   transform: translateY(3px);
 }
 
-
-/* ========================================
-   Task tab panels
-   ======================================== */
-
-.task-tab-panel {
-  background-color: var(--bark);
-  background-image: var(--wood-grain);
-  border: 2px solid var(--bark-deep);
-  border-radius: var(--r-lg);
-  padding: 10px;
-  box-shadow: var(--lip-deep) var(--bark-deep);
-}
-
-#taskTabsContainer .task-tab-panel {
-  margin-top: 0;
-}
-
-
-/* ========================================
-   Category lore section
-   ======================================== */
-
-
-
-
-
-
-
-
-
-
-
-/* ========================================
-   Task list items
-   ======================================== */
-
-.task-list {
-  list-style: none;
-  margin: 0;
-  padding: 12px;
-  background: var(--clay);
-  border: 2px solid var(--clay-deep);
-  border-radius: var(--r-md);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 60px;
-}
-
-.task-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: var(--r-sm);
-  background: var(--linen);
-  border: 2px solid var(--clay-edge);
-  flex-wrap: wrap;
-  transition: background 0.18s, border-color 0.18s, transform 0.1s;
-}
-
-.task-item:hover {
-  background: #FDF7EA;
-  border-color: var(--leaf);
-}
-
-.task-item input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--leaf-deep);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.task-item .task-text {
-  flex: 1;
-  font-size: var(--fs-sm);
-  min-width: 50px;
-  transition: color 0.22s;
-}
-
-.task-item.completed .task-text {
-  text-decoration: line-through;
-  color: var(--ink-faint);
-}
-
-/* Per-category badge colours */
-.cat-badge {
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  border-radius: 20px;
-  padding: 2px 7px;
-  white-space: nowrap;
-  flex-shrink: 0;
-  background: var(--ink-on-dark);
-  color: var(--bark);
-}
-
-.cat-badge[data-category="education"]   { background: #eaf3ea; color: #3d7a50; }
-.cat-badge[data-category="exercise"]    { background: #fef8de; color: #8c6406; }
-.cat-badge[data-category="mindfulness"] { background: #eeeaf8; color: #6858a8; }
-.cat-badge[data-category="sleep"]       { background: #e6eef8; color: #3464a0; }
-.cat-badge[data-category="chores"]      { background: var(--linen); color: var(--bark); }
-.cat-badge[data-category="finance"]     { background: #e3efe9; color: #2f7d63; }
-.cat-badge[data-category="misc"]        { background: var(--bloom-tint); color: var(--bloom-deep); }
-
-.task-item button.remove {
-  border: none;
-  background: none;
-  color: var(--bloom);
-  cursor: pointer;
-  font-size: var(--fs-sm);
-  line-height: 1;
-  flex-shrink: 0;
-  padding: 2px 4px;
-  border-radius: 6px;
-  opacity: 0.5;
-  transition: opacity 0.18s, color 0.18s, background 0.18s;
-}
-
-.task-item:hover button.remove {
-  opacity: 1;
-}
-
-.task-item button.remove:hover {
-  color: var(--bloom-deep);
-  background: rgba(160, 56, 56, 0.10);
-}
 
 .empty-state {
   color: var(--ink-soft);
@@ -2546,6 +2327,102 @@ body {
 .heat-stage-2 { background: #7CB37F; }
 .heat-stage-3 { background: var(--leaf-deep); }
 
+/* Nothing was due. An outline rather than a fill, so it reads as an
+   absence rather than as the worst possible score - which is exactly
+   how a solid grey square read for every weekend of a school-days
+   habit, and for every day before the garden existed. */
+.heat-stage-off {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(107, 79, 59, 0.18);
+}
+
+/* ---- Growth chart (C5) ---- */
+.growth-wrap { margin-top: 4px; }
+
+.growth-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-bottom: 8px;
+}
+
+.growth-gain {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--ink-faint);
+}
+
+.growth-gain.is-up { color: var(--leaf-deep); }
+
+.growth-window {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+/* Pushed to its own end of the row so the number reads first. */
+.growth-range {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 2px solid var(--clay-deep);
+  border-radius: var(--r-sm);
+  background: rgba(58, 40, 26, 0.10);
+}
+
+.growth-range-btn {
+  padding: 4px 10px 5px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s, color 0.16s;
+}
+
+.growth-range-btn:hover  { color: var(--ink); }
+.growth-range-btn.active {
+  background: var(--linen);
+  color: var(--ink);
+  box-shadow: 0 1px 0 rgba(58, 40, 26, 0.18);
+}
+
+.growth-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.growth-grid {
+  stroke: rgba(107, 79, 59, 0.16);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.growth-area  { fill: rgba(127, 169, 104, 0.22); stroke: none; }
+.growth-line  { fill: none; stroke: var(--leaf-deep); stroke-width: 2.5;
+                stroke-linejoin: round; stroke-linecap: round; }
+.growth-dot   { fill: var(--leaf-deep); stroke: var(--linen); stroke-width: 2; }
+
+/* In viewBox units, not CSS pixels: the chart is 700 wide and renders
+   at whatever the card gives it, so this scales with the card. 12
+   here lands at roughly 10px on a phone. */
+.growth-ylabel,
+.growth-xlabel {
+  fill: var(--ink-faint);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .heatmap-legend {
   display: flex;
   align-items: center;
@@ -2556,6 +2433,10 @@ body {
   font-weight: 700;
   color: var(--ink-soft);
 }
+
+/* Separates the three groups in the individual legend, which would
+   otherwise read as one run of seven things. */
+.heatmap-legend-gap { width: 6px; }
 
 .heatmap-legend-swatch {
   width: 11px;
@@ -2697,11 +2578,6 @@ body {
 @media (max-width: 600px) {
   .tasks-content {
     padding: 0 12px 52px;
-  }
-
-  .task-add-section {
-    border-radius: 0 0 14px 14px;
-    padding: 12px 12px 14px;
   }
 }
 
@@ -3321,34 +3197,6 @@ body {
    Plant skins - task-row pip + Greenhouse page
    ======================================== */
 
-/* Task-row button. The pip carries the skin's three key colours, so
-   the row itself tells you what that plant is wearing - tapping it
-   jumps to the Greenhouse with that plant's skins already open. */
-.task-item button.skin-btn {
-  border: none;
-  background: none;
-  cursor: pointer;
-  flex-shrink: 0;
-  padding: 3px;
-  border-radius: 8px;
-  line-height: 0;
-  opacity: 0.55;
-  transition: opacity 0.18s, background 0.18s, transform 0.18s;
-}
-
-.task-item:hover button.skin-btn { opacity: 1; }
-
-.task-item button.skin-btn:hover {
-  background: rgba(58, 107, 74, 0.10);
-  transform: scale(1.08);
-}
-
-.task-item button.skin-btn:focus-visible {
-  outline: 2px solid var(--leaf-deep);
-  outline-offset: 2px;
-  opacity: 1;
-}
-
 .skin-pip {
   display: inline-block;
   width: 15px;
@@ -3783,7 +3631,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .task-item button.skin-btn,
   .plant-card,
   .skin-tile { transition: none; }
   .skin-tile:hover,
@@ -3811,7 +3658,8 @@ body {
   padding: 12px 18px 72px;
 }
 
-/* Card shell - same paper treatment as .task-tab-panel */
+/* Card shell - the same bark-frames-clay paper treatment used by the
+   header and the plots on the tasks page. */
 .friends-section {
   background: var(--clay);
   border: 3px solid var(--bark);
@@ -4234,107 +4082,6 @@ a:focus-visible,
 
 /* Planks need room to breathe before they can be chunky. Below this
    the nav wraps to two rows rather than shrinking the tap targets. */
-@media (max-width: 560px) {
-  .task-add-section {
-    margin: 0 10px 12px;
-  }
-  .cat-subnav {
-    padding: 0 10px 8px;
-  }
-}
-
-
-/* ============================================================
-   The plot - one card per plant, replacing the pill row
-   ============================================================ */
-
-.plot-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
-  gap: 10px;
-  margin: 0 14px 16px;
-  padding: 12px;
-  background-color: var(--bark);
-  background-image: var(--wood-grain);
-  border: 2px solid var(--bark-deep);
-  border-radius: var(--r-lg);
-  box-shadow: var(--lip) var(--bark-deep);
-}
-
-.plot-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 10px 8px 12px;
-  background: var(--clay);
-  border: 2px solid var(--clay-deep);
-  border-radius: var(--r-md);
-  cursor: pointer;
-  box-shadow: var(--lip) var(--clay-deep);
-  transition: transform 0.1s, box-shadow 0.1s, background 0.16s;
-}
-
-.plot-card:hover { background: #F0DBBB; }
-
-.plot-card.active {
-  background: var(--linen);
-  border-color: var(--bark-deep);
-  transform: translateY(3px);
-  box-shadow: inset 0 3px 0 rgba(94, 70, 50, 0.13);
-}
-
-/* A fixed art box so cards stay the same height whether the plant is
-   a seed or a full canopy. The plant sits on the floor of it. */
-.plot-card-art {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  height: 74px;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.plot-card-art svg { max-height: 100%; width: auto; }
-
-.plot-card-name {
-  font-family: var(--font-display);
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  color: var(--ink);
-  line-height: 1.2;
-  /* "Miscellaneous" is one unbreakable word wider than a 116px card,
-     and a single long word has no break opportunity in it - without
-     this it spills out over the card's edge instead of wrapping. */
-  overflow-wrap: anywhere;
-  text-align: center;
-}
-
-.plot-card-count {
-  font-family: var(--font-body);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--ink-soft);
-}
-
-.plot-card-streak {
-  margin-top: 4px;
-  padding: 1px 8px 2px;
-  border-radius: 20px;
-  background: var(--sun);
-  border: 1.5px solid var(--sun-deep);
-  font-family: var(--font-display);
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  color: #4A3009;
-}
-
-/* "All tasks" has no species, so it gets the empty plot's height. */
-.plot-card-all {
-  justify-content: center;
-  gap: 4px;
-  min-height: 118px;
-}
 
 /* ---- The way back to the garden ---------------------------------
    Not a button in a corner with an arrow. A strip of the actual
@@ -4359,35 +4106,6 @@ a:focus-visible,
 }
 
 .plot-gate:hover { filter: brightness(1.12); }
-
-
-/* ============================================================
-   Tab panel header - name and species, nothing more
-   ============================================================ */
-
-.panel-head {
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-  padding: 2px 4px 10px;
-}
-
-.panel-head-name {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: var(--fs-lg);
-  font-weight: 700;
-  color: var(--linen);
-}
-
-.panel-head-species {
-  font-family: var(--font-body);
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  color: var(--clay);
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
 
 
 /* ============================================================
@@ -4521,7 +4239,6 @@ body.nav-open { overflow: hidden; }
    the word "Greenhouse" at a size worth tapping. */
 @media (max-width: 560px) {
   .nav-drawer { width: 100%; max-width: 82vw; }
-  .plot-grid { margin: 0 10px 14px; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); }
   .plot-gate { width: calc(100% - 20px); margin: -6px 10px 16px; }
 }
 
@@ -4638,7 +4355,7 @@ body.nav-open { overflow: hidden; }
 /* Close and remove buttons now hold an SVG cross rather than a glyph. */
 .auth-modal-close svg,
 .dev-panel-close svg,
-.task-item .remove svg {
+.tp-sheet-close svg {
   display: block;
 }
 
@@ -6004,3 +5721,1007 @@ body.nav-open { overflow: hidden; }
   text-underline-offset: 2px;
 }
 .auth-modal-terms a:hover { color: var(--ink); }
+
+
+/* ============================================================
+   TASKS PAGE
+   ------------------------------------------------------------
+   The same three surfaces as everywhere else - bark frames clay,
+   clay holds linen - but arranged as one continuous column rather
+   than a stack of separate wooden boxes. The old page had four
+   frames on it and they fought each other for attention.
+
+   Everything here is prefixed .tp- and nothing outside this block
+   uses that prefix, so this section can be replaced whole.
+   ============================================================ */
+
+/* ---- Header: the day, and what is left of it ---- */
+.tp-header {
+  margin: 0 14px 12px;
+  padding: 14px 16px 12px;
+  background-color: var(--bark);
+  background-image: var(--wood-grain);
+  border: 2px solid var(--bark-deep);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lip) var(--bark-deep);
+}
+
+.tp-header-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.tp-header-day {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--linen);
+  letter-spacing: 0.01em;
+}
+
+.tp-header-date {
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--clay-edge);
+}
+
+.tp-header-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--clay);
+}
+
+.tp-header-late {
+  padding: 1px 8px 2px;
+  border-radius: 20px;
+  background: var(--bloom-deep);
+  color: var(--bloom-tint);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+}
+
+/* The one place a number becomes a picture. Deliberately thin: it
+   is a read-out, not a trophy. */
+.tp-progress {
+  margin-top: 10px;
+  height: 7px;
+  border-radius: 20px;
+  background: rgba(30, 20, 12, 0.35);
+  overflow: hidden;
+}
+
+.tp-progress i {
+  display: block;
+  height: 100%;
+  border-radius: 20px;
+  background: linear-gradient(90deg, var(--leaf-deep), var(--leaf));
+  transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+
+/* ---- Add form ---- */
+.tp-add {
+  margin: 0 14px 12px;
+  padding: 10px;
+  background: var(--clay);
+  border: 2px solid var(--clay-deep);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lip) var(--clay-deep);
+}
+
+.tp-add-main {
+  display: flex;
+  gap: 8px;
+}
+
+.tp-add-main .tp-input { flex: 1 1 auto; min-width: 0; }
+
+.tp-add-btn {
+  flex: 0 0 auto;
+  padding: 11px 20px;
+  border: 2px solid var(--leaf-dark);
+  border-radius: var(--r-sm);
+  background: var(--leaf-deep);
+  color: var(--linen);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  box-shadow: var(--lip) var(--leaf-dark);
+  transition: transform 0.1s, box-shadow 0.1s, filter 0.16s;
+}
+
+.tp-add-btn:hover  { filter: brightness(1.07); }
+.tp-add-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--leaf-dark); }
+
+.tp-add-opts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+
+/* ---- Shared controls ---- */
+.tp-input,
+.tp-select {
+  padding: 10px 12px;
+  border: 2px solid var(--clay-deep);
+  border-radius: var(--r-sm);
+  background: var(--linen);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.tp-select { cursor: pointer; }
+.tp-date   { font-weight: 700; }
+
+.tp-input::placeholder { color: var(--ink-faint); font-weight: 400; }
+
+.tp-input:focus,
+.tp-select:focus {
+  outline: none;
+  border-color: var(--leaf);
+  box-shadow: 0 0 0 3px rgba(127, 169, 104, 0.35);
+}
+
+.tp-textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 62px;
+  line-height: 1.5;
+}
+
+/* Segmented control. One row, one choice lit. Used for the add
+   form type switch, the scope switch and the schedule presets. */
+.tp-seg {
+  display: inline-flex;
+  padding: 3px;
+  gap: 3px;
+  background: rgba(58, 40, 26, 0.16);
+  border: 2px solid var(--clay-deep);
+  border-radius: var(--r-sm);
+}
+
+.tp-seg-btn {
+  padding: 7px 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s, color 0.16s;
+}
+
+.tp-seg-btn:hover { color: var(--ink); }
+
+.tp-seg-btn.active {
+  background: var(--linen);
+  color: var(--ink);
+  box-shadow: 0 1px 0 rgba(58, 40, 26, 0.18);
+}
+
+.tp-scope {
+  display: flex;
+  margin: 0 14px 12px;
+  background: rgba(8, 5, 2, 0.28);
+  border-color: var(--bark-deep);
+}
+
+.tp-scope .tp-seg-btn { flex: 1; color: var(--clay-edge); }
+.tp-scope .tp-seg-btn:hover { color: var(--linen); }
+.tp-scope .tp-seg-btn.active { color: var(--ink); }
+
+
+/* ---- The plots. A horizontal strip, not a grid: it filters, and
+        a filter should not take half the screen. ---- */
+.tp-plot {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 10px 14px 12px;
+  margin-bottom: 4px;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.tp-plot::-webkit-scrollbar { display: none; }
+
+.tp-plot-card {
+  flex: 0 0 auto;
+  width: 88px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 6px 9px;
+  border: 2px solid var(--bark-deep);
+  border-radius: var(--r-md);
+  background: var(--clay);
+  cursor: pointer;
+  box-shadow: var(--lip) var(--bark-deep);
+  transition: transform 0.12s, box-shadow 0.12s, background 0.16s;
+}
+
+.tp-plot-card:hover { background: #F0DBBB; }
+
+.tp-plot-card.active {
+  background: var(--linen);
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--bark-deep), inset 0 3px 0 rgba(94, 70, 50, 0.12);
+}
+
+.tp-plot-art {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 46px;
+  overflow: hidden;
+}
+
+.tp-plot-art svg { max-height: 100%; width: auto; }
+
+.tp-plot-name {
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--ink);
+  text-align: center;
+  line-height: 1.15;
+}
+
+.tp-plot-count {
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--ink-faint);
+}
+
+/* No species, so no artwork - it gets the height back as padding
+   rather than as an empty box. */
+.tp-plot-card-all { justify-content: center; padding-top: 20px; padding-bottom: 20px; }
+
+
+/* ---- Sections ---- */
+.tp-sections { margin: 0 14px; }
+
+/* Habits left, assignments right. align-items:start is what keeps a
+   short column short - the default would stretch both to the height
+   of the taller one and leave a long empty box beside a full list. */
+.tp-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: 0 16px;
+}
+
+.tp-col { min-width: 0; }
+
+/* One column below this. Two columns of task rows on a phone gives
+   each about 150px, which is not enough for a habit name and its
+   streak on the same line. */
+@media (max-width: 720px) {
+  .tp-cols { grid-template-columns: 1fr; gap: 0; }
+}
+
+.tp-section { margin-bottom: 18px; }
+
+.tp-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px 4px;
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--clay);
+}
+
+.tp-section-count {
+  padding: 1px 8px 2px;
+  border-radius: 20px;
+  background: rgba(8, 5, 2, 0.28);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--clay-edge);
+}
+
+.tp-section-note {
+  margin: -4px 4px 8px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--clay-edge);
+}
+
+/* Done, off-schedule and finished all read as background. They are
+   there to be checked, not to be worked through. */
+.tp-section.is-muted { opacity: 0.72; }
+.tp-section.is-muted:hover { opacity: 1; }
+
+.tp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.tp-empty {
+  margin: 0;
+  padding: 18px 16px;
+  border: 2px dashed rgba(231, 205, 166, 0.3);
+  border-radius: var(--r-md);
+  text-align: center;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1.55;
+  color: var(--clay-edge);
+}
+
+
+/* ---- A row ---- */
+.tp-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px 9px 11px;
+  background: var(--linen);
+  border: 2px solid var(--linen-edge);
+  border-radius: var(--r-md);
+  box-shadow: 0 2px 0 rgba(58, 40, 26, 0.18);
+  transition: border-color 0.16s, background 0.16s, transform 0.1s;
+}
+
+.tp-row:hover { border-color: var(--leaf); background: #FDF7EA; }
+
+/* An assignment is a different KIND of thing, so it gets a different
+   edge rather than a badge to read. */
+.tp-row.is-once { border-left: 5px solid var(--sun); }
+
+.tp-row.is-done { background: var(--clay); border-color: var(--clay-edge); }
+.tp-row.is-done .tp-row-title { text-decoration: line-through; color: var(--ink-faint); }
+
+.tp-check {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid var(--clay-deep);
+  border-radius: 8px;
+  background: #FFF;
+  color: transparent;
+  cursor: pointer;
+  transition: background 0.16s, border-color 0.16s, color 0.16s, transform 0.1s;
+}
+
+.tp-check:hover { border-color: var(--leaf); }
+.tp-check:active { transform: scale(0.9); }
+
+.tp-check[aria-pressed="true"] {
+  background: var(--leaf-deep);
+  border-color: var(--leaf-dark);
+  color: var(--linen);
+}
+
+.tp-check:focus-visible { outline: 2px solid var(--leaf-deep); outline-offset: 2px; }
+
+.tp-check-sm { width: 20px; height: 20px; border-radius: 6px; }
+
+.tp-row-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.tp-row-title {
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.tp-row-metas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 10px;
+  width: 100%;
+}
+
+.tp-meta {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--ink-faint);
+}
+
+.tp-meta-streak { color: var(--sun-deep); }
+.tp-meta-now    { color: var(--leaf-deep); }
+.tp-meta-late   { color: var(--bloom-deep); }
+.tp-meta-cat    { color: var(--ink-soft); opacity: 0.75; }
+
+.tp-row-bar {
+  display: block;
+  width: 100%;
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 20px;
+  background: var(--linen-edge);
+  overflow: hidden;
+}
+
+.tp-row-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 20px;
+  background: var(--leaf);
+  transition: width 0.35s ease;
+}
+
+/* The plant, small, on the row it belongs to. This is the whole
+   point of the app and the list is where people actually live. */
+.tp-row-art {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 34px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  opacity: 0.9;
+}
+
+.tp-row-art svg { max-height: 100%; width: auto; }
+
+
+/* The effort prompt, opened by ticking a task.
+
+   A CENTRED dialog at every width, not a bottom sheet and not a strip
+   under the row. The task sheet rises from the bottom on a phone
+   because it is a long scrolling form and its controls should sit
+   near a thumb; this is three buttons and a question, answered
+   without moving your eyes, so it belongs in the middle of the
+   screen where the tick just took your attention.
+
+   Above .tp-sheet in z: ticking the last step of a checklist inside
+   the sheet opens this on top of it. */
+.tp-ask {
+  position: fixed;
+  inset: 0;
+  z-index: 10060;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+}
+
+.tp-ask.hidden { display: none !important; }
+
+body.tp-ask-open { overflow: hidden; }
+
+.tp-ask-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(12, 8, 4, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.tp-ask-card {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  max-height: 88vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 18px 16px;
+  background-color: var(--clay);
+  border: 3px solid var(--bark-deep);
+  border-radius: var(--r-lg);
+  text-align: center;
+  animation: tpAskIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes tpAskIn {
+  from { transform: scale(0.94); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tp-ask-card { animation: none; }
+}
+
+/* The plant, so the question is visibly about the thing that just
+   grew rather than about a row in a list. */
+.tp-ask-art {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 74px;
+  margin-bottom: 8px;
+}
+
+.tp-ask-art svg { max-height: 100%; width: auto; }
+
+.tp-ask-name {
+  margin: 0 0 2px;
+  font-size: var(--fs-sm);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+.tp-ask-q {
+  margin: 0 0 14px;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Full width and stacked. Three options side by side would fit, but
+   the labels would have to shrink to make it and the hint would have
+   nowhere to go - and the hint is the part that makes the honest
+   answer easy to pick. */
+.tp-ask-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tp-ask-opt {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--linen);
+  border: 2px solid var(--clay-deep);
+  border-radius: var(--r-md);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.16s, border-color 0.16s, transform 0.1s;
+}
+
+.tp-ask-opt:hover {
+  border-color: var(--bark-deep);
+  background: var(--clay-edge);
+}
+
+.tp-ask-opt:active { transform: translateY(1px); }
+
+/* The value already stored for today. Ticking writes Steady, so this
+   is lit the moment the dialog opens - which is the point: it says
+   what the day is currently worth, and the two below it are the ones
+   that change anything. */
+.tp-ask-opt.active {
+  border-color: var(--bloom-deep);
+  box-shadow: inset 0 0 0 1px var(--bloom-deep);
+}
+
+/* Label over hint rather than beside it. Deliberately NOT flex with a
+   gap: three of these stack, and a column of two centred lines each
+   is what makes the hint readable as the answer to the label rather
+   than as a caption running off the end of it. */
+.tp-ask-opt-label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--fs-base);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.tp-ask-opt-hint {
+  display: block;
+  margin-top: 1px;
+  font-size: var(--fs-xs);
+  color: var(--ink-faint);
+  line-height: 1.3;
+}
+
+/* Not a cancel: the tick stands and the day is already worth Steady.
+   This only declines to say more about it. */
+.tp-ask-skip {
+  margin-top: 12px;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: var(--fs-sm);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.tp-ask-skip:hover { color: var(--ink); }
+
+
+/* ============================================================
+   Task detail sheet
+   ------------------------------------------------------------
+   A sheet from the bottom on a phone, a centred card on a desktop.
+   Deliberately NOT the .auth-modal shell: that card is 360px and
+   this one holds a form.
+   ============================================================ */
+
+.tp-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.tp-sheet.hidden { display: none !important; }
+
+body.tp-sheet-open { overflow: hidden; }
+
+.tp-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(12, 8, 4, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.tp-sheet-card {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  max-height: 88vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 18px 16px 24px;
+  background-color: var(--clay);
+  border: 3px solid var(--bark-deep);
+  border-bottom: none;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  animation: tpSheetIn 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes tpSheetIn {
+  from { transform: translateY(28px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.tp-sheet-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid var(--clay-deep);
+  border-radius: 50%;
+  background: var(--linen);
+  color: var(--ink-soft);
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.16s, color 0.16s;
+}
+
+.tp-sheet-close:hover { opacity: 1; color: var(--ink); }
+
+.tp-sheet-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 34px;
+  margin-bottom: 12px;
+}
+
+.tp-sheet-art {
+  flex: 0 0 auto;
+  width: 62px;
+  height: 76px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.tp-sheet-art svg { max-height: 100%; width: auto; }
+
+.tp-sheet-heading { flex: 1 1 auto; min-width: 0; }
+
+.tp-sheet-title {
+  width: 100%;
+  padding: 6px 8px;
+  border: 2px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--ink);
+  transition: background 0.16s, border-color 0.16s;
+}
+
+.tp-sheet-title:hover { background: rgba(248, 238, 220, 0.5); }
+
+.tp-sheet-title:focus {
+  outline: none;
+  background: var(--linen);
+  border-color: var(--leaf);
+}
+
+.tp-sheet-species {
+  margin: 0 0 0 10px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.tp-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 16px;
+}
+
+.tp-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 6px 11px 7px;
+  border: 2px solid var(--clay-deep);
+  border-radius: var(--r-sm);
+  background: var(--linen);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.tp-stat b {
+  font-family: var(--font-display);
+  font-size: var(--fs-base);
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.tp-field { margin-bottom: 16px; }
+
+.tp-field-split {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.tp-field-split .tp-input { width: 100%; }
+
+.tp-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 6px;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.tp-label-count {
+  padding: 1px 7px 2px;
+  border-radius: 20px;
+  background: var(--linen);
+  border: 1px solid var(--clay-deep);
+  letter-spacing: 0;
+  color: var(--ink);
+}
+
+.tp-hint {
+  margin: 7px 2px 0;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.tp-hint-quiet { opacity: 0.75; }
+.tp-hint-warn  { color: var(--bloom-deep); font-weight: 700; }
+
+/* Seven days, seven buttons. Nothing shorter reads as a week. */
+.tp-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.tp-day {
+  padding: 9px 0;
+  border: 2px solid var(--clay-deep);
+  border-radius: var(--r-sm);
+  background: var(--linen);
+  color: var(--ink-faint);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+
+.tp-day:hover { border-color: var(--leaf); }
+
+.tp-day.active {
+  background: var(--leaf-deep);
+  border-color: var(--leaf-dark);
+  color: var(--linen);
+}
+
+.tp-subs {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tp-sub {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px 7px 9px;
+  background: var(--linen);
+  border: 2px solid var(--linen-edge);
+  border-radius: var(--r-sm);
+}
+
+.tp-sub-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.tp-sub.is-done .tp-sub-text { text-decoration: line-through; color: var(--ink-faint); }
+
+.tp-sub-x {
+  flex: 0 0 auto;
+  padding: 4px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--bloom);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.16s, color 0.16s, background 0.16s;
+}
+
+.tp-sub-x:hover { opacity: 1; color: var(--bloom-deep); background: rgba(160, 56, 56, 0.1); }
+.tp-sub-x svg   { display: block; }
+
+.tp-sub-add { display: flex; gap: 7px; }
+.tp-sub-add .tp-input { flex: 1 1 auto; min-width: 0; }
+
+.tp-btn-sm {
+  flex: 0 0 auto;
+  padding: 9px 16px;
+  border: 2px solid var(--bark-deep);
+  border-radius: var(--r-sm);
+  background: var(--bark-light);
+  color: var(--linen);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.16s;
+}
+
+.tp-btn-sm:hover { filter: brightness(1.08); }
+
+.tp-btn-skin {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 2px solid var(--clay-deep);
+  border-radius: var(--r-sm);
+  background: var(--linen);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.16s, background 0.16s;
+}
+
+.tp-btn-skin:hover { border-color: var(--leaf); background: #FDF7EA; }
+
+.tp-sheet-foot {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 2px solid var(--clay-deep);
+}
+
+.tp-btn-danger {
+  width: 100%;
+  padding: 11px 16px;
+  border: 2px solid var(--bloom);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--bloom-deep);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s, color 0.16s;
+}
+
+.tp-btn-danger:hover { background: var(--bloom-tint); }
+
+/* Second press only. The first press arms it, which is the whole
+   confirmation - a plant, its streak and its history all go. */
+.tp-btn-danger.is-armed {
+  background: var(--bloom-deep);
+  border-color: var(--bloom-deep);
+  color: var(--bloom-tint);
+}
+
+
+@media (min-width: 620px) {
+  .tp-sheet { align-items: center; }
+  .tp-sheet-card {
+    border-bottom: 3px solid var(--bark-deep);
+    border-radius: var(--r-lg);
+    max-height: 84vh;
+  }
+}
+
+@media (max-width: 560px) {
+  .tp-header,
+  .tp-add,
+  .tp-scope   { margin-left: 10px; margin-right: 10px; }
+  .tp-sections { margin: 0 10px; }
+  .tp-plot     { padding-left: 10px; padding-right: 10px; }
+  .tp-add-opts .tp-seg-btn { padding: 7px 11px; }
+  .tp-field-split { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tp-sheet-card { animation: none; }
+  .tp-progress i,
+  .tp-row-bar i  { transition: none; }
+}

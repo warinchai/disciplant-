@@ -768,6 +768,9 @@ auth.onIdTokenChanged(function (user) {
           }
           tasks = (data.tasks || []).map(function (t) {
             t = t || {};
+            // Packed first, because createdAt below is inferred from it
+            // for any task saved before that field existed.
+            var hist = migrateHistory(t.history);
             return {
               id:                t.id                || 0,
               text:              t.text               || '',
@@ -776,27 +779,31 @@ auth.onIdTokenChanged(function (user) {
               // the species' default skin at render time.
               skinId:            t.skinId              || SKIN_DEFAULT_ID,
               completed:         t.completed           || false,
-              // Every day count coming out of the document goes
-              // through clampGrowthDays() (01): this is the edge the
-              // data arrives at, and the document is writable by the
-              // browser, so it is the first place a nonsense value -
-              // a hand-edited 1e18, a NaN, a negative - can be caught
-              // before anything tries to lay out a garden with it.
-              streak:            clampGrowthDays(t.streak),
+              // Every number coming out of the document goes through
+              // a clamp in 01: this is the edge the data arrives at,
+              // and the document is writable by the browser, so it is
+              // the first place a nonsense value - a hand-edited
+              // 1e18, a NaN, a negative - can be caught before
+              // anything tries to lay out a garden with it.
+              //
+              // Two different clamps, and which one each field gets
+              // is load-bearing. Growth is a POINT total and may be
+              // fractional; a streak is a count of days and may not.
+              streak:            clampStreak(t.streak),
               lastCleanDate:     t.lastCleanDate        || null,
               prevLastCleanDate: t.prevLastCleanDate    || null,
-              totalGrowthDays:   clampGrowthDays(t.totalGrowthDays),
+              totalGrowthDays:   clampGrowthPoints(t.totalGrowthDays),
               // All-time longest streak this task has ever reached.
               // Backfilled from the current streak on load in case a
               // task already had a streak before this field existed.
-              maxStreak:         Math.max(clampGrowthDays(t.maxStreak), clampGrowthDays(t.streak)),
+              maxStreak:         Math.max(clampStreak(t.maxStreak), clampStreak(t.streak)),
               // All-time high-water mark for totalGrowthDays, which
               // is NOT monotonic - un-ticking today's box takes a day
               // back off it. Without this, a plant sitting exactly on
               // a 30-day skin unlock would lose that skin the moment
               // its owner corrected a mis-tap. Backfilled from the
               // current total for tasks saved before this existed.
-              maxGrowthDays:     Math.max(clampGrowthDays(t.maxGrowthDays), clampGrowthDays(t.totalGrowthDays)),
+              maxGrowthDays:     Math.max(clampGrowthPoints(t.maxGrowthDays), clampGrowthPoints(t.totalGrowthDays)),
               // Per-day completion log - { "YYYY-MM-DD": true, ... } -
               // one entry per day this task was actually checked off.
               // Powers the Stats page heatmaps; only starts recording
@@ -808,12 +815,40 @@ auth.onIdTokenChanged(function (user) {
               // The next ordinary save writes the new shape; because
               // `tasks` is an array, that save also clears the old
               // keys rather than merging alongside them.
-              history:           migrateHistory(t.history),
+              history:           hist,
               // Manual placement override - set when the user drags
               // this plant to a spot themselves. null/undefined means
               // "use the automatic layout" (see computePlantLayout).
               posX:              (typeof t.posX === 'number') ? t.posX : null,
               posY:              (typeof t.posY === 'number') ? t.posY : null,
+
+              // ---- The task model (01-app-core.js) --------------
+              // Every field here tolerates being absent, which is
+              // what makes this a normalizer rather than a migration:
+              // a document written before any of these existed loads
+              // as a plain daily habit, which is exactly what it is.
+              //
+              // 'habit' is the default and has to stay the default -
+              // it is what every task in every existing garden is.
+              kind:              (t.kind === 'once') ? 'once' : 'habit',
+              // null means every day. See normalizeSchedule().
+              schedule:          normalizeSchedule(t.schedule),
+              // The app never recorded creation dates, so for older
+              // tasks this is INFERRED from the first day they were
+              // ever completed - the same approximation the Overall
+              // heatmap already makes, and for the same reason. New
+              // tasks record it properly (see makeTask).
+              createdAt:         normalizeDateString(t.createdAt) ||
+                                 firstCompletedDate(hist) || null,
+              due:               normalizeDateString(t.due),
+              doneAt:            normalizeDateString(t.doneAt),
+              notes:             (typeof t.notes === 'string')
+                                   ? t.notes.slice(0, NOTE_MAX) : '',
+              subtasks:          normalizeSubtasks(t.subtasks),
+              // What finishing this is worth. Absent means 1, which
+              // is what every completion in every existing garden was
+              // worth, so no document needs rewriting for this.
+              impact:            normalizeImpact(t.impact),
             };
           });
           lastResetDate = data.lastResetDate || null;
@@ -906,7 +941,7 @@ function buildCleanTasks() {
     // another page - writes those changes without also committing
     // drags the user hasn't saved yet and may still discard.
     var pos = (typeof getPersistedPosition === 'function') ? getPersistedPosition(t) : t;
-    return {
+    var clean = {
       id:                t.id,
       text:              t.text,
       categoryId:        t.categoryId,
@@ -917,16 +952,50 @@ function buildCleanTasks() {
       // rewrites an over-large stored value back down to the ceiling,
       // and stops one from reaching gardenSummaries - which friends
       // read - or the community counters.
-      streak:            clampGrowthDays(t.streak),
+      streak:            clampStreak(t.streak),
       lastCleanDate:     t.lastCleanDate || null,
       prevLastCleanDate: t.prevLastCleanDate || null,
-      totalGrowthDays:   clampGrowthDays(t.totalGrowthDays),
-      maxStreak:         Math.max(clampGrowthDays(t.maxStreak), clampGrowthDays(t.streak)),
-      maxGrowthDays:     Math.max(clampGrowthDays(t.maxGrowthDays), clampGrowthDays(t.totalGrowthDays)),
+      totalGrowthDays:   clampGrowthPoints(t.totalGrowthDays),
+      maxStreak:         Math.max(clampStreak(t.maxStreak), clampStreak(t.streak)),
+      maxGrowthDays:     Math.max(clampGrowthPoints(t.maxGrowthDays), clampGrowthPoints(t.totalGrowthDays)),
       history:           t.history || {},
       posX:              (typeof pos.posX === 'number') ? pos.posX : null,
       posY:              (typeof pos.posY === 'number') ? pos.posY : null,
     };
+
+    // ---- The task model, written only when it says something ----
+    //
+    // A field at its default is LEFT OUT rather than written as
+    // null or '' or []. Two reasons, and the second is the one
+    // that matters: the normalizer above fills a default for
+    // anything absent, so omitting is lossless; and the whole
+    // tasks array is rewritten and re-downloaded on every tick,
+    // so a garden of plain daily habits keeps saving exactly the
+    // document it saved before any of this existed.
+    //
+    // The corollary, which is the same warning saveData() carries
+    // about merge: dropping a field from this payload deletes it,
+    // because `tasks` is an ARRAY and Firestore replaces arrays
+    // whole. That is what makes clearing a due date work.
+    if (t.kind === 'once')          clean.kind      = 'once';
+    // Only an assignment reads impact, and only a non-default one
+    // says anything - so a garden of ordinary habits still writes
+    // byte-for-byte the document it wrote before this existed.
+    if (t.kind === 'once' && normalizeImpact(t.impact) !== TASK_IMPACT_DEFAULT) {
+      clean.impact = normalizeImpact(t.impact);
+    }
+    if (isCustomSchedule(t))        clean.schedule  = t.schedule;
+    if (t.createdAt)                clean.createdAt = t.createdAt;
+    if (t.due)                      clean.due       = t.due;
+    if (t.doneAt)                   clean.doneAt    = t.doneAt;
+    if (t.notes)                    clean.notes     = t.notes;
+    if (t.subtasks && t.subtasks.length) {
+      clean.subtasks = t.subtasks.map(function (s) {
+        return { id: s.id, text: s.text, done: !!s.done };
+      });
+    }
+
+    return clean;
   });
 }
 
@@ -1447,38 +1516,6 @@ function getNextId(taskArray) {
 
 
 // ============================================
-// Adding a task
-// ============================================
-taskForm.addEventListener('submit', function (event) {
-  event.preventDefault();
-  var text  = taskInput.value.trim();
-  var catId = categorySelect.value || 'misc';
-  if (text === '') return;
-  tasks.push({
-    id:                nextId,
-    text:              text,
-    categoryId:        catId,
-    skinId:            SKIN_DEFAULT_ID,
-    completed:         false,
-    streak:            0,
-    lastCleanDate:     null,
-    prevLastCleanDate: null,
-    totalGrowthDays:    0,
-    maxStreak:         0,
-    maxGrowthDays:     0,
-    history:           {},
-    posX:              null,
-    posY:              null,
-  });
-  nextId++;
-  taskInput.value = '';
-  assignPermanentPositions();
-  saveData();
-  render();
-});
-
-
-// ============================================
 // Toggling a task's completed state
 // ============================================
 function toggleTask(taskId, newChecked) {
@@ -1493,25 +1530,58 @@ function toggleTask(taskId, newChecked) {
   // be thrown off by the dev rollover simulation, timezone edge
   // cases, or any other date-comparison mismatch.
   var wasCompleted = task.completed;
+  var isOnce       = task.kind === 'once';
+  var today        = getTodayString();
+  // What this completion is worth: the task's weight, scaled by how
+  // much of its checklist is done - see taskCompletionAward() in 01.
+  // 1 for an ordinary habit with no steps, which is almost every task
+  // in almost every garden. Read ONCE, before anything moves, so the
+  // credit given and the credit taken back are guaranteed to be the
+  // same number even if something re-enters this function.
+  var award        = taskCompletionAward(task);
   task.completed   = newChecked;
   if (!task.history) task.history = {};
 
   if (newChecked && !wasCompleted) {
-    // Fresh completion - grow both streak and size, once, and log
-    // today in this task's per-day history (powers the Stats page
-    // heatmaps).
-    task.streak          = (task.streak || 0) + 1;
-    task.totalGrowthDays = (task.totalGrowthDays || 0) + 1;
-    histSet(task.history, getTodayString(), true);
-    task.maxStreak        = Math.max(task.maxStreak || 0, task.streak);
-    // Banked, and never given back - see the field's note on load.
-    task.maxGrowthDays    = Math.max(task.maxGrowthDays || 0, task.totalGrowthDays);
+    // Fresh completion - grow the plant, once, and log today in this
+    // task's per-day history (powers the Stats page heatmaps). SIZE
+    // works the same way for both kinds; only the SIZE OF THE AWARD
+    // differs, and only because an assignment is allowed to say how
+    // much work it was.
+    task.totalGrowthDays = clampGrowthPoints((task.totalGrowthDays || 0) + award);
+    histSet(task.history, today, true);
+    task.maxGrowthDays   = Math.max(task.maxGrowthDays || 0, task.totalGrowthDays);
+
+    // VITALITY is where the kinds part company. A streak is a claim
+    // about consecutive days and an assignment is done exactly once,
+    // so it never has one - and, because applyDayBoundaries() skips
+    // it entirely, never breaks anyone else's either.
+    if (isOnce) {
+      task.doneAt = today;
+    } else {
+      task.streak    = (task.streak || 0) + 1;
+      task.maxStreak = Math.max(task.maxStreak || 0, task.streak);
+    }
   } else if (!newChecked && wasCompleted) {
-    // Undoing a completion - reverse today's credit for both, and
-    // remove today's history entry so the heatmap reflects reality.
-    task.streak          = Math.max(0, (task.streak || 0) - 1);
-    task.totalGrowthDays = Math.max(0, (task.totalGrowthDays || 0) - 1);
-    histSet(task.history, getTodayString(), false);
+    // Undoing a completion. Today's credit is reversible; a previous
+    // day's is not, which is the same rule the day boundary already
+    // enforces for habits - once a day has rolled over it is locked
+    // in. For an assignment the two can be far apart, so an old one
+    // being reopened keeps the day it grew and simply becomes open
+    // again. Un-ticking a mis-tap on the same day still takes it back.
+    var reversible = !isOnce || task.doneAt === today;
+
+    if (reversible) {
+      // The same award back off, not a flat 1. retuneAward() in 01
+      // moves the total itself whenever a still-reversible task is
+      // re-rated or its checklist changes, which is what keeps these
+      // two in step: whatever the award reads now is exactly what the
+      // plant is currently carrying for this tick.
+      task.totalGrowthDays = clampGrowthPoints(Math.max(0, (task.totalGrowthDays || 0) - award));
+      histSet(task.history, today, false);
+      if (!isOnce) task.streak = Math.max(0, (task.streak || 0) - 1);
+    }
+    if (isOnce) task.doneAt = null;
   }
 
   saveData();
@@ -1526,94 +1596,4 @@ function removeTask(taskId) {
   tasks = tasks.filter(function (t) { return t.id !== taskId; });
   saveData();
   render();
-}
-
-
-// ============================================
-// Rendering task lists
-// ============================================
-
-// Renders a filtered subset of tasks into a given list + empty-state element.
-function renderFilteredList(catId, listEl, emptyEl) {
-  listEl.innerHTML = '';
-
-  var filtered = catId === 'all'
-    ? tasks
-    : tasks.filter(function (t) { return t.categoryId === catId; });
-
-  filtered.forEach(function (task) {
-    var cat = getCategoryById(task.categoryId);
-
-    var li       = document.createElement('li');
-    li.className = 'task-item' + (task.completed ? ' completed' : '');
-
-    var checkbox      = document.createElement('input');
-    checkbox.type     = 'checkbox';
-    checkbox.checked  = task.completed;
-    (function (id, cb) {
-      cb.addEventListener('change', function () { toggleTask(id, cb.checked); });
-    }(task.id, checkbox));
-
-    var textSpan       = document.createElement('span');
-    textSpan.className = 'task-text';
-    textSpan.textContent = task.text;
-
-    li.appendChild(checkbox);
-    li.appendChild(textSpan);
-
-    // Show category badge only in the "all" view
-    if (catId === 'all') {
-      var badge            = document.createElement('span');
-      badge.className      = 'cat-badge';
-      badge.dataset.category = task.categoryId;
-      badge.textContent    = cat.name;
-      li.appendChild(badge);
-    }
-
-    // Skin pip - shows the plant's current colours right on the
-    // row, and doubles as a shortcut into the Greenhouse, where
-    // skins are actually chosen.
-    var skinBtn       = document.createElement('button');
-    skinBtn.type      = 'button';
-    skinBtn.className = 'skin-btn';
-    skinBtn.innerHTML = skinPipHtml(getSkin(task.categoryId, getTaskSkinId(task)));
-    skinBtn.setAttribute('aria-label', 'Open this ' + cat.species + ' in the Greenhouse');
-    skinBtn.title     = 'Change how this ' + cat.species + ' looks - opens the Greenhouse';
-    (function (id) {
-      skinBtn.addEventListener('click', function () { openPlantSkins(id); });
-    }(task.id));
-    li.appendChild(skinBtn);
-
-    var removeBtn      = document.createElement('button');
-    removeBtn.className  = 'remove';
-    removeBtn.innerHTML   = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>';
-    removeBtn.setAttribute('aria-label', 'Remove task');
-    (function (id) {
-      removeBtn.addEventListener('click', function () { removeTask(id); });
-    }(task.id));
-    li.appendChild(removeBtn);
-
-    listEl.appendChild(li);
-  });
-
-  emptyEl.classList.toggle('hidden', filtered.length > 0);
-}
-
-// Renders all task views: the "all" tab and every category tab.
-function renderTaskList() {
-  // The plot of plant cards above the lists: counts, streaks and the
-  // artwork all move when a task is ticked.
-  if (typeof refreshCategoryCards === 'function') refreshCategoryCards();
-
-  // "All" tab
-  renderFilteredList('all', taskList, emptyState);
-
-  // Each category tab
-  CATEGORIES.forEach(function (cat) {
-    var listEl  = document.getElementById('cat-list-' + cat.id);
-    var emptyEl = document.getElementById('cat-empty-' + cat.id);
-    if (listEl && emptyEl) {
-      renderFilteredList(cat.id, listEl, emptyEl);
-    }
-  });
 }

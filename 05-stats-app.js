@@ -74,70 +74,93 @@ function buildYearGrid() {
 
 // ---- Overall (all-tasks) day stats ----
 
-// WHAT THE DENOMINATOR IS, AND WHY IT IS A GUESS
+// WHAT THE DENOMINATOR IS
 //
-// A cell's colour is completed/total for that day. The numerator is
-// exact: history records precisely which days each habit was ticked.
-// The denominator is not, because the app has never stored how many
-// habits existed on any given past day - only how many exist now.
+// A cell's colour is completed/due for that day. The numerator was
+// always exact - history records precisely which days each habit was
+// ticked. The denominator was the hard half, and it has now been
+// answered properly rather than guessed at.
 //
-// Using the live count for every date, which is what this did until
-// now, has one loud failure. Add a habit today and every cell in the
-// preceding year dilutes: a day where you completed three of three
-// was a full-strength cell, and becomes three of four, then three of
-// five. Your history visibly fades every time you take up something
-// new, which is precisely backwards as an encouragement.
+// WHAT IT USED TO BE. The live task count, for every date in the
+// year. That had one loud failure: add a habit today and every cell
+// in the preceding year diluted, because a day where you completed
+// three of three became three of four, then three of five. Your
+// history visibly faded every time you took up something new, which
+// is precisely backwards as an encouragement. A first-completion
+// date was inferred per habit to patch the worst of it.
 //
-// So `firstSeen` stands in for a creation date: a habit is counted on
-// a given day only if it had already been completed at least once by
-// then. That is an INFERENCE, and it is wrong in a knowable
-// direction - a habit created in January but first ticked in March is
-// left out of January and February, making those days look better
-// than they were. The error is bounded by the gap between creating a
-// habit and first keeping it, which for a habit anyone sticks with is
-// short, and it errs toward flattering the past rather than erasing
-// it. The alternative is storing a per-day active count, which means
-// a new field on a document that is rewritten on every tick - the
-// exact cost the packed history was introduced to remove.
+// WHAT IT IS NOW. Two stored fields do the work the inference used to
+// approximate:
 //
-// A habit that has never been completed has no first date to infer
-// from, so it counts from today onward: it plainly exists now, and
-// nothing can be said about when it started.
+//   createdAt  when the task entered the garden. Exact for anything
+//              planted since the task model landed; still inferred
+//              from the first completed day for anything older, so
+//              the old approximation survives only where there is
+//              genuinely nothing better. See taskStartDate() in 01.
 //
-// firstSeen is built ONCE per render by renderOverallHeatmap() and
-// passed in, not recomputed per cell - there are 371 cells and this
-// would otherwise walk every habit's history 371 times. Omitting it
-// falls back to the old behaviour, so the function still works
-// standalone.
-function computeOverallDayStats(dateStr, firstSeen) {
-  var total     = 0;
+//   schedule   which weekdays the habit is actually due on. This is
+//              the one that changes the picture: a school-days habit
+//              used to read as two missed days every weekend, all
+//              year, for as long as it existed.
+//
+// Neither costs a read. Both were already being written and both are
+// already in memory, which is what made this worth doing - the
+// alternative always on the table was a per-day active count, and
+// that means a new field on a document rewritten on every tick,
+// which is the exact cost the packed history exists to avoid.
+//
+// A day where NOTHING was due is not a day scored zero. It has no
+// fraction at all, and the grid draws it as an outline rather than
+// as an empty square, so the months before a garden existed stop
+// looking like months of failure.
+
+// One task, one day. The rule has two halves and both are load-
+// bearing:
+//
+//   a day the task was DUE counts, done or not;
+//   a day the task was DONE counts, due or not.
+//
+// The second half is what stops a bonus completion falling out of
+// both sides of the fraction and leaving the day looking empty - a
+// school-days habit ticked anyway on a Sunday, or an assignment,
+// which is never "due" on a past day but is very much done on one.
+// Extra credit can never lower a score: the same completion adds one
+// to each side.
+function dayTally(task, dateStr) {
+  var done = histGet(task.history, dateStr);
+  return { counted: done || wasDueOn(task, dateStr), done: done };
+}
+
+function computeOverallDayStats(dateStr) {
+  var due       = 0;
   var completed = 0;
 
   tasks.forEach(function (t) {
-    if (firstSeen) {
-      var since = firstSeen[t.id];
-      // String comparison is safe and intended: 'YYYY-MM-DD' sorts
-      // lexicographically in the same order it sorts chronologically,
-      // which is the whole reason the format is used throughout.
-      if (!since || dateStr < since) return;   // not yet in the garden
-    }
-    total++;
-    if (histGet(t.history, dateStr)) completed++;
+    var tally = dayTally(t, dateStr);
+    if (!tally.counted) return;
+    due++;
+    if (tally.done) completed++;
   });
 
-  var percent = total > 0 ? (completed / total) * 100 : 0;
-  return { completed: completed, total: total, percent: percent };
+  var percent = due > 0 ? (completed / due) * 100 : 0;
+  return { completed: completed, total: due, percent: percent };
 }
 
-// One pass over the habits, giving each the day it is assumed to have
-// entered the garden. Built per render and thrown away.
-function buildFirstSeenMap() {
-  var today = getTodayString();
-  var map   = {};
-  tasks.forEach(function (t) {
-    map[t.id] = firstCompletedDate(t.history) || today;
+// Completions and the days they were owed on, over a window. Used by
+// both sets of summary cards so "4 completions last week" can finally
+// say what it was out of.
+function tallyWindow(list, dates) {
+  var done = 0;
+  var due  = 0;
+  list.forEach(function (t) {
+    dates.forEach(function (d) {
+      var tally = dayTally(t, d);
+      if (!tally.counted) return;
+      due++;
+      if (tally.done) done++;
+    });
   });
-  return map;
+  return { done: done, due: due };
 }
 
 function heatStageForPercent(percent) {
@@ -270,25 +293,25 @@ function renderOverallHeatmap() {
   if (!container) return;
   var weeks = buildYearGrid();
 
-  // Once, not once per cell. See computeOverallDayStats().
-  var firstSeen = buildFirstSeenMap();
-
   renderHeatmapGrid(
     container,
     weeks,
     function (dateStr) {
-      var d = computeOverallDayStats(dateStr, firstSeen);
-      return { stage: heatStageForPercent(d.percent), data: d };
+      var d = computeOverallDayStats(dateStr);
+      // Nothing due and nothing done is an ABSENCE, not a zero. The
+      // 'off' stage is drawn as an outline; scoring it 0% would paint
+      // every day before the garden existed, and every weekend of a
+      // school-days-only garden, as failure.
+      return {
+        stage: d.total ? heatStageForPercent(d.percent) : 'off',
+        data:  d,
+      };
     },
     function (dateStr, info) {
       var d = info.data;
-      // total can legitimately be zero now: on a day before the oldest
-      // habit was first completed, there is nothing to have completed.
-      // '0% of tasks completed (0/0 tasks)' would read as a failure
-      // rather than as an absence, so say the true thing instead.
-      if (!d.total) return dateStr + ': no habits tracked yet';
-      return dateStr + ': ' + Math.round(d.percent) + '% of tasks completed (' +
-        d.completed + '/' + d.total + ' tasks)';
+      if (!d.total) return dateStr + ': nothing due';
+      return dateStr + ': ' + Math.round(d.percent) + '% done (' +
+        d.completed + ' of ' + d.total + ' due)';
     }
   );
 }
@@ -314,18 +337,230 @@ function renderIndividualHeatmap(taskId) {
   var hist  = task.history || {};
   var weeks = buildYearGrid();
 
+  // Three states rather than two. A day this habit was never
+  // scheduled for is not a miss, and drawing it as one was the whole
+  // complaint: a weekday-only habit spent its year looking like it
+  // failed twice a week.
   renderHeatmapGrid(
     container,
     weeks,
     function (dateStr) {
-      var done = histGet(hist, dateStr);
-      return { stage: done ? 3 : 0, data: { done: done } };
+      var tally = dayTally(task, dateStr);
+      return {
+        stage: tally.done ? 3 : (tally.counted ? 0 : 'off'),
+        data:  tally,
+      };
     },
     function (dateStr, info) {
-      return dateStr + ': ' + (info.data.done ? 'Completed' : 'Not Completed');
+      if (info.data.done)     return dateStr + ': completed';
+      if (info.data.counted)  return dateStr + ': missed';
+      return dateStr + ': not scheduled';
     }
   );
 }
+
+// ============================================
+// C5: growth over time
+//
+// WHY A CHART AND NOT THE GARDEN. The day-to-day change in a plant is
+// sub-perceptual by design - that is what the growth curve is FOR,
+// and flattening it would make a two-year-old oak the same size as a
+// two-month-old one. So the garden cannot show a trend, and the
+// height tag can only show one week of it. A chart shows the shape.
+//
+// The y-axis is HEIGHT, not days, on purpose. Days grown is a
+// straight line for anyone keeping a habit, which is true and tells
+// you nothing. Height is the S-curve, so the chart shows the thing
+// the number under the plant is actually doing: nearly flat for a
+// fortnight, then a spurt, then a long slow climb.
+// ============================================
+
+var STATS_GROWTH_RANGES = [30, 90, 365];
+var statsGrowthRange    = 90;
+
+var GROWTH_CHART_W = 700;
+var GROWTH_CHART_H = 200;
+// Wide enough for the longest label an axis can produce. A garden of
+// ten mature plants runs to four digits of days grown, and the label
+// is right-aligned into this gutter, so too little of it clips the
+// number rather than wrapping it. Sized against the 12-unit axis
+// type in the stylesheet - shrink one and this can come in with it.
+var GROWTH_PAD_L   = 50;
+var GROWTH_PAD_R   = 10;
+var GROWTH_PAD_T   = 12;
+var GROWTH_PAD_B   = 22;
+
+var STATS_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function growthShortDate(dateStr) {
+  var p = String(dateStr).split('-');
+  var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+  return d.getUTCDate() + ' ' + STATS_MONTHS[d.getUTCMonth()];
+}
+
+// points: [{ date, value }], oldest first.
+//
+// formatAxis is separate from formatValue because the two are read
+// differently: the headline says '+71 days', which needs its unit,
+// while three repetitions of that unit stacked up the left edge are
+// just noise that pushes the chart around. Defaults to the same
+// formatter when a caller has no reason to split them.
+function growthChartSvg(points, formatValue, formatAxis) {
+  if (!points || points.length < 2) return '';
+  formatAxis = formatAxis || formatValue;
+
+  var vals = points.map(function (p) { return p.value; });
+  var lo   = Math.min.apply(null, vals);
+  var hi   = Math.max.apply(null, vals);
+
+  // A FLAT LINE IS A REAL ANSWER - nothing grew - and it needs its
+  // own treatment. Left alone the range collapses and the line lands
+  // on the floor of the box under two gridlines labelled with values
+  // that never occurred, which reads as a chart that failed rather
+  // than as a plant that stood still. So the line is centred and it
+  // gets ONE gridline, at the level it actually sat at.
+  var flat = (hi - lo) < 1e-9;
+  if (flat) { lo = lo - 1; hi = lo + 2; }
+
+  var innerW = GROWTH_CHART_W - GROWTH_PAD_L - GROWTH_PAD_R;
+  var innerH = GROWTH_CHART_H - GROWTH_PAD_T - GROWTH_PAD_B;
+  var baseY  = GROWTH_PAD_T + innerH;
+
+  function px(i) { return GROWTH_PAD_L + (i / (points.length - 1)) * innerW; }
+  function py(v) { return GROWTH_PAD_T + innerH - ((v - lo) / (hi - lo)) * innerH; }
+
+  var line = points.map(function (p, i) {
+    return (i ? 'L' : 'M') + px(i).toFixed(1) + ' ' + py(p.value).toFixed(1);
+  }).join(' ');
+
+  // No fill under a flat line. The area is there to give the climb
+  // weight, and under a line that never climbed it is half a box of
+  // green implying growth that did not happen.
+  var area = flat ? '' : (line +
+    ' L' + px(points.length - 1).toFixed(1) + ' ' + baseY.toFixed(1) +
+    ' L' + px(0).toFixed(1) + ' ' + baseY.toFixed(1) + ' Z');
+
+  var grid = '';
+  var lines = flat ? [1] : [0, 1, 2];
+  lines.forEach(function (g) {
+    var gv = lo + (hi - lo) * (g / 2);
+    var gy = py(gv).toFixed(1);
+    grid +=
+      '<line class="growth-grid" x1="' + GROWTH_PAD_L + '" y1="' + gy +
+      '" x2="' + (GROWTH_CHART_W - GROWTH_PAD_R) + '" y2="' + gy + '"/>' +
+      '<text class="growth-ylabel" x="' + (GROWTH_PAD_L - 9) + '" y="' + gy +
+      '" text-anchor="end" dominant-baseline="middle">' +
+      escapeHtml(formatAxis(gv)) + '</text>';
+  });
+
+  var ticks = '';
+  var tickAt = [0, Math.floor((points.length - 1) / 2), points.length - 1];
+  tickAt.forEach(function (i, n) {
+    ticks += '<text class="growth-xlabel" x="' + px(i).toFixed(1) + '" y="' +
+      (GROWTH_CHART_H - 6) + '" text-anchor="' +
+      (n === 0 ? 'start' : (n === 2 ? 'end' : 'middle')) + '">' +
+      escapeHtml(growthShortDate(points[i].date)) + '</text>';
+  });
+
+  return (
+    '<svg class="growth-chart" viewBox="0 0 ' + GROWTH_CHART_W + ' ' +
+      GROWTH_CHART_H + '" role="img" aria-label="Growth over time">' +
+      grid +
+      (area ? '<path class="growth-area" d="' + area + '"/>' : '') +
+      '<path class="growth-line" d="' + line + '"/>' +
+      '<circle class="growth-dot" cx="' + px(points.length - 1).toFixed(1) +
+        '" cy="' + py(points[points.length - 1].value).toFixed(1) + '" r="4"/>' +
+      ticks +
+    '</svg>'
+  );
+}
+
+function growthRangeHtml() {
+  return '<div class="growth-range">' + STATS_GROWTH_RANGES.map(function (n) {
+    return '<button type="button" class="growth-range-btn' +
+      (n === statsGrowthRange ? ' active' : '') + '" data-range="' + n + '">' +
+      (n >= 365 ? '1 year' : n + ' days') + '</button>';
+  }).join('') + '</div>';
+}
+
+function renderGrowthCard(hostId, points, formatValue, emptyMsg, formatAxis) {
+  var host = document.getElementById(hostId);
+  if (!host) return;
+
+  if (!points || points.length < 2) {
+    host.innerHTML = '<p class="empty-state">' + escapeHtml(emptyMsg) + '</p>';
+    return;
+  }
+
+  var gain = points[points.length - 1].value - points[0].value;
+  var label = gain > 0
+    ? '+' + formatValue(gain)
+    : 'no growth';
+
+  host.innerHTML =
+    '<div class="growth-head">' +
+      '<span class="growth-gain' + (gain > 0 ? ' is-up' : '') + '">' +
+        escapeHtml(label) + '</span>' +
+      '<span class="growth-window">over ' +
+        (statsGrowthRange >= 365 ? 'the last year' : 'the last ' + statsGrowthRange + ' days') +
+      '</span>' +
+      growthRangeHtml() +
+    '</div>' +
+    growthChartSvg(points, formatValue, formatAxis);
+}
+
+function renderIndividualGrowth(taskId) {
+  var task = tasks.find(function (t) { return t.id === taskId; });
+  if (!task) return;
+
+  var points = buildGrowthSeries(task, statsGrowthRange).map(function (p) {
+    return { date: p.date, value: computeHeightMeters(p.days) };
+  });
+  renderGrowthCard('statsIndividualGrowth', points, formatHeightMeters,
+    'Not enough history yet.');
+}
+
+// The garden as a whole. Summed heights would be a meaningless
+// number, so this one counts DAYS GROWN across every plant: it only
+// ever goes up, and its slope is how much the garden is being kept.
+function renderOverallGrowth() {
+  if (!tasks.length) {
+    renderGrowthCard('statsOverallGrowth', null, null,
+      'No plants yet - add one on the Tasks page.');
+    return;
+  }
+
+  var totals = null;
+  tasks.forEach(function (t) {
+    var series = buildGrowthSeries(t, statsGrowthRange);
+    if (!totals) {
+      totals = series.map(function (p) { return { date: p.date, value: p.days }; });
+      return;
+    }
+    series.forEach(function (p, i) { totals[i].value += p.days; });
+  });
+
+  renderGrowthCard(
+    'statsOverallGrowth',
+    totals,
+    function (v) { return Math.round(v) + ' days'; },
+    'Not enough history yet.',
+    function (v) { return String(Math.round(v)); }
+  );
+}
+
+// One delegated listener for both cards, bound once. The card bodies
+// are rebuilt on every render, so nothing inside them can hold a
+// listener of its own.
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest && e.target.closest('.growth-range-btn');
+  if (!btn) return;
+  var next = parseInt(btn.getAttribute('data-range'), 10);
+  if (!next || next === statsGrowthRange) return;
+  statsGrowthRange = next;
+  renderStatsView();
+});
 
 // ---- Summary metric cards ----
 
@@ -333,8 +568,6 @@ function computeOverallStats() {
   var maxGrowthTask    = null;
   var allTimeMaxStreak = 0;
   var currentMaxStreak = 0;
-  var weeklyGrowth     = 0;
-  var monthlyGrowth    = 0;
 
   var last7  = []; for (var i = 0; i < 7;  i++) last7.push(getDateNDaysAgo(i));
   var last30 = []; for (var j = 0; j < 30; j++) last30.push(getDateNDaysAgo(j));
@@ -347,17 +580,20 @@ function computeOverallStats() {
     allTimeMaxStreak = Math.max(allTimeMaxStreak, t.maxStreak || 0, t.streak || 0);
     currentMaxStreak = Math.max(currentMaxStreak, t.streak || 0);
 
-    var hist = t.history || {};
-    last7.forEach(function (d)  { if (histGet(hist, d)) weeklyGrowth++; });
-    last30.forEach(function (d) { if (histGet(hist, d)) monthlyGrowth++; });
   });
+
+  // Out of how many. Same rule as the heatmap - see dayTally().
+  var week  = tallyWindow(tasks, last7);
+  var month = tallyWindow(tasks, last30);
 
   return {
     maxGrowthTask:    maxGrowthTask,
     allTimeMaxStreak: allTimeMaxStreak,
     currentMaxStreak: currentMaxStreak,
-    weeklyGrowth:     weeklyGrowth,
-    monthlyGrowth:    monthlyGrowth,
+    weeklyGrowth:     week.done,
+    weeklyDue:        week.due,
+    monthlyGrowth:    month.done,
+    monthlyDue:       month.due,
   };
 }
 
@@ -381,7 +617,9 @@ function computeIndividualStats(taskId) {
 
   var last7  = []; for (var i = 0; i < 7;  i++) last7.push(getDateNDaysAgo(i));
   var last30 = []; for (var j = 0; j < 30; j++) last30.push(getDateNDaysAgo(j));
-  var hist   = task.history || {};
+
+  var week  = tallyWindow([task], last7);
+  var month = tallyWindow([task], last30);
 
   return {
     task:            task,
@@ -390,9 +628,28 @@ function computeIndividualStats(taskId) {
     heightMeters:    heightMeters,
     streak:          streak,
     maxStreak:       maxStreak,
-    weekCompletions:  last7.filter(function (d) { return histGet(hist, d); }).length,
-    monthCompletions: last30.filter(function (d) { return histGet(hist, d); }).length,
+    weekCompletions:  week.done,
+    weekDue:          week.due,
+    monthCompletions: month.done,
+    monthDue:         month.due,
   };
+}
+
+// "4 of 5" rather than "4 completions", now that there is something
+// to be out of. A window where nothing was ever due says so instead
+// of reporting a zero out of zero.
+function completionRatio(done, due) {
+  if (!due) return 'nothing due';
+  return done + ' of ' + due;
+}
+
+// The subtitle carries the window, and says what the denominator
+// actually counted - which is scheduled days across every habit, not
+// calendar days, and would otherwise be a puzzle when a garden of
+// school-days habits reports 25 due in the last 7.
+function dueSubtitle(due, windowDays) {
+  if (!due) return 'last ' + windowDays + ' days';
+  return 'scheduled days, last ' + windowDays;
 }
 
 function statCardHtml(emoji, label, value, sub) {
@@ -425,12 +682,12 @@ function renderOverallCards() {
       maxCat ? maxCat.emoji : '🌳',
       'Max Plant',
       maxCat ? s.maxGrowthTask.text : '—',
-      maxCat ? ((s.maxGrowthTask.totalGrowthDays || 0) + ' days grown · ' + maxCat.species) : ''
+      maxCat ? (formatGrowthPoints(s.maxGrowthTask.totalGrowthDays) + ' days grown · ' + maxCat.species) : ''
     ) +
     statCardHtml('🏆', 'All-Time Max Streak',    s.allTimeMaxStreak + ' day' + (s.allTimeMaxStreak === 1 ? '' : 's'), '') +
     statCardHtml('🔥', 'Current Highest Streak', s.currentMaxStreak + ' day' + (s.currentMaxStreak === 1 ? '' : 's'), '') +
-    statCardHtml('📅', 'Weekly Growth',          s.weeklyGrowth + ' completion' + (s.weeklyGrowth === 1 ? '' : 's'), 'last 7 days') +
-    statCardHtml('📈', 'Monthly Growth',         s.monthlyGrowth + ' completion' + (s.monthlyGrowth === 1 ? '' : 's'), 'last 30 days');
+    statCardHtml('📅', 'Weekly Growth',  completionRatio(s.weeklyGrowth,  s.weeklyDue),  dueSubtitle(s.weeklyDue,  7)) +
+    statCardHtml('📈', 'Monthly Growth', completionRatio(s.monthlyGrowth, s.monthlyDue), dueSubtitle(s.monthlyDue, 30));
 }
 
 function renderIndividualCards(taskId) {
@@ -453,12 +710,12 @@ function renderIndividualCards(taskId) {
       s.cat.emoji,
       'Current Stage & Height',
       'Stage ' + s.stageIdx + ' · ' + formatHeightMeters(s.heightMeters),
-      s.cat.species + ' · ' + (s.task.totalGrowthDays || 0) + ' days grown'
+      s.cat.species + ' · ' + formatGrowthPoints(s.task.totalGrowthDays) + ' days grown'
     ) +
     statCardHtml('🔥', 'Current Streak',    s.streak + ' day' + (s.streak === 1 ? '' : 's'), '') +
     statCardHtml('🏆', 'Max Streak',        s.maxStreak + ' day' + (s.maxStreak === 1 ? '' : 's'), '') +
-    statCardHtml('📅', 'Growth This Week',  s.weekCompletions + ' completion' + (s.weekCompletions === 1 ? '' : 's'), 'last 7 days') +
-    statCardHtml('📈', 'Growth This Month', s.monthCompletions + ' completion' + (s.monthCompletions === 1 ? '' : 's'), 'last 30 days');
+    statCardHtml('📅', 'Growth This Week',  completionRatio(s.weekCompletions,  s.weekDue),  dueSubtitle(s.weekDue,  7)) +
+    statCardHtml('📈', 'Growth This Month', completionRatio(s.monthCompletions, s.monthDue), dueSubtitle(s.monthDue, 30));
 }
 
 // ---- View mode wiring ----
@@ -505,12 +762,14 @@ function renderStatsView() {
     if (individualViewEl) individualViewEl.classList.remove('hidden');
 
     renderIndividualHeatmap(taskId);
+    renderIndividualGrowth(taskId);
     renderIndividualCards(taskId);
   } else {
     if (overallViewEl)    overallViewEl.classList.remove('hidden');
     if (individualViewEl) individualViewEl.classList.add('hidden');
 
     renderOverallHeatmap();
+    renderOverallGrowth();
     renderOverallCards();
   }
 }
@@ -588,7 +847,7 @@ function renderProfileHeader() {
         '<div class="profile-quick-stat-label">Active Plants</div>' +
       '</div>' +
       '<div class="profile-quick-stat">' +
-        '<div class="profile-quick-stat-value">' + lifetimeGrowthDays + '</div>' +
+        '<div class="profile-quick-stat-value">' + formatGrowthPoints(lifetimeGrowthDays) + '</div>' +
         '<div class="profile-quick-stat-label">Lifetime Growth Days</div>' +
       '</div>' +
     '</div>';

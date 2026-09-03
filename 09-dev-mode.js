@@ -35,7 +35,7 @@
 //   whole tasks array, so if anything else triggers a save while you
 //   have silly numbers on screen (ticking a habit, saving a garden
 //   rearrangement, a midnight rollover) those numbers get written for
-//   real, and clampGrowthDays() in 01 will cap them at MAX_GROWTH_DAYS
+//   real, and the clamps in 01 will cap them at MAX_GROWTH_DAYS
 //   on the way out. Reload before you do anything that saves.
 // ============================================
 
@@ -143,8 +143,8 @@ function renderDevPanel() {
 
   var rowsHtml = tasks.map(function (t) {
     var cat            = getCategoryById(t.categoryId);
-    var streak          = Math.max(0, t.streak || 0);
-    var totalGrowthDays = Math.max(0, t.totalGrowthDays || 0);
+    var streak          = clampStreak(t.streak);
+    var totalGrowthDays = clampGrowthPoints(t.totalGrowthDays);
 
     // One garden, so one pair of numbers. The separate "daily" pair
     // that used to sit beside these was computed off the streak with
@@ -178,7 +178,7 @@ function renderDevPanel() {
         '<div class="dev-field-group">' +
           '<span class="dev-field-label">Total days 🌱</span>' +
           '<button type="button" class="dev-quick-btn" data-dev-action="dec" data-dev-field="totalGrowthDays" data-dev-step="1">−1</button>' +
-          '<input type="number" class="dev-number-input" data-dev-field="totalGrowthDays" min="0" value="' + totalGrowthDays + '" />' +
+          '<input type="number" class="dev-number-input" data-dev-field="totalGrowthDays" min="0" step="any" value="' + totalGrowthDays + '" />' +
           '<button type="button" class="dev-quick-btn" data-dev-action="inc" data-dev-field="totalGrowthDays" data-dev-step="1">+1</button>' +
           '<button type="button" class="dev-quick-btn" data-dev-action="inc" data-dev-field="totalGrowthDays" data-dev-step="7">+7</button>' +
           '<button type="button" class="dev-quick-btn" data-dev-action="inc" data-dev-field="totalGrowthDays" data-dev-step="30">+30</button>' +
@@ -239,7 +239,11 @@ if (devPanelBody) {
       next = action === 'inc' ? current + step : Math.max(0, current - step);
     }
 
-    task[field] = next;
+    // Growth is a point total and may hold a fraction; a streak is a
+    // count of days and may not. Same split as the two clamps in 01,
+    // so a value typed here cannot be one the app would reject on
+    // load and quietly rewrite.
+    task[field] = (field === 'streak') ? clampStreak(next) : clampGrowthPoints(next);
     render(); // updates the garden AND rebuilds this panel — preview only, not saved
   });
 
@@ -261,8 +265,10 @@ if (devPanelBody) {
     }
 
     if (field === 'streak' || field === 'totalGrowthDays') {
-      var val = Math.max(0, parseInt(target.value, 10) || 0);
-      task[field] = val;
+      var raw = (field === 'streak')
+        ? parseInt(target.value, 10)
+        : parseFloat(target.value);
+      task[field] = (field === 'streak') ? clampStreak(raw) : clampGrowthPoints(raw);
       render();
     }
   });

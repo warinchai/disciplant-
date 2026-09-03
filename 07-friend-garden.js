@@ -385,7 +385,12 @@ function renderFriendGarden() {
       layout = computePlantLayout(plant, groupPlants.indexOf(plant), groupPlants.length);
     }
 
-    var totalGrowthDays = Math.max(0, plant.totalGrowthDays || 0);
+    // Points, not ticks - see the growth block in 01. The summary
+    // carries the TOTAL and never the impact behind it: what an
+    // assignment was worth is a judgement someone made about their
+    // own afternoon, and a friend has no business reading it. The
+    // total already has it baked in, which is all a plant needs.
+    var totalGrowthDays = clampGrowthPoints(plant.totalGrowthDays);
     var streak          = Math.max(0, plant.streak || 0);
     // NOTE: the summary still carries plant.completed, but nothing on
     // this page reads it now. It was only ever used by the deleted
@@ -408,7 +413,7 @@ function renderFriendGarden() {
                    plantArtScaleAdjust(cat.id, stageIdx);
 
     var streakPart = streak > 0 ? ' \u00B7 ' + streak + ' day streak' : '';
-    var subLabel   = totalGrowthDays + ' days grown' + streakPart;
+    var subLabel   = formatGrowthPoints(totalGrowthDays) + ' days grown' + streakPart;
 
     var growthOnlyScale = scale;
     scale = scale * layout.depthScale;
@@ -423,7 +428,8 @@ function renderFriendGarden() {
     wrap.style.setProperty('--plant-depth-bottom', layout.bottomPct + '%');
     wrap.setAttribute(
       'title',
-      cat.name + ' (' + cat.species + ') \u00B7 ' + totalGrowthDays + ' days grown' +
+      cat.name + ' (' + cat.species + ') \u00B7 ' +
+      formatGrowthPoints(totalGrowthDays) + ' days grown' +
       (streak > 0 ? ' \u00B7 ' + streak + ' day streak' : '')
     );
 

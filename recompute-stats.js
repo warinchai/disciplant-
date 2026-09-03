@@ -97,10 +97,23 @@ async function countGardeners() {
 //                     This figure is exactly correct on every run.
 //
 //   habitsCompleted = the sum of every task's totalGrowthDays, which
-//                     is the count of days that task has been ticked
-//                     off across its whole life. So it's habit-DAYS,
-//                     which is why the home page labels it "days
-//                     completed" rather than "habits completed".
+//                     is the growth that task has earned across its
+//                     whole life. So it's habit-DAYS, which is why the
+//                     home page labels it "days completed" rather than
+//                     "habits completed".
+//
+//                     That field became a POINT total rather than a
+//                     count of ticks (see the growth block in
+//                     01-app-core.js), and the label survives the
+//                     change because one point is defined as one
+//                     completed day of an ordinary habit. What it no
+//                     longer is, is a count of CHECKBOX TICKS: an
+//                     assignment someone rated as a fortnight of work
+//                     contributes fourteen. That is the intended
+//                     reading of "days completed" and the wrong
+//                     reading of "times a box was ticked", so do not
+//                     relabel this on the home page without changing
+//                     what is summed here.
 //
 // .select('tasks') asks Firestore for just that one field, so the
 // other fields never leave the database.
@@ -130,12 +143,16 @@ async function countGardens() {
       // impossible no matter what is in the data.
       const days = task && Number(task.totalGrowthDays);
       if (Number.isFinite(days) && days > 0) {
-        habitsCompleted += Math.min(Math.floor(days), MAX_GROWTH_DAYS);
+        // Ceiling per task, floor once at the end. Flooring each task
+        // here would have thrown away the fractional part of every
+        // plant in every garden, which is a rounding error the size of
+        // the user base rather than of one plant.
+        habitsCompleted += Math.min(days, MAX_GROWTH_DAYS);
       }
     });
   });
 
-  return { gardens, habitsGrowing, habitsCompleted };
+  return { gardens, habitsGrowing, habitsCompleted: Math.floor(habitsCompleted) };
 }
 
 

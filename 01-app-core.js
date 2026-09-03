@@ -185,7 +185,6 @@ let authActionError   = null;  // last-error message shown in the modal, if any
 
 // Navigation state
 let currentPage      = 'home';
-let currentTaskTab   = 'all';
 let authReady        = false;
 
 // Set true whenever we navigate TO the garden page, so the next
@@ -200,11 +199,6 @@ let pendingGardenScrollCenter = false;
 const loadingState      = document.getElementById('loadingState');
 const tasksLoadingState = document.getElementById('tasksLoadingState');
 const mainContent       = document.getElementById('mainContent');
-const taskForm          = document.getElementById('taskForm');
-const taskInput         = document.getElementById('taskInput');
-const categorySelect    = document.getElementById('categorySelect');
-const taskList          = document.getElementById('taskList');
-const emptyState        = document.getElementById('emptyState');
 const gardenSceneEl     = document.getElementById('gardenScene');
 const gardenTrackEl     = document.getElementById('gardenSceneTrack');
 const skyEl             = document.getElementById('sky');
@@ -261,11 +255,6 @@ const authModalBody      = document.getElementById('authModalBody');
     mainContent:       mainContent,
     gardenSceneEl:     gardenSceneEl,
     gardenTrackEl:     gardenTrackEl,
-    taskForm:          taskForm,
-    taskInput:         taskInput,
-    categorySelect:    categorySelect,
-    taskList:          taskList,
-    emptyState:        emptyState,
     skyEl:             skyEl,
     skyBodyEl:         skyBodyEl,
     pageHomeEl:        pageHomeEl,
@@ -292,167 +281,22 @@ const authModalBody      = document.getElementById('authModalBody');
 })();
 
 
-// ============================================
-// Populate the category <select> dropdown
-// ============================================
-CATEGORIES.forEach(function (cat) {
-  var opt       = document.createElement('option');
-  opt.value     = cat.id;
-  opt.textContent = cat.name;
-  categorySelect.appendChild(opt);
-});
-categorySelect.value = 'misc';
-
-
-// ============================================
-// Build the category plot and its tab panels
-//
-// One card per plant, not a row of text pills. The card shows the
-// species' own artwork, so the tasks page finally has plants on it -
-// which is the whole point of the app and used to be invisible here.
-//
-// Split in two on purpose: the shells are built once at parse time,
-// but the artwork and the counts need task data, which arrives later
-// and changes on every tick. refreshCategoryCards() does that half and
-// is called from renderTaskList().
-// ============================================
-function buildCategoryTabs() {
-  var plot      = document.getElementById('catSubnav');
-  var container = document.getElementById('taskTabsContainer');
-  if (!plot || !container) return;
-
-  plot.innerHTML      = '';
-  container.innerHTML = '';
-
-  // "All tasks" is a card too, but a plainer one - it has no species.
-  var allCard         = document.createElement('button');
-  allCard.type        = 'button';
-  allCard.className   = 'plot-card plot-card-all active';
-  allCard.dataset.tab = 'all';
-  allCard.innerHTML   =
-    '<span class="plot-card-name">All tasks</span>' +
-    '<span class="plot-card-count" id="plot-count-all"></span>';
-  allCard.addEventListener('click', function () { switchTaskTab('all'); });
-  plot.appendChild(allCard);
-
-  CATEGORIES.forEach(function (cat) {
-    var card         = document.createElement('button');
-    card.type        = 'button';
-    card.className   = 'plot-card';
-    card.dataset.tab = cat.id;
-    card.innerHTML =
-      '<span class="plot-card-art" id="plot-art-' + cat.id + '"></span>' +
-      '<span class="plot-card-name">' + cat.name + '</span>' +
-      '<span class="plot-card-count" id="plot-count-' + cat.id + '"></span>' +
-      '<span class="plot-card-streak hidden" id="plot-streak-' + cat.id + '"></span>';
-    card.addEventListener('click', function () { switchTaskTab(cat.id); });
-    plot.appendChild(card);
-
-    // ---- Tab panel: header, list, empty state. Nothing else. ----
-    var panel = document.createElement('div');
-    panel.id        = 'tab-' + cat.id;
-    panel.className = 'task-tab-panel hidden';
-
-    var head = document.createElement('div');
-    head.className = 'panel-head';
-
-    var nameEl         = document.createElement('h3');
-    nameEl.className   = 'panel-head-name';
-    nameEl.textContent = cat.name;
-
-    var speciesEl         = document.createElement('span');
-    speciesEl.className   = 'panel-head-species';
-    speciesEl.textContent = cat.species;
-
-    head.appendChild(nameEl);
-    head.appendChild(speciesEl);
-    panel.appendChild(head);
-
-    var catListEl       = document.createElement('ul');
-    catListEl.id        = 'cat-list-' + cat.id;
-    catListEl.className = 'task-list';
-    panel.appendChild(catListEl);
-
-    var catEmptyEl         = document.createElement('p');
-    catEmptyEl.id          = 'cat-empty-' + cat.id;
-    catEmptyEl.className   = 'empty-state';
-    catEmptyEl.textContent = 'Nothing planted here yet. Add a ' +
-                             cat.name.toLowerCase() + ' task above.';
-    panel.appendChild(catEmptyEl);
-
-    container.appendChild(panel);
-  });
-}
-
-buildCategoryTabs();
-
-
-// Repaints the artwork and the numbers on every card. Safe to call
-// before 04-garden-scene.js has loaded (it owns getPlantSVG) and before
-// any tasks exist - both cases just leave the plot at its seed stage.
-function refreshCategoryCards() {
-  var allCount = document.getElementById('plot-count-all');
-  if (allCount) {
-    allCount.textContent = tasks.length
-      ? countDone(tasks) + ' of ' + tasks.length + ' done'
-      : 'empty';
-  }
-
-  CATEGORIES.forEach(function (cat) {
-    var mine = tasks.filter(function (t) { return t.categoryId === cat.id; });
-
-    var countEl = document.getElementById('plot-count-' + cat.id);
-    if (countEl) {
-      countEl.textContent = mine.length
-        ? countDone(mine) + ' of ' + mine.length + ' done'
-        : 'empty';
-    }
-
-    // The card shows this category's furthest-along plant, so the plot
-    // reads as a garden rather than a row of identical seeds.
-    var lead = null;
-    mine.forEach(function (t) {
-      if (!lead || (t.totalGrowthDays || 0) > (lead.totalGrowthDays || 0)) lead = t;
-    });
-
-    var streakEl = document.getElementById('plot-streak-' + cat.id);
-    if (streakEl) {
-      var best = 0;
-      mine.forEach(function (t) { best = Math.max(best, t.streak || 0); });
-      streakEl.textContent = best + (best === 1 ? ' day' : ' days');
-      streakEl.classList.toggle('hidden', best < 2);
-    }
-
-    var artEl = document.getElementById('plot-art-' + cat.id);
-    if (artEl && typeof getPlantSVG === 'function') {
-      var stage  = lead ? getStageIndexForDays(lead.totalGrowthDays) : 0;
-      var skinId = (lead && typeof getTaskSkinId === 'function')
-        ? getTaskSkinId(lead)
-        : null;
-      // Building seven SVG strings and reparsing them costs nothing in
-      // Firestore but is the most expensive thing on this page, and it
-      // ran on every checkbox tick. A plant's stage and skin change far
-      // less often than its done-count, so only redraw on a real change.
-      var stamp = stage + ':' + (skinId || '');
-      if (artEl.dataset.stamp !== stamp) {
-        artEl.innerHTML = getPlantSVG(cat.id, stage, skinId, 56);
-        artEl.dataset.stamp = stamp;
-      }
-    }
-  });
-}
-
-function countDone(list) {
-  var n = 0;
-  list.forEach(function (t) { if (t.completed) n++; });
-  return n;
-}
 
 
 // ============================================
 // Navigation
 // ============================================
-function navigateTo(page) {
+// Pages that get their own URL hash and a back/forward history entry.
+// friend-garden is deliberately left out: it needs a friend uid to mean
+// anything, which the hash doesn't carry, so a bare "#friend-garden"
+// from the back button would land on a page with no friend loaded.
+// Leaving the browser on whatever hash it already had for that case
+// (see the guard in navigateTo below) is a smaller gap than that.
+var NAV_HASH_PAGES = ['home', 'garden', 'tasks', 'stats', 'greenhouse', 'friends'];
+
+function navigateTo(page, opts) {
+  opts = opts || {};
+
   // Leaving the friend garden - by the back button OR by any nav
   // button on that page - forgets whose garden it was. Checked before
   // currentPage moves, and skipped when we're navigating INTO the
@@ -591,28 +435,43 @@ function navigateTo(page) {
   if (page === 'greenhouse' && pageGreenhouseEl) pageGreenhouseEl.scrollTop = 0;
   if (page === 'friends' && pageFriendsEl) pageFriendsEl.scrollTop = 0;
   if (page === 'friend-garden' && pageFriendGardenEl) pageFriendGardenEl.scrollTop = 0;
-}
 
-function switchTaskTab(tabId) {
-  currentTaskTab = tabId;
-
-  // Update button active states
-  document.querySelectorAll('.plot-card').forEach(function (btn) {
-    btn.classList.toggle('active', btn.dataset.tab === tabId);
-  });
-
-  // Show the right tab panel, hide others
-  document.getElementById('tab-all').classList.toggle('hidden', tabId !== 'all');
-  CATEGORIES.forEach(function (cat) {
-    var panel = document.getElementById('tab-' + cat.id);
-    if (panel) panel.classList.toggle('hidden', tabId !== cat.id);
-  });
-
-  // Pre-select category in the shared form
-  if (tabId !== 'all') {
-    categorySelect.value = tabId;
+  // Keep the URL in sync so the back/forward buttons work between
+  // pages, without doing this for a popstate-triggered call (the
+  // history entry already exists in that case - pushing again would
+  // just stack a duplicate on top of it) or for friend-garden (see
+  // NAV_HASH_PAGES above).
+  if (!opts.fromPopState && NAV_HASH_PAGES.indexOf(page) !== -1) {
+    var hash = '#' + page;
+    if (location.hash !== hash) history.pushState(null, '', hash);
   }
 }
+
+// Back/forward button support: a hash we recognize navigates there; any
+// other hash (or none, e.g. after a full "back" past the first visit)
+// falls back to home. fromPopState stops navigateTo from pushing a new
+// history entry for a transition the browser already recorded.
+window.addEventListener('popstate', function () {
+  var page = (location.hash || '').slice(1);
+  if (NAV_HASH_PAGES.indexOf(page) === -1) page = 'home';
+  navigateTo(page, { fromPopState: true });
+});
+
+// Deep-linking: a bookmarked or shared "#tasks" (etc.) link opens
+// straight to that page instead of always landing on Home. Deferred to
+// DOMContentLoaded so every script (02-12) has finished loading first -
+// this file (01) runs before any of them, and navigateTo() calls things
+// like ensureSignedIn() and startFriendRequestListeners() that only
+// exist once those later files are in. fromPopState:true because the
+// browser's own initial history entry already matches this hash; we're
+// just catching it up to what that hash means, not creating a new one.
+document.addEventListener('DOMContentLoaded', function () {
+  var initialPage = (location.hash || '').slice(1);
+  if (NAV_HASH_PAGES.indexOf(initialPage) !== -1 && initialPage !== 'home') {
+    navigateTo(initialPage, { fromPopState: true });
+  }
+});
+
 
 
 
@@ -1646,6 +1505,24 @@ function dayGap(earlierDate, laterDate) {
 // ten-habit garden at about 37 KB and takes the whole question off
 // the table for the life of the app.
 //
+// THE CHARACTER IS AN EFFORT LEVEL, NOT A BOOLEAN (C1)
+// '0' is still "not done" and every other digit is still "done", so
+// nothing about the paragraphs above changes and no row anywhere
+// needs rewriting. What the digit now also says is how hard that day
+// was: '1' steady, '2' hard, '3' all out - see EFFORT_LEVELS below.
+//
+// The migration is nil, and that is not luck, it is why the ladder is
+// numbered from one. Every day ever recorded holds a '1', and '1'
+// means an ordinary day at the ordinary rate. A garden that never
+// touches the effort control writes exactly the rows it wrote before,
+// costs exactly the bytes it cost before, and grows exactly as fast.
+//
+// This buys ONE character per day and no more, which is a deliberate
+// limit rather than a first pass. Two characters would double the one
+// number this whole design exists to keep small, and the second
+// character's only job would be storing what each day's growth was
+// actually worth - see the note on buildGrowthSeries().
+//
 // WHAT IS SAFE TO ASSUME ABOUT THIS DATA
 // Nothing is derived from history. streak, totalGrowthDays,
 // maxStreak and maxGrowthDays are all their own stored fields, so
@@ -1671,6 +1548,52 @@ function dayGap(earlierDate, laterDate) {
 // reintroduces exactly the off-by-one this avoids.
 // ============================================
 
+// ============================================
+// Effort (C1/C2)
+//
+// How hard a given day was, logged by the person who had it, stored
+// as one digit in that day's slot in the packed history.
+//
+// EFFORT ONLY EVER ADDS. There is no bucket below Steady and that is
+// a design decision rather than an oversight: a ladder with an "easy"
+// rung on it charges you for honesty, and a tracker that grows less
+// when you tell the truth teaches you not to. So the question this
+// control asks is not "how much did today count" - every day counts
+// the same - it is "did today cost you more than usual", and the
+// only two answers that do anything are yes and very.
+//
+// Self-declared and unverified, exactly like impact, and the same
+// consequence follows: it must never reach a leaderboard.
+//
+// THE INDEX IS THE STORED CHARACTER. Do not reorder this array. '1'
+// has to keep meaning Steady forever, because every day in every
+// history that predates this feature holds a '1'.
+var EFFORT_LEVELS = [
+  null,                                                    // '0' = not done
+  { value: 1, label: 'Steady',  mult: 1,   hint: 'an ordinary day' },
+  { value: 2, label: 'Hard',    mult: 1.5, hint: 'it cost you' },
+  { value: 3, label: 'All out', mult: 2,   hint: 'as much as you had' },
+];
+
+var EFFORT_DEFAULT = 1;
+
+// Anything unrecognised reads as Steady rather than as nothing: a
+// character this version does not know is still a completed day, and
+// the safe reading of an unknown effort is the ordinary one.
+function normalizeEffort(value) {
+  var n = Math.floor(Number(value));
+  if (!isFinite(n) || n < 1 || n >= EFFORT_LEVELS.length) return EFFORT_DEFAULT;
+  return n;
+}
+
+function effortMultiplier(level) {
+  return EFFORT_LEVELS[normalizeEffort(level)].mult;
+}
+
+function getEffortLevel(level) {
+  return EFFORT_LEVELS[normalizeEffort(level)];
+}
+
 // 0-based day of the year. 1 January -> 0, 31 December -> 364 or 365.
 function dayOfYear(dateStr) {
   var p = String(dateStr).split('-');
@@ -1686,9 +1609,24 @@ function dateFromDayOfYear(year, index) {
 
 // Was this date completed? Safe against a missing history, a missing
 // year, and a row shorter than the index asked for.
+//
+// ANY non-zero character counts as done, which is what lets the
+// effort digits share the slot without a migration. charAt() past the
+// end of a trimmed row returns '', which is neither '0' nor done.
 function histGet(hist, dateStr) {
   var row = hist && hist[String(dateStr).slice(0, 4)];
-  return !!row && row.charAt(dayOfYear(dateStr)) === '1';
+  if (!row) return false;
+  var c = row.charAt(dayOfYear(dateStr));
+  return c !== '' && c !== '0';
+}
+
+// How hard this date was: 0 for a day that was not done at all, else
+// an effort level. An unknown character on a completed day reads as
+// Steady rather than as not-done - see normalizeEffort().
+function histLevel(hist, dateStr) {
+  if (!histGet(hist, dateStr)) return 0;
+  var row = hist[String(dateStr).slice(0, 4)];
+  return normalizeEffort(row.charAt(dayOfYear(dateStr)));
 }
 
 // Set or clear one day, in place.
@@ -1719,14 +1657,114 @@ function histSet(hist, dateStr, on) {
   if (!(i >= 0 && i <= 365)) return;
   if (dateFromDayOfYear(+year, i) !== key) return;
 
+  // `on` may be a boolean or an effort level. true is Steady, which
+  // is what every caller that predates effort meant by it and what
+  // every row already written holds.
+  var ch = '0';
+  if (on === true)          ch = String(EFFORT_DEFAULT);
+  else if (on && on !== '0') ch = String(normalizeEffort(on));
+
   var row = hist[year] || '';
   while (row.length < i) row += '0';
-  row = (row.slice(0, i) + (on ? '1' : '0') + row.slice(i + 1))
+  row = (row.slice(0, i) + ch + row.slice(i + 1))
           .replace(/0+$/, '');
 
   if (row) hist[year] = row;
   else delete hist[year];
 }
+
+// How many of the last `windowDays` days this task was completed on.
+//
+// The window ends today. includeToday exists for the garden's
+// show/hide growth toggle: while the growth is hidden the plant on
+// screen is yesterday's, and a gain figure that counted today would
+// be describing a plant that is not there.
+function recentGrowthDays(task, windowDays, includeToday) {
+  if (!task || !task.history) return 0;
+  var today = getTodayString();
+  var n = 0;
+  for (var i = includeToday ? 0 : 1; i < windowDays; i++) {
+    if (histGet(task.history, shiftDate(today, -i))) n++;
+  }
+  return n;
+}
+
+// The plant's day count on each of the last `windowDays` days,
+// oldest first.
+//
+// WALKED BACKWARDS FROM THE STORED TOTAL, not summed forwards out of
+// history, and that is the whole trick. history only goes back to the
+// day the field was introduced, so summing it forwards would report
+// a plant shorter than the one standing in the garden. Anchoring on
+// totalGrowthDays and subtracting each day's completion on the way
+// back means anything earned before history existed shows up as the
+// flat baseline it actually is, and today's end of the line always
+// matches the plant.
+function buildGrowthSeries(task, windowDays) {
+  var days  = clampGrowthPoints(task && task.totalGrowthDays);
+  var base  = taskBaseAward(task);
+  var today = getTodayString();
+  var out   = [];
+
+  for (var i = 0; i < windowDays; i++) {
+    var date = shiftDate(today, -i);
+    out.push({ date: date, days: days });
+    // Each completed day comes off at its OWN effort, which the row
+    // now records, times the task's base award, which it does not.
+    //
+    // BE CLEAR ABOUT WHAT IS STILL AN APPROXIMATION. C1 made the
+    // effort half of this exact and left the other half alone: the
+    // weight and the checklist ratio are still read at their CURRENT
+    // values, because one character per day has room for how hard a
+    // day was or for what it paid out, and it is spent on the former.
+    // Re-rate an assignment or edit a checklist weeks later and the
+    // earlier end of this one line shifts under it. Making that exact
+    // needs a second character per day, which doubles the field this
+    // whole packing exists to keep small, and is not worth it to fix
+    // a line on a chart.
+    if (task && histGet(task.history, date)) {
+      days = clampGrowthPoints(days - base * effortMultiplier(histLevel(task.history, date)));
+    }
+  }
+  out.reverse();
+  return out;
+}
+
+// The same window as recentGrowthDays(), in POINTS rather than in
+// ticks. The delta under a plant is a claim about how much the plant
+// grew, so it has to be measured in the thing the plant is sized by.
+//
+// Summed day by day rather than multiplied out, because since C1 the
+// days in a window are not worth the same as each other - a hard
+// Tuesday is worth half again what a steady Monday was.
+function recentGrowthPoints(task, windowDays, includeToday) {
+  if (!task) return 0;
+  var today = getTodayString();
+  var base  = taskBaseAward(task);
+  var total = 0;
+  for (var i = includeToday ? 0 : 1; i < windowDays; i++) {
+    var date  = shiftDate(today, -i);
+    var level = histLevel(task.history, date);
+    if (level) total += base * effortMultiplier(level);
+  }
+  return clampGrowthPoints(total);
+}
+
+// Did this task earn its growth TODAY, and how much?
+//
+// history is the authority rather than task.completed, and the
+// difference is entirely about assignments. A one-off finished last
+// week is still `completed` - that is what finished means for
+// something that never unticks - so reading the flag would have
+// credited it with growth it earned in another week, and the
+// show/hide toggle in 04 would have shrunk it by a day it did not
+// gain today.
+function growthEarnedToday(task) {
+  if (!task) return 0;
+  if (!histGet(task.history, getTodayString())) return 0;
+  return taskCompletionAward(task);
+}
+
 
 // Every completed date, ascending, as 'YYYY-MM-DD' strings.
 //
@@ -1742,7 +1780,7 @@ function histDates(hist) {
     var row = hist[year];
     if (typeof row !== 'string') continue;
     for (var i = 0; i < row.length; i++) {
-      if (row.charAt(i) === '1') out.push(dateFromDayOfYear(+year, i));
+      if (row.charAt(i) !== '0') out.push(dateFromDayOfYear(+year, i));
     }
   }
   return out.sort();
@@ -1772,13 +1810,13 @@ function firstCompletedDate(hist) {
     if (!Object.prototype.hasOwnProperty.call(hist, y)) continue;
     if (!/^\d{4}$/.test(y)) continue;
     if (typeof hist[y] !== 'string') continue;
-    if (hist[y].indexOf('1') === -1) continue;
+    if (!/[^0]/.test(hist[y])) continue;
     years.push(y);
   }
   if (!years.length) return null;
 
   years.sort();
-  return dateFromDayOfYear(+years[0], hist[years[0]].indexOf('1'));
+  return dateFromDayOfYear(+years[0], hist[years[0]].search(/[^0]/));
 }
 
 
@@ -1808,8 +1846,17 @@ function migrateHistory(raw) {
     if (!Object.prototype.hasOwnProperty.call(raw, k)) continue;
 
     // Already packed: a four-digit year mapping to a row string.
+    //
+    // The alphabet is normalised on the way through. A character this
+    // version does not recognise is a completed day at an effort
+    // level it cannot read, and the safe reading of that is Steady -
+    // never "not done", which would silently erase a day from the
+    // heatmap. Only '0' means not done.
     if (/^\d{4}$/.test(k) && typeof raw[k] === 'string') {
-      var row = raw[k].replace(/0+$/, '');
+      var row = raw[k].replace(/[^0-9]/g, '1').replace(/0+$/, '');
+      row = row.replace(/[0-9]/g, function (c) {
+        return c === '0' ? '0' : String(normalizeEffort(c));
+      });
       if (row) packed[k] = row;
       continue;
     }
@@ -1934,23 +1981,63 @@ var GROWTH_SCALE_K = 0.074 * Math.pow(GROWTH_SPEEDUP, 0.7);
 // ends up in the document, the app draws a plant rather than a
 // 1e18-scaled one, and writes the value back down on the next save.
 //
-// clampGrowthDays() is also the junk filter for this field, so it has
-// to survive everything a hand-edited document can hold: strings,
-// null, NaN, Infinity, negatives, fractions. Anything it cannot make
-// sense of becomes 0, which renders as a seed.
+// The clamp is also the junk filter for this field, so it has to
+// survive everything a hand-edited document can hold: strings, null,
+// NaN, Infinity, negatives, fractions. Anything it cannot make sense
+// of becomes 0, which renders as a seed.
 var MAX_GROWTH_DAYS = 1000;
 
-function clampGrowthDays(value) {
+// ---- Days became POINTS ------------------------------------------
+//
+// totalGrowthDays used to be a count of days and could only ever move
+// by one. It is now a POINT TOTAL, and one point is defined as
+// exactly what it always was: one completed day of an ordinary habit.
+//
+// That definition is the whole migration. Every stored number keeps
+// the meaning it had, every curve below is fed the same value it was
+// fed before, and a garden of plain daily habits is drawn and
+// measured identically to how it was drawn and measured yesterday.
+// What changes is only that the number can now move by something
+// other than one - see taskGrowthWeight() further down - and that it
+// no longer has to be a whole number.
+//
+// The FIELD NAME is deliberately left alone. A friend's browser
+// running yesterday's cached copy of this app reads totalGrowthDays
+// straight out of gardenSummaries (see 07); renaming it would show
+// them a plot full of seeds until they happened to reload.
+//
+// Two clamps now, where there was one, and the split is the reason
+// this block is worth reading twice. Growth is fractional. A STREAK
+// is not - it is a count of days and half a day is not a thing - and
+// neither is maxStreak. Handing a streak to the growth clamp would
+// have quietly let 3.5 through the moment anything wrote one.
+var GROWTH_POINT_DECIMALS = 3;
+
+function clampGrowthPoints(value) {
+  var n = Number(value);
+  if (!isFinite(n) || n <= 0) return 0;
+  if (n > MAX_GROWTH_DAYS) return MAX_GROWTH_DAYS;
+  // Rounded on the way through, not just on display. Points are added
+  // and subtracted across sessions and stored between them, so
+  // 0.1 + 0.2 drift would otherwise accumulate in the document itself
+  // and eventually surface as a plant that will not return to zero.
+  var f = Math.pow(10, GROWTH_POINT_DECIMALS);
+  return Math.round(n * f) / f;
+}
+
+// Whole days, and nothing else. Same ceiling, because a streak longer
+// than the age ceiling is junk by the same argument.
+function clampStreak(value) {
   var n = Number(value);
   if (!isFinite(n) || n <= 0) return 0;
   return Math.min(Math.floor(n), MAX_GROWTH_DAYS);
 }
 
-// The two curves below take a day count straight from a task, so they
-// clamp rather than trusting the caller: they are the last thing
+// The two curves below take a point total straight from a task, so
+// they clamp rather than trusting the caller: they are the last thing
 // standing between a bad number and the layout.
 function computeScaleForDays(totalGrowthDays) {
-  var days = clampGrowthDays(totalGrowthDays);
+  var days = clampGrowthPoints(totalGrowthDays);
   return 1 + GROWTH_SCALE_K * Math.pow(days, 0.7);
 }
 
@@ -1963,26 +2050,598 @@ function getStageIndexForDays(totalGrowthDays) {
   return idx;
 }
 
+// Points are still printed as "days grown" everywhere they were, and
+// that is not a shortcut left over from the rename - it is the point
+// of anchoring one point to one day. A number denominated in days can
+// be read as days.
+//
+// A whole number prints as a whole number, which is every plant in
+// every garden that only holds ordinary habits. Anything else gets
+// one decimal, because two would be noise at the size a plant is.
+function formatGrowthPoints(points) {
+  var n = clampGrowthPoints(points);
+  if (Math.abs(n - Math.round(n)) < 0.05) return String(Math.round(n));
+  return n.toFixed(1);
+}
+
+// ============================================
+// What a completion is worth
+//
+// Every habit is worth 1, exactly as before. An ASSIGNMENT is worth
+// what its owner said it was worth when they created it, because the
+// alternative was worse in a way that only shows up once one-offs
+// have their own plants: finishing a term paper and replying to an
+// email both grew a seed by one day, so the garden said they were the
+// same piece of work. They are not.
+//
+// The scale is denominated in days on purpose. "This was worth a
+// week" is a judgement a person can actually make about their own
+// afternoon; "this was worth 4.5 growth units" is not.
+//
+// SELF-DECLARED, AND NOT VERIFIED. Nothing stops someone marking
+// every errand Major. That is a tracker someone is keeping for
+// themselves, and the only person it misleads is its owner - the same
+// reasoning that already lets anyone tick a habit they did not do.
+// What it does mean is that impact must never reach a leaderboard.
+//
+// Habits do NOT read this field even when it is set, which is what
+// keeps per-habit difficulty a separate decision (A5) rather than
+// something that shipped by accident here: flipping it on later is a
+// change to this one function and the picker in 12, not to the
+// document format.
+var TASK_IMPACTS = [
+  { value: 1,  label: 'Small',  hint: 'a day of growth' },
+  { value: 3,  label: 'Medium', hint: 'about three days' },
+  { value: 7,  label: 'Large',  hint: 'about a week' },
+  { value: 14, label: 'Major',  hint: 'about a fortnight' },
+];
+
+var TASK_IMPACT_DEFAULT = 1;
+
+// Anything not on the list becomes the default rather than being
+// clamped to the nearest rung: an unrecognised number is a document
+// written by a newer version of the app or by hand, and in both cases
+// the honest reading is "no claim made".
+function normalizeImpact(value) {
+  var n = Number(value);
+  var ok = TASK_IMPACTS.some(function (i) { return i.value === n; });
+  return ok ? n : TASK_IMPACT_DEFAULT;
+}
+
+function taskGrowthWeight(task) {
+  if (!task || task.kind !== 'once') return 1;
+  return normalizeImpact(task.impact);
+}
+
+// ---- Partial credit from steps ------------------------------------
+//
+// A task with a checklist is worth the FRACTION of it that is done.
+// Ticking three of five steps and then ticking the task itself grows
+// the plant by three fifths of what finishing it would, because that
+// is what happened.
+//
+// This only ever comes up when someone ticks the parent by hand with
+// steps outstanding, since ticking the last step ticks the task for
+// them at full credit (see syncParentFromSubtasks). So the fraction
+// is not a punishment for using checklists - it is the answer to
+// "I am calling this done, but it isn't quite".
+//
+// A TICK IS NEVER WORTH NOTHING. Ticking the box with no steps done
+// at all would otherwise grow the plant by zero, which reads as the
+// app ignoring the click rather than as a considered judgement about
+// partial work. The floor is one step: claiming a task is done is
+// itself worth at least as much as doing one part of it.
+//
+// A task with no steps is worth its full weight, exactly as before -
+// which is every task in every existing garden, so nothing moves.
+function taskSubtaskRatio(task) {
+  var subs = (task && task.subtasks) || [];
+  if (!subs.length) return 1;
+  var done = 0;
+  subs.forEach(function (s) { if (s.done) done++; });
+  return Math.min(Math.max(done, 1), subs.length) / subs.length;
+}
+
+// What a completion is worth BEFORE the day it happened on gets a
+// say: the task's own weight, scaled by how much of its checklist is
+// done. Everything about this number is a property of the task.
+function taskBaseAward(task) {
+  return taskGrowthWeight(task) * taskSubtaskRatio(task);
+}
+
+// The effort logged for a given day, as a multiplier. A day that was
+// never ticked has no effort and no multiplier to apply.
+function taskEffortOn(task, dateStr) {
+  return histLevel(task && task.history, dateStr) || EFFORT_DEFAULT;
+}
+
+function taskEffortToday(task) {
+  return taskEffortOn(task, getTodayString());
+}
+
+// What ticking this task RIGHT NOW is worth. The single answer to
+// that question: 02 awards it, 04 rolls it back for the show/hide
+// toggle, and setTaskEffort() below re-tunes against it.
+//
+// Effort comes from TODAY'S slot in the history, which is the one
+// piece of this that is a property of the day rather than the task.
+// Before the box is ticked there is no slot yet, so it reads Steady -
+// which is exactly what the first tick of the day is worth.
+function taskCompletionAward(task) {
+  return clampGrowthPoints(taskBaseAward(task) * effortMultiplier(taskEffortToday(task)));
+}
+
+// Logging how hard today was, after the fact.
+//
+// Only ever about TODAY. Effort is a memory of a day you have just
+// had, and there is no interface anywhere for editing an older one -
+// which is also what keeps this inside the reversible window, so the
+// retune below is always allowed to move the plant.
+function setTaskEffort(task, level) {
+  if (!task) return;
+  var today = getTodayString();
+  // Nothing to log against a day that was not done.
+  if (!histGet(task.history, today)) return;
+
+  var prevAward = taskCompletionAward(task);
+  histSet(task.history, today, normalizeEffort(level));
+  retuneAward(task, prevAward);
+}
+
+// Can this task's credit still be taken back?
+//
+// A habit's tick is always today's, because the day boundary unticks
+// it overnight. An assignment's can be weeks old, and once a day has
+// rolled over the growth is banked - the same rule the boundary has
+// always enforced, and the reason neither a dropdown nor a checklist
+// gets to reopen it.
+function isAwardReversible(task) {
+  if (!task || !task.completed) return false;
+  if (task.kind !== 'once') return true;
+  return !task.doneAt || task.doneAt === getTodayString();
+}
+
+// THE INVARIANT THIS FILE IS BUILT ON: while a tick is reversible, the
+// plant is carrying exactly taskCompletionAward(task) for it.
+//
+// Everything that can change what a completion is worth - re-rating an
+// assignment, ticking a step, adding one, deleting one - has to call
+// this afterwards with the award as it was BEFORE the change. Without
+// it the two drift apart, and the drift is not theoretical: tick a
+// task at two steps of five, tick a third step, untick the task, and
+// the refund would hand back three fifths having paid out two.
+function retuneAward(task, prevAward) {
+  if (!task) return;
+  var next = taskCompletionAward(task);
+  if (next === prevAward) return;
+  if (!isAwardReversible(task)) return;
+
+  task.totalGrowthDays = clampGrowthPoints(
+    Math.max(0, (task.totalGrowthDays || 0) + (next - prevAward))
+  );
+  task.maxGrowthDays = Math.max(clampGrowthPoints(task.maxGrowthDays),
+                                task.totalGrowthDays);
+}
+
+// Changing what an assignment was worth AFTER ticking it moves the
+// plant by the difference, and only while that tick is still
+// reversible. Past that the credit is banked and this is a relabel,
+// exactly like every other retroactive edit in the app.
+function setTaskImpact(task, value) {
+  if (!task) return;
+  var prevAward = taskCompletionAward(task);
+  task.impact = normalizeImpact(value);
+  retuneAward(task, prevAward);
+}
+
+
+// ============================================
+// The task model
+//
+// A task used to be nine fields and every one of them was about
+// growth. It now has a TYPE, and the type is what the day boundary
+// below actually branches on:
+//
+//   kind: 'habit'  Repeats. Unticks itself overnight, carries a
+//                  streak, and is only due on the days its schedule
+//                  names. Every task in every garden that already
+//                  exists is one of these, which is why a document
+//                  with no kind field loads as a habit.
+//
+//   kind: 'once'   An assignment. Ticked once and finished: it does
+//                  NOT untick overnight, it holds no streak, and it
+//                  can never break one. It keeps its plant and the
+//                  growth day it earned.
+//
+// FIELDS ADDED, AND THE ONES DELIBERATELY NOT ADDED
+//   kind, schedule, createdAt, due, doneAt, notes, subtasks, impact.
+//
+// impact is read only for kind: 'once' - see taskGrowthWeight() in
+// the growth block above. Per-habit weight, effort logging, streak
+// freezes and pause windows are all designed for and none of them are
+// here. There is no migration cost to adding them later: the
+// normalizer in 02 supplies a default for every field it does not
+// find, so a document written today and one written before any of
+// this existed load identically.
+//
+// That is also why buildCleanTasks() OMITS a field sitting at its
+// default rather than writing a null. A garden of plain daily habits
+// still saves byte-for-byte the document it saved before this change,
+// and the whole tasks array is rewritten and re-downloaded on every
+// tick - see the packed-history note above - so bytes that mean
+// nothing are bytes worth not sending.
+// ============================================
+
+// Caps on everything a user can type into a task. These are document
+// size guards, not design opinions: free text on a task is the one
+// place someone can make their own saves expensive.
+var TASK_TEXT_MAX     = 120;
+var NOTE_MAX          = 500;
+var SUBTASK_MAX       = 20;
+var SUBTASK_TEXT_MAX  = 90;
+
+// Seven characters, index 0 = Sunday, to match Date#getUTCDay().
+var SCHEDULE_WEEKDAYS = '0111110';
+var SCHEDULE_WEEKENDS = '1000001';
+
+// Anything that is not a well-formed seven-day mask becomes null,
+// and so does a mask that means "every day" - daily is the default,
+// and the default is stored as absent rather than as '1111111'.
+// An all-zero mask is not a schedule, it is a deletion; it reads
+// back as daily rather than as a habit that can never be due.
+function normalizeSchedule(s) {
+  if (typeof s !== 'string') return null;
+  if (!/^[01]{7}$/.test(s))  return null;
+  if (s.indexOf('0') === -1) return null;
+  if (s.indexOf('1') === -1) return null;
+  return s;
+}
+
+function isCustomSchedule(task) {
+  return !!task && typeof task.schedule === 'string' && task.schedule.length === 7;
+}
+
+function isScheduledOnDayIndex(task, dayIndex) {
+  if (!isCustomSchedule(task)) return true;
+  return task.schedule.charAt(dayIndex) === '1';
+}
+
+// UTC like every other date function here, so a schedule cannot
+// shift by a day across a daylight-saving boundary.
+function dayOfWeek(dateStr) {
+  var p = String(dateStr).split('-');
+  return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])).getUTCDay();
+}
+
+function shiftDate(dateStr, delta) {
+  var p = String(dateStr).split('-');
+  return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + delta))
+           .toISOString().slice(0, 10);
+}
+
+// An assignment is never "scheduled": it is due, which is a different
+// question and is asked of task.due instead.
+function isScheduledOn(task, dateStr) {
+  if (!task || task.kind === 'once') return false;
+  return isScheduledOnDayIndex(task, dayOfWeek(dateStr));
+}
+
+function normalizeDateString(value) {
+  if (typeof value !== 'string') return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  return value;
+}
+
+// Subtasks are display-and-ordering only. They do not feed growth:
+// ticking the last one ticks the TASK, and the task is what grows.
+// Partial credit is a change to what a completion is worth and is
+// not wired up - see the list above.
+function normalizeSubtasks(raw) {
+  if (!Array.isArray(raw)) return [];
+  var out = [];
+  raw.forEach(function (s) {
+    if (!s || typeof s.text !== 'string') return;
+    if (out.length >= SUBTASK_MAX) return;
+    var text = s.text.trim().slice(0, SUBTASK_TEXT_MAX);
+    if (!text) return;
+    out.push({
+      id:   (typeof s.id === 'number' && s.id > 0) ? Math.floor(s.id) : 0,
+      text: text,
+      done: !!s.done,
+    });
+  });
+  // Ids have to be unique within a task or the click handlers pick
+  // the wrong step. Renumber a collision rather than drop the step.
+  var seen = {};
+  out.forEach(function (s, i) {
+    if (!s.id || seen[s.id]) s.id = i + 1;
+    seen[s.id] = true;
+  });
+  return out;
+}
+
+// The one place a brand new task is defined. Called from the add form
+// in 12; the normalizer in 02 has to agree with it field for field.
+function makeTask(id, text, catId) {
+  return {
+    id:                id,
+    text:              String(text || '').trim().slice(0, TASK_TEXT_MAX),
+    categoryId:        catId || 'misc',
+    skinId:            (typeof SKIN_DEFAULT_ID !== 'undefined') ? SKIN_DEFAULT_ID : null,
+    completed:         false,
+    streak:            0,
+    lastCleanDate:     null,
+    prevLastCleanDate: null,
+    totalGrowthDays:   0,
+    maxStreak:         0,
+    maxGrowthDays:     0,
+    history:           {},
+    posX:              null,
+    posY:              null,
+    kind:              'habit',
+    schedule:          null,
+    // Recorded from now on. Gardens that predate this field infer it
+    // from their first completed day instead - see the normalizer.
+    createdAt:         getTodayString(),
+    due:               null,
+    doneAt:            null,
+    notes:             '',
+    subtasks:          [],
+    // What finishing this is worth, in growth points, for an
+    // assignment. Carried by habits too so the shape is uniform, and
+    // ignored by them. 1 is both the default and what every task in
+    // every existing garden effectively already had.
+    impact:            TASK_IMPACT_DEFAULT,
+  };
+}
+
+
+// ============================================
+// Editing a task
+//
+// None of these save or render. The call sites in 12-tasks-page.js do
+// both, once, after the edit - so changing three fields in the detail
+// sheet is still three saves and the throttle coalesces them.
+// ============================================
+function setTaskField(task, field, value) {
+  if (!task) return;
+
+  if (field === 'text') {
+    var text = String(value || '').trim().slice(0, TASK_TEXT_MAX);
+    // An empty name would leave a nameless plant and no way back to
+    // it, so the old name stands.
+    if (text) task.text = text;
+    return;
+  }
+  if (field === 'notes') {
+    task.notes = String(value || '').slice(0, NOTE_MAX);
+    return;
+  }
+  if (field === 'due') {
+    task.due = normalizeDateString(value);
+    return;
+  }
+  if (field === 'categoryId') {
+    // Changing the plot changes the SPECIES, so refuse an id that has
+    // no artwork behind it rather than drawing a fallback forever.
+    var known = CATEGORIES.some(function (c) { return c.id === value; });
+    if (known) task.categoryId = value;
+    return;
+  }
+}
+
+// Switching type is not just a label. A streak is a claim about
+// consecutive days and an assignment has none, so it goes; a due date
+// is meaningless on something that repeats, so that goes the other
+// way. maxStreak is left alone in both directions - it already
+// happened, and the banked figure is never given back.
+function setTaskKind(task, kind) {
+  var next = (kind === 'once') ? 'once' : 'habit';
+  if (!task || task.kind === next) return;
+  task.kind = next;
+
+  if (next === 'once') {
+    task.streak   = 0;
+    task.schedule = null;
+    task.doneAt   = task.completed ? getTodayString() : null;
+    // A habit becoming an assignment is worth what an assignment with
+    // no claim on it is worth. Anything else would silently multiply
+    // a plant that is already ticked, on a change of TYPE.
+    task.impact   = normalizeImpact(task.impact);
+  } else {
+    task.due    = null;
+    task.doneAt = null;
+    // A finished assignment turned back into a habit is a habit that
+    // has been done today, which is what completed already means.
+    if (task.completed) task.streak = Math.max(task.streak || 0, 1);
+  }
+}
+
+function setTaskSchedule(task, schedule) {
+  if (!task) return;
+  task.schedule = normalizeSchedule(schedule);
+}
+
+function toggleTaskScheduleDay(task, dayIndex) {
+  if (!task) return;
+  if (!(dayIndex >= 0 && dayIndex <= 6)) return;
+  var s = isCustomSchedule(task) ? task.schedule : '1111111';
+  var flipped = s.slice(0, dayIndex) +
+                (s.charAt(dayIndex) === '1' ? '0' : '1') +
+                s.slice(dayIndex + 1);
+  // Turning off the last remaining day would leave a habit that can
+  // never come due. Read it as "no schedule" and fall back to daily.
+  if (flipped.indexOf('1') === -1) flipped = '1111111';
+  setTaskSchedule(task, flipped);
+}
+
+// ============================================
+// Was this task due on a given day?
+//
+// The single authority for the question, because three different
+// things ask it: the day boundary above (did a streak survive), the
+// heatmap denominator in 05 (how much was owed that day), and the
+// weekly and monthly counts on the Stats cards.
+//
+// Before the schedule field existed, every habit was due every day
+// and the answer was trivially yes. It no longer is, and getting it
+// wrong in either direction is visible: too generous and a weekend
+// reads as two days of failure, too strict and a bonus completion
+// vanishes out of the chart.
+//
+// ASSIGNMENTS ALWAYS ANSWER NO, which looks wrong and is not. A
+// one-off is not owed on any particular past day - it is owed NOW,
+// until it is done, and there is no single day in the year it can be
+// said to have failed on. Its overdue-ness belongs on the Tasks page,
+// where it is actionable, rather than as a permanent red square in
+// the year. It still reaches the chart, through the other half of the
+// rule in dayTally() (05): a day that was DONE counts whether or not
+// it was due.
+function wasDueOn(task, dateStr) {
+  if (!task) return false;
+  if (task.kind === 'once') return false;
+  // String comparison is safe and intended: 'YYYY-MM-DD' sorts
+  // lexicographically in the same order it sorts chronologically,
+  // which is the whole reason the format is used throughout.
+  if (dateStr < taskStartDate(task)) return false;
+  return isScheduledOnDayIndex(task, dayOfWeek(dateStr));
+}
+
+// The day a task started counting.
+//
+// createdAt is exact for anything planted since the task model
+// landed. For anything older it was backfilled by the normalizer in
+// 02 from the first day the task was ever completed, which is an
+// approximation that errs towards flattering the past - a habit
+// created in January but first kept in March is simply absent from
+// January and February rather than counted as two months of misses.
+//
+// A task with neither has never been completed at all, so there is no
+// past to speak of: it starts today.
+function taskStartDate(task) {
+  return (task && task.createdAt) || getTodayString();
+}
+
+
+function subtasksAllDone(task) {
+  var subs = (task && task.subtasks) || [];
+  if (!subs.length) return false;
+  return subs.every(function (s) { return s.done; });
+}
+
+// Steps and the task are kept in step in BOTH directions: ticking the
+// last step ticks the task, and unticking a step afterwards unticks
+// it again. The second half is conditional on the task having been
+// fully stepped-out BEFORE the change, so a task that was ticked by
+// hand is never untucked by someone adding a step to it later.
+//
+// This goes through toggleTask() in 02 rather than setting completed
+// here, because that function owns growth: it is the only place a day
+// is added to or taken off a plant, and the only place today's
+// history bit is written.
+function syncParentFromSubtasks(task, wasAllDone) {
+  if (!task || !(task.subtasks || []).length) return;
+  var allDone = subtasksAllDone(task);
+  if (allDone && !task.completed)                 toggleTask(task.id, true);
+  else if (!allDone && wasAllDone && task.completed) toggleTask(task.id, false);
+}
+
+// All three mutators below follow the same three beats, and the ORDER
+// is load-bearing: read the award, change the steps, retune, then
+// sync. Retuning before the sync is what makes the sync's own refund
+// correct - by the time syncParentFromSubtasks() can call toggleTask()
+// to untick the parent, the plant is already carrying the award that
+// toggleTask is about to take back off it.
+function addSubtask(task, text) {
+  if (!task) return;
+  if (!Array.isArray(task.subtasks)) task.subtasks = [];
+  if (task.subtasks.length >= SUBTASK_MAX) return;
+  var clean = String(text || '').trim().slice(0, SUBTASK_TEXT_MAX);
+  if (!clean) return;
+
+  var prevAward = taskCompletionAward(task);
+  var maxId = 0;
+  task.subtasks.forEach(function (s) { if (s.id > maxId) maxId = s.id; });
+  task.subtasks.push({ id: maxId + 1, text: clean, done: false });
+  retuneAward(task, prevAward);
+  // Adding an unticked step to a finished task reopens it, which is
+  // the only sensible reading of "there is more to do".
+  syncParentFromSubtasks(task, true);
+}
+
+function toggleSubtask(task, subId) {
+  if (!task || !Array.isArray(task.subtasks)) return;
+  var was       = subtasksAllDone(task);
+  var prevAward = taskCompletionAward(task);
+  task.subtasks.forEach(function (s) { if (s.id === subId) s.done = !s.done; });
+  retuneAward(task, prevAward);
+  syncParentFromSubtasks(task, was);
+}
+
+function removeSubtask(task, subId) {
+  if (!task || !Array.isArray(task.subtasks)) return;
+  var was       = subtasksAllDone(task);
+  var prevAward = taskCompletionAward(task);
+  task.subtasks = task.subtasks.filter(function (s) { return s.id !== subId; });
+  retuneAward(task, prevAward);
+  syncParentFromSubtasks(task, was);
+}
 
 // ============================================
 // Day-boundary logic
 // ============================================
+// How far back a single rollover will look before it gives up and
+// calls the streak broken. Someone returning after more than a year
+// has broken it under any reading, and the loop should not be
+// unbounded just because lastResetDate can be arbitrarily old.
+var MAX_STREAK_LOOKBACK_DAYS = 400;
+
+// Did this habit miss a day it was actually supposed to be done, in
+// the window between the last rollover and today?
+//
+// The old test was "was yesterday ticked", which is right only for a
+// habit scheduled every day. A school-days habit is not missed on a
+// Sunday, and breaking its streak every weekend made the schedule
+// feature a lie, so the window is now walked a day at a time and
+// unscheduled days are skipped.
+//
+// history is the source of truth for every day except the last
+// rollover itself, whose result is still sitting unmerged in
+// task.completed - toggleTask() writes both in lockstep, so reading
+// either is safe, and reading both is safest.
+function missedAScheduledDay(task, fromDate, toDate) {
+  // No prior rollover recorded at all. Nothing can be verified, and
+  // the old behaviour was to break; keep it.
+  if (!fromDate) return true;
+
+  var gap = dayGap(fromDate, toDate);
+  if (gap <= 0) return false;
+  if (gap > MAX_STREAK_LOOKBACK_DAYS) return true;
+
+  for (var i = 0; i < gap; i++) {
+    var day = shiftDate(fromDate, i);
+    if (!isScheduledOn(task, day)) continue;
+    var done = (i === 0)
+      ? (task.completed || histGet(task.history, day))
+      : histGet(task.history, day);
+    if (!done) return true;
+  }
+  return false;
+}
+
 function applyDayBoundaries() {
   var today   = getTodayString();
   var changed = false;
 
   if (lastResetDate !== today) {
-    var gap = lastResetDate ? dayGap(lastResetDate, today) : null;
-
     tasks.forEach(function (task) {
-      // gap === 1: task.completed still reflects "yesterday" - if it
-      // wasn't done, that day was missed, so the streak breaks now.
-      // gap > 1 (or no prior reset date at all): at least one full
-      // day passed with no rollover recorded, which can only mean it
-      // was missed - the streak always breaks in that case too.
-      var survivedYesterday = (gap === 1) && task.completed;
+      // Assignments do not roll over. A finished one stays finished
+      // and keeps its tick; an unfinished one stays unfinished and
+      // simply becomes more overdue. Neither holds a streak, so
+      // there is nothing here for them at all.
+      if (task.kind === 'once') return;
 
-      if (!survivedYesterday && task.streak > 0) {
+      if (missedAScheduledDay(task, lastResetDate, today) && task.streak > 0) {
         task.streak = 0;
         changed = true;
       }
@@ -1990,6 +2649,12 @@ function applyDayBoundaries() {
         task.completed = false;
         changed = true;
       }
+      // Steps come back unticked with the task they belong to. A
+      // checklist that stayed ticked overnight would auto-complete
+      // tomorrow the moment anything called syncParentFromSubtasks.
+      (task.subtasks || []).forEach(function (s) {
+        if (s.done) { s.done = false; changed = true; }
+      });
     });
 
     lastResetDate = today;

@@ -6,6 +6,13 @@
   <title>DISCIPLANT - daily discipline garden</title>
   <link rel="stylesheet" href="style.css" />
 
+  <!-- DRAFT, LOCAL ONLY - reuses the .story-card recipe built for
+       story.html so the mission block below matches that page. Not
+       committed; pull this link (and the .home-mission block in
+       #page-home) back out, or fold the rules into style.css proper,
+       once the wording and placement are actually approved. -->
+  <link rel="stylesheet" href="story.css" />
+
   <!-- Icons. The same sprout circle the account picture uses, drawn
        once more in favicon.svg rather than shared with 02's
        AVATAR_SPROUT_SVG: a tab icon is 16px, so the plant is scaled up
@@ -439,6 +446,58 @@
         </button>
       </div>
 
+      <!-- MISSION - DRAFT, LOCAL ONLY.
+
+           v4 (SAVED, not deleted): the flat-silver metal plaque -
+           still fully defined in story.css under .mission-plate /
+           .mission-screw / .mission-plate-shine, just not used right
+           now. Commented out below rather than removed so it's a
+           one-line swap to bring back if the wood version (active,
+           just under this comment) doesn't work out.
+
+      <section class="mission-plate" style="--tilt: -0.7deg;">
+        <span class="mission-screw mission-screw-tl" aria-hidden="true"></span>
+        <span class="mission-screw mission-screw-tr" aria-hidden="true"></span>
+        <span class="mission-screw mission-screw-bl" aria-hidden="true"></span>
+        <span class="mission-screw mission-screw-br" aria-hidden="true"></span>
+        <span class="mission-plate-shine" aria-hidden="true"></span>
+        <h2 class="mission-plate-title">Our Mission</h2>
+        <p class="mission-plate-line">Disciplant is trying to help you set real goals, build the habits that actually get you there, and watch yourself reach them — one day, one habit, one plant at a time.</p>
+        <a class="mission-plate-link" href="story.html">Read our full story &rarr;</a>
+      </section>
+      -->
+
+      <!-- v5 (ACTIVE): a wooden plate instead of metal - the theory
+           being that a metal object was the mismatch, not just how
+           reflective it was. Built from the SAME bark/wood-grain
+           recipe as .home-tag (the wordmark plank just above), with
+           two drilled holes and a rope loop on each side suggesting
+           it's tied to something behind the scene, the way a hung
+           sign would be. Heading is carved with the SAME HB_GLYPHS
+           lettering the four button signs above use (via
+           story-carve.js, now also loaded on this page - see the
+           STORY_WOOD_PLATE color trio there), not a CSS font. Body
+           line and link are plain Baloo 2 / Nunito, same as the rest
+           of the app - no borrowed fonts this time. -->
+      <section class="mission-plate-wood" style="--tilt: -0.6deg;">
+        <span class="mission-wood-hole mission-wood-hole-l" aria-hidden="true"></span>
+        <span class="mission-wood-hole mission-wood-hole-r" aria-hidden="true"></span>
+        <svg class="mission-wood-rope mission-wood-rope-l" viewBox="0 0 30 46" aria-hidden="true">
+          <path d="M15 8 C6 4 3 -6 6 -16" stroke="#B98A4E" stroke-width="4" stroke-linecap="round" fill="none"/>
+          <path d="M15 8 C6 4 3 -6 6 -16" stroke="#8A5F32" stroke-width="4" stroke-linecap="round" fill="none" stroke-dasharray="1.5 3.5"/>
+        </svg>
+        <svg class="mission-wood-rope mission-wood-rope-r" viewBox="0 0 30 46" aria-hidden="true">
+          <path d="M15 8 C24 4 27 -6 24 -16" stroke="#B98A4E" stroke-width="4" stroke-linecap="round" fill="none"/>
+          <path d="M15 8 C24 4 27 -6 24 -16" stroke="#8A5F32" stroke-width="4" stroke-linecap="round" fill="none" stroke-dasharray="1.5 3.5"/>
+        </svg>
+        <h2 class="mission-wood-title">
+          <span class="sr-only">Our Mission</span>
+          <span class="mission-wood-cut" id="missionCutTitle" role="img" aria-hidden="true"></span>
+        </h2>
+        <p class="mission-wood-line">Disciplant is trying to help you set real goals, build the habits that actually get you there, and watch yourself reach them — one day, one habit, one plant at a time.</p>
+        <a class="mission-wood-link" href="story.html">Read our full story &rarr;</a>
+      </section>
+
       <!-- ABOUT PANEL
 
            A board of the same pale stock the tagline is cut into,
@@ -613,6 +672,16 @@
 
   <!-- ================================================
        PAGE: TASKS
+
+       Four regions, all of them filled by 12-tasks-page.js:
+       a header that answers "what is left today", one add form for
+       both kinds of task, a strip of plots that filters, and the
+       list itself grouped into sections rather than tabs.
+
+       Every row opens the detail sheet further down this file. That
+       sheet is where the task model lives - type, schedule, steps,
+       notes, due date, plot, skin - because a checkbox row has room
+       for exactly one fact and there are now rather more than one.
        ================================================ -->
   <div id="page-tasks" class="page page-tasks hidden">
 
@@ -621,38 +690,88 @@
     <!-- Main tasks content - hidden until auth resolves -->
     <div id="mainContent" class="tasks-content hidden">
 
-      <!-- Shared add-task form (always visible, category pre-set by active tab) -->
-      <div class="task-add-section">
-        <form id="taskForm" class="task-form">
+      <div class="tp-header" id="tpHeader"></div>
+
+      <!-- One form, two kinds of task. The type switch decides which
+           fields are read, so an assignment is two keystrokes away
+           from a habit rather than behind a separate flow. -->
+      <form id="tpAddForm" class="tp-add" autocomplete="off">
+        <div class="tp-add-main">
           <input
             type="text"
-            id="taskInput"
+            id="tpAddInput"
+            class="tp-input"
             placeholder="e.g. Read for 20 min"
+            aria-label="What do you want to plant?"
+            maxlength="120"
             autocomplete="off"
             required
           />
-          <select id="categorySelect" class="cat-select">
-            <!-- options populated from CATEGORIES in script.js -->
-          </select>
-          <button type="submit">Add</button>
-        </form>
-      </div>
+          <button type="submit" class="tp-add-btn">Add</button>
+        </div>
+        <div class="tp-add-opts">
+          <div class="tp-seg" id="tpAddKind" role="group" aria-label="Task type">
+            <button type="button" class="tp-seg-btn active" data-kind="habit">Habit</button>
+            <button type="button" class="tp-seg-btn" data-kind="once">Assignment</button>
+          </div>
+          <select id="tpAddCategory" class="tp-select" aria-label="Which plot"></select>
+          <!-- Hidden rather than removed, so a due date survives a
+               toggle back and forth. -->
+          <input type="date" id="tpAddDue" class="tp-select tp-date hidden" aria-label="Due date" />
+        </div>
+      </form>
 
-      <!-- Category plot: one card per plant (populated by JS) -->
-      <div class="plot-grid" id="catSubnav"></div>
+      <!-- The plots. A filter now, not a set of tabs. -->
+      <div class="tp-plot" id="tpPlot"></div>
+
+      <div class="tp-seg tp-scope" id="tpScope" role="group" aria-label="Which tasks to show"></div>
+
+      <div class="tp-sections" id="tpSections"></div>
 
       <!-- The ground under the plot, and the one-tap way into it. -->
       <button class="plot-gate" id="plotGate">Walk out to the garden</button>
 
-      <!-- "All" tab panel -->
-      <div id="tab-all" class="task-tab-panel">
-        <ul id="taskList" class="task-list"></ul>
-        <p id="emptyState" class="empty-state">No tasks yet - add your first one above.</p>
-      </div>
+    </div>
+  </div>
 
-      <!-- Category tab panels (populated by JS) -->
-      <div id="taskTabsContainer"></div>
+  <!-- ================================================
+       TASK DETAIL SHEET
 
+       Lives outside #page-tasks so it can sit above everything and
+       is not hidden along with the page. Its body is rebuilt from
+       scratch on every render by tpRenderSheet(), so every listener
+       inside it is delegated.
+       ================================================ -->
+  <div id="taskSheet" class="tp-sheet hidden" aria-hidden="true">
+    <div class="tp-sheet-backdrop"></div>
+    <div class="tp-sheet-card" role="dialog" aria-modal="true" aria-label="Task details">
+      <button type="button" class="tp-sheet-close" id="taskSheetClose" aria-label="Close">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>
+      </button>
+      <div class="tp-sheet-body" id="taskSheetBody"></div>
+    </div>
+  </div>
+
+  <!-- ================================================
+       EFFORT PROMPT
+
+       Asked once, every time a task is ticked. A CENTRED dialog
+       rather than a strip under the row, because this is a
+       question rather than a piece of the list: it wants an
+       answer before anything else happens, and a control that
+       sits in the flow gets scrolled past instead of answered.
+
+       Sits after the task sheet in the source and above it in z,
+       because ticking the last step of a checklist INSIDE the
+       sheet opens this on top of it.
+
+       Body is rebuilt by tpRenderAsk() in 12-tasks-page.js on
+       every render, so every listener in it is delegated.
+       ================================================ -->
+  <div id="effortAsk" class="tp-ask hidden" aria-hidden="true">
+    <div class="tp-ask-backdrop"></div>
+    <div class="tp-ask-card" role="dialog" aria-modal="true" aria-label="How was it?">
+      <div class="tp-ask-body" id="effortAskBody"></div>
     </div>
   </div>
 
@@ -679,6 +798,9 @@
           <h3 class="stats-card-title">Yearly Activity</h3>
           <div id="statsOverallHeatmap" class="heatmap-wrap"></div>
           <div class="heatmap-legend">
+            <span class="heatmap-legend-swatch heat-stage-off"></span>
+            <span>Nothing due</span>
+            <span class="heatmap-legend-gap"></span>
             <span>Less</span>
             <span class="heatmap-legend-swatch heat-stage-0"></span>
             <span class="heatmap-legend-swatch heat-stage-1"></span>
@@ -687,6 +809,14 @@
             <span>More</span>
           </div>
         </div>
+        <!-- C5. The garden cannot show a trend - a day of growth is
+             sub-perceptual by design - so the same data goes in a
+             chart, where it is legible. -->
+        <div class="stats-heatmap-card">
+          <h3 class="stats-card-title">Growth</h3>
+          <div id="statsOverallGrowth" class="growth-wrap"></div>
+        </div>
+
         <div id="statsOverallCards" class="stats-cards-grid"></div>
       </div>
 
@@ -696,12 +826,21 @@
           <h3 class="stats-card-title" id="statsIndividualHeatmapTitle">Yearly Activity</h3>
           <div id="statsIndividualHeatmap" class="heatmap-wrap"></div>
           <div class="heatmap-legend">
-            <span>Not completed</span>
+            <span class="heatmap-legend-swatch heat-stage-off"></span>
+            <span>Not scheduled</span>
+            <span class="heatmap-legend-gap"></span>
             <span class="heatmap-legend-swatch heat-stage-0"></span>
+            <span>Missed</span>
+            <span class="heatmap-legend-gap"></span>
             <span class="heatmap-legend-swatch heat-stage-3"></span>
             <span>Completed</span>
           </div>
         </div>
+        <div class="stats-heatmap-card">
+          <h3 class="stats-card-title">Height over time</h3>
+          <div id="statsIndividualGrowth" class="growth-wrap"></div>
+        </div>
+
         <div id="statsIndividualCards" class="stats-cards-grid"></div>
       </div>
 
@@ -950,6 +1089,12 @@
   <!-- Firebase project keys + App Check activation -->
   <script src="firebase-config.js"></script>
 
+  <!-- DRAFT, LOCAL ONLY - carves the mission plaque's heading with
+       the same HB_GLYPHS lettering 01-app-core.js uses for the
+       marker button signs. Independent of app state/auth, so load
+       order relative to the scripts below doesn't matter. -->
+  <script src="story-carve.js"></script>
+
   <script src="01-app-core.js"></script>
   <script src="02-auth-tasks.js"></script>
   <script src="03-plant-art.js"></script>
@@ -957,6 +1102,13 @@
   <script src="05-stats-app.js"></script>
   <script src="06-friends.js"></script>
   <script src="07-friend-garden.js"></script>
+
+  <!-- The tasks page. Numbered 12 because 08 and 09 are taken by
+       files that do not ship, and 10/11 were already written when
+       this one was split out. Load order still matters: it calls
+       getPlantSVG and escapeHtml (04), skinPipHtml and
+       openPlantSkins (05), and the whole task model (01). -->
+  <script src="12-tasks-page.js"></script>
 
   <!-- Account data: export and permanent deletion. Numbered 10 because
        08 and 09 were taken; loaded here, ahead of both, because unlike

@@ -86,9 +86,11 @@ var PLANT_HEIGHT_MIDPOINT_POW =
 
 function computeHeightMeters(growthDays) {
   // Same ceiling and same junk filter as the growth scale (see
-  // clampGrowthDays in 01), so the number under a plant can never
-  // disagree with the plant above it.
-  var days = clampGrowthDays(growthDays);
+  // clampGrowthPoints in 01), so the number under a plant can never
+  // disagree with the plant above it. Fractional points fall straight
+  // through both curves - they were always continuous functions that
+  // only ever happened to be fed whole numbers.
+  var days = clampGrowthPoints(growthDays);
 
   var grown = Math.pow(days, PLANT_HEIGHT_STEEPNESS);
   var surge = PLANT_HEIGHT_CANOPY_M * grown / (PLANT_HEIGHT_MIDPOINT_POW + grown);
@@ -101,6 +103,53 @@ function computeHeightMeters(growthDays) {
 
   return PLANT_SEED_HEIGHT_M + surge + ancient;
 }
+
+// ---- C4: the number that answers "did this actually do anything" --
+//
+// An absolute height cannot answer that question. Past the first
+// fortnight a day of growth is a fraction of a percent of size, so
+// the plant looks identical and the tag reads almost the same number
+// it read yesterday. A DELTA answers it directly: the same plant,
+// minus the days it earned this week.
+//
+// Derived, never stored. It is the height function applied twice, so
+// it cannot drift out of step with the plant above it and it costs
+// no field on a document that is rewritten on every tick.
+var HEIGHT_GAIN_WINDOW_DAYS = 7;
+
+function computeHeightGainMeters(task, drawnDays) {
+  // Match the plant being drawn. When today's growth is hidden,
+  // drawnDays is behind the stored total and today must come out of
+  // the window too - see getDailyDisplayDays().
+  var includeToday = drawnDays >= clampGrowthPoints(task && task.totalGrowthDays);
+  // POINTS, not ticks. The two were the same number until an
+  // assignment was allowed to be worth more than a day; measuring the
+  // delta in ticks would have reported a Major assignment's fortnight
+  // of growth as one day's worth of metres.
+  var gained = recentGrowthPoints(task, HEIGHT_GAIN_WINDOW_DAYS, includeToday);
+  if (gained <= 0) return 0;
+
+  var before = Math.max(0, drawnDays - gained);
+  return computeHeightMeters(drawnDays) - computeHeightMeters(before);
+}
+
+// Built in one place because two call sites write this tag: the
+// render below, and the in-place update the show/hide toggle does
+// without re-rendering the scene.
+function heightTagHtml(task, drawnDays) {
+  var gain = computeHeightGainMeters(task, drawnDays);
+  return (
+    '<span class="plant-height-main">' +
+      formatHeightMeters(computeHeightMeters(drawnDays)) +
+    '</span>' +
+    // A week with no growth in it says nothing rather than "+0 cm".
+    // The absence is already legible from the streak on the label.
+    (gain > 0
+      ? '<span class="plant-height-gain">+' + formatHeightMeters(gain) + ' this week</span>'
+      : '')
+  );
+}
+
 
 // Centimetres below a metre, metres above it - "0.02 m" is not how
 // anyone describes a seed. Sub-10cm keeps one decimal so the first
@@ -1351,8 +1400,15 @@ function persistDailyGrowthShown() {
 // exactly what it would show if this button did not exist.
 function getDailyDisplayDays(task) {
   var days = Math.max(0, task.totalGrowthDays || 0);
-  if (dailyGrowthShown || !task.completed) return days;
-  return Math.max(0, days - 1);
+  if (dailyGrowthShown) return days;
+  // What this plant actually gained TODAY, which is not always one
+  // and is not always anything. growthEarnedToday() in 01 reads the
+  // history bit rather than task.completed, and that fixes a wrong
+  // answer this function has been giving since assignments landed: a
+  // one-off finished last week is permanently `completed`, so the old
+  // test hid a day of growth it did not earn today, every day,
+  // forever.
+  return Math.max(0, days - growthEarnedToday(task));
 }
 
 // The growth-only scale (before depth) that the garden draws a plant
@@ -1401,7 +1457,7 @@ function computeTaskMomentum(task) {
 // the flag, so a completed task always has at least one day on it.
 function getGrownTodayTasks() {
   return tasks.filter(function (task) {
-    return task.completed && (task.totalGrowthDays || 0) > 0;
+    return growthEarnedToday(task) > 0 && (task.totalGrowthDays || 0) > 0;
   });
 }
 
@@ -1538,7 +1594,7 @@ function resizePlantForToggle(task) {
   // the one on screen.
   var heightTag = wrap.querySelector('.plant-height-tag');
   if (heightTag) {
-    heightTag.textContent = formatHeightMeters(computeHeightMeters(days));
+    heightTag.innerHTML = heightTagHtml(task, days);
   }
 
   // The waiting glow is an invitation to press the button, so it
@@ -1865,7 +1921,7 @@ function renderGarden() {
     // (toggleTask in 02 raises totalGrowthDays), so an unticked plant
     // has nothing to subtract and is drawn the same in both positions
     // of the toggle - it simply does not move.
-    var readyToGrow = task.completed && totalGrowthDays > 0 && !dailyGrowthShown;
+    var readyToGrow = growthEarnedToday(task) > 0 && totalGrowthDays > 0 && !dailyGrowthShown;
 
     // Through the same helper the toggle animation calls, so the
     // rendered size and the animated size cannot be computed two
@@ -1886,7 +1942,10 @@ function renderGarden() {
     // right now", and that count is the same fact whichever way the
     // button happens to be set.
     var streakPart = streak > 0 ? ' · ' + streak + ' day streak' : '';
-    var subLabel   = totalGrowthDays + ' days grown' + streakPart;
+    // Still "days grown", and still honest: one growth point IS one
+    // day of an ordinary habit, so a number denominated in points
+    // reads correctly as days. See formatGrowthPoints() in 01.
+    var subLabel   = formatGrowthPoints(totalGrowthDays) + ' days grown' + streakPart;
 
     // Depth multiplier stacks with the growth-based scale - a fully
     // grown far-row plant is still smaller than a fully grown
@@ -1918,7 +1977,8 @@ function renderGarden() {
     wrap.setAttribute(
       'title',
       task.text + ' · ' + cat.name + ' (' + cat.species + ') · ' +
-      totalGrowthDays + ' days grown' + (streak > 0 ? ' · ' + streak + ' day streak' : '') +
+      formatGrowthPoints(totalGrowthDays) + ' days grown' +
+      (streak > 0 ? ' · ' + streak + ' day streak' : '') +
       (gardenEditMode ? ' · drag to move' : '')
     );
 
@@ -1935,7 +1995,7 @@ function renderGarden() {
     // art itself.
     var heightTag = document.createElement('div');
     heightTag.className = 'plant-height-tag';
-    heightTag.textContent = formatHeightMeters(heightMeters);
+    heightTag.innerHTML = heightTagHtml(task, heightDays);
     wrap.appendChild(heightTag);
 
     // Label - fixed size, sits below the plant at ground level.
