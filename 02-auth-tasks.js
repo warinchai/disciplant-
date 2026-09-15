@@ -194,43 +194,67 @@ function writeUserProfileDoc(uid, profileData, opensWindow, retryIndex) {
 
   db.collection('users').doc(uid).set(payload, { merge: true })
     .catch(function (error) {
-      if (!isRateLimitDenial(error)) {
-        console.error('DISCIPLANT: could not save profile doc:', error);
-        return;
-      }
+      classifyDenial(error, function (kind) { onProfileWriteDenied(kind, error); });
+    });
 
-      // The optimistic window this attempt recorded never actually
-      // opened, so take it back. Leaving it would mark the reading as
-      // local, and the listener in 06 only adopts the server's real
-      // rlStart while the client has no reading of its own - so a
-      // false one would keep this session guessing wrong all over
-      // again.
+  function onProfileWriteDenied(kind, error) {
+    if (kind === 'appcheck') {
+      // Take the optimistic window back. The rate-limit branch below
+      // does this because the rules said no; here the request never
+      // reached the rules at all, so the local reading is even less
+      // grounded — nothing opened, and leaving a false rlStart behind
+      // would keep this session guessing wrong long after attestation
+      // recovers.
       if (opensWindow) {
         userRlStartMs      = 0;
         userRlStartIsLocal = false;
       }
 
-      var next = (typeof retryIndex === 'number') ? retryIndex + 1 : 0;
-      if (next < PROFILE_RETRY_DELAYS_MS.length) {
-        setTimeout(function () {
-          writeUserProfileDoc(uid, profileData, !opensWindow, next);
-        }, PROFILE_RETRY_DELAYS_MS[next]);
-        return;
-      }
-
-      // Clear the signature so this is attempted again on the next
-      // ID-token refresh. Without that, the guard in
-      // ensureUserProfileDoc() would treat the change as already saved
-      // and the update would be lost.
+      // Clear the signature for the same reason the exhausted-retry
+      // path below does — the next ID-token refresh should try again,
+      // by which time attestation may well be working.
       lastProfileSignature = null;
-      console.error(
-        'DISCIPLANT: profile write denied on both rate-limit branches. This ' +
-        'account has written to its user document more than the per-window ' +
-        'limit allows. Nothing is lost - the name, email and avatar on file ' +
-        'keep their previous values, and this retries on the next token ' +
-        'refresh.'
-      );
-    });
+      reportAppCheckFailure('the profile write (users/' + uid + ')');
+      return;
+    }
+
+    if (kind !== 'ratelimit') {
+      console.error('DISCIPLANT: could not save profile doc:', error);
+      return;
+    }
+
+    // The optimistic window this attempt recorded never actually
+    // opened, so take it back. Leaving it would mark the reading as
+    // local, and the listener in 06 only adopts the server's real
+    // rlStart while the client has no reading of its own - so a
+    // false one would keep this session guessing wrong all over
+    // again.
+    if (opensWindow) {
+      userRlStartMs      = 0;
+      userRlStartIsLocal = false;
+    }
+
+    var next = (typeof retryIndex === 'number') ? retryIndex + 1 : 0;
+    if (next < PROFILE_RETRY_DELAYS_MS.length) {
+      setTimeout(function () {
+        writeUserProfileDoc(uid, profileData, !opensWindow, next);
+      }, PROFILE_RETRY_DELAYS_MS[next]);
+      return;
+    }
+
+    // Clear the signature so this is attempted again on the next
+    // ID-token refresh. Without that, the guard in
+    // ensureUserProfileDoc() would treat the change as already saved
+    // and the update would be lost.
+    lastProfileSignature = null;
+    console.error(
+      'DISCIPLANT: profile write denied on both rate-limit branches. This ' +
+      'account has written to its user document more than the per-window ' +
+      'limit allows. Nothing is lost - the name, email and avatar on file ' +
+      'keep their previous values, and this retries on the next token ' +
+      'refresh.'
+    );
+  }
 }
 
 // Reads a field off the Firebase user, falling back to its linked
@@ -1180,8 +1204,107 @@ function rlFields(opensWindow) {
 // always the rate limiter rather than a genuine authorisation problem
 // — the ownership half of these rules hasn't changed. Kept as its own
 // function so the distinction stays visible at the call sites.
+//
+// THE ONE EXCEPTION IS APP CHECK, and it used to be invisible here.
+// App Check enforcement rejects a request BEFORE the security rules
+// are consulted, and Firestore reports that rejection with the exact
+// same code the rules use: 'permission-denied'. Nothing on the error
+// object tells the two apart. So a broken App Check token — an
+// unregistered debug token, a Vercel preview domain missing from the
+// reCAPTCHA key, a site key typo — presented as "you have hit the
+// per-window write limit", sent the caller through three pointless
+// retries, and left a console message pointing at the wrong system
+// entirely.
+//
+// The client CAN tell them apart, just not synchronously: ask App
+// Check for a fresh token at the moment of the denial. If one cannot
+// be minted, the request never reached the rules and the rate limiter
+// is not the story. That is why the call sites below take a callback
+// instead of an if.
 function isRateLimitDenial(error) {
   return !!error && error.code === 'permission-denied';
+}
+
+// Probing costs a round trip to the App Check backend, so the answer
+// is cached briefly. A denial storm (the rate limiter firing on every
+// save) therefore probes once, not once per write.
+var APPCHECK_PROBE_TTL_MS = 30000;
+var appCheckProbeResult   = null;
+var appCheckProbeAt       = 0;
+var appCheckProbeInFlight = null;
+
+// Resolves 'ok', 'failed', or 'unknown'. 'unknown' means App Check is
+// not present on this page at all — the test harness, or the CDN
+// script failing to load — in which case it cannot be the cause of
+// anything and the old rate-limit reading stands.
+function appCheckTokenState() {
+  if (typeof firebase === 'undefined' || typeof firebase.appCheck !== 'function') {
+    return Promise.resolve('unknown');
+  }
+
+  var now = Date.now();
+  if (appCheckProbeResult && (now - appCheckProbeAt) < APPCHECK_PROBE_TTL_MS) {
+    return Promise.resolve(appCheckProbeResult);
+  }
+  if (appCheckProbeInFlight) return appCheckProbeInFlight;
+
+  // forceRefresh, deliberately. A cached token is worthless as
+  // evidence here: the server may have just rejected that very token,
+  // and the SDK would hand it back looking perfectly healthy. Only a
+  // fresh mint proves attestation still works.
+  var probe;
+  try {
+    probe = firebase.appCheck().getToken(true);
+  } catch (e) {
+    return Promise.resolve('failed');
+  }
+  if (!probe || typeof probe.then !== 'function') return Promise.resolve('unknown');
+
+  appCheckProbeInFlight = probe
+    .then(function (result) {
+      return (result && result.token) ? 'ok' : 'failed';
+    })
+    .catch(function () { return 'failed'; })
+    .then(function (state) {
+      appCheckProbeAt       = Date.now();
+      appCheckProbeResult   = state;
+      appCheckProbeInFlight = null;
+      return state;
+    });
+
+  return appCheckProbeInFlight;
+}
+
+// Calls back with 'appcheck', 'ratelimit' or 'other'. Always async,
+// including on the non-denial path, so call sites have one shape.
+function classifyDenial(error, done) {
+  if (!isRateLimitDenial(error)) {
+    Promise.resolve().then(function () { done('other'); });
+    return;
+  }
+  appCheckTokenState().then(function (state) {
+    done(state === 'failed' ? 'appcheck' : 'ratelimit');
+  });
+}
+
+// One message per page load. Every write in flight fails together
+// when attestation breaks, and three identical paragraphs in the
+// console is how a clear diagnosis turns back into noise.
+var appCheckFailureReported = false;
+
+function reportAppCheckFailure(what) {
+  if (appCheckFailureReported) return;
+  appCheckFailureReported = true;
+
+  var host    = (typeof location !== 'undefined' && location.hostname) || '';
+  var isLocal = ['localhost', '127.0.0.1', '[::1]', ''].indexOf(host) !== -1;
+
+  console.error(
+    'DISCIPLANT: ' + what + ' was rejected by App Check, NOT by the rate limiter. This page could not mint an App Check token, so Firestore refused the request before firestore.rules ever ran — retrying cannot help until attestation is fixed. ' +
+    (isLocal
+      ? 'On a local host this is almost always the debug token: firebase-config.js turns debug mode on here, and the token it logs at startup has to be registered under Firebase Console -> Security -> App Check -> Apps -> Manage debug tokens.'
+      : 'Check that ' + host + ' is on the reCAPTCHA Enterprise key domain list. Vercel preview deployments are not, by design — test on production or add the preview domain to the key.')
+  );
 }
 
 function saveData(rlOpensWindow, retryIndex) {
@@ -1260,35 +1383,55 @@ function saveData(rlOpensWindow, retryIndex) {
   db.collection('gardens').doc(currentUserId)
     .set(payload, { merge: true })
     .catch(function (error) {
-      if (isRateLimitDenial(error)) {
-        var next = (isRetry ? retryIndex : -1) + 1;
+      classifyDenial(error, function (kind) { onGardenSaveDenied(kind, error); });
+    });
 
-        if (next < RL_RETRY_DELAYS_MS.length) {
-          // Flip the branch. The overwhelmingly likely cause is that
-          // the client guessed the window state wrong, and there are
-          // only two guesses to make.
-          setTimeout(function () {
-            saveData(!rlOpensWindow, next);
-          }, RL_RETRY_DELAYS_MS[next]);
-          return;
-        }
+  function onGardenSaveDenied(kind, error) {
+    if (kind === 'appcheck') {
+      // NOTE this is the one case the "safe if rejected" reasoning at
+      // the optimistic assignment above does NOT cover. That argument
+      // holds only for a rules denial, where a rejection really does
+      // imply a live window. An App Check rejection implies nothing
+      // about the window — the rules never ran — so the optimistic
+      // reading has to come back out.
+      if (rlOpensWindow) {
+        gardenRlStartMs      = 0;
+        gardenRlStartIsLocal = false;
+      }
 
-        // Out of retries: this is a real ceiling, not a mismatch.
-        // Say so plainly rather than leaving a bare permission error
-        // in the console, because the visible symptom is confusing —
-        // Firestore rolls the rejected write back out of its local
-        // cache, so the habit the user just ticked will appear to
-        // untick itself a moment later.
-        console.error(
-          'DISCIPLANT: save rejected — the per-window write limit in ' +
-          'firestore.rules has been reached for this account. Saving ' +
-          'resumes when the window rolls over (see rlWindow()). Nothing ' +
-          'was lost: the next successful save writes the current state.'
-        );
+      reportAppCheckFailure('the garden save (gardens/' + currentUserId + ')');
+      return;
+    }
+
+    if (kind === 'ratelimit') {
+      var next = (isRetry ? retryIndex : -1) + 1;
+
+      if (next < RL_RETRY_DELAYS_MS.length) {
+        // Flip the branch. The overwhelmingly likely cause is that
+        // the client guessed the window state wrong, and there are
+        // only two guesses to make.
+        setTimeout(function () {
+          saveData(!rlOpensWindow, next);
+        }, RL_RETRY_DELAYS_MS[next]);
         return;
       }
-      console.error('Error saving data:', error);
-    });
+
+      // Out of retries: this is a real ceiling, not a mismatch.
+      // Say so plainly rather than leaving a bare permission error
+      // in the console, because the visible symptom is confusing —
+      // Firestore rolls the rejected write back out of its local
+      // cache, so the habit the user just ticked will appear to
+      // untick itself a moment later.
+      console.error(
+        'DISCIPLANT: save rejected — the per-window write limit in ' +
+        'firestore.rules has been reached for this account. Saving ' +
+        'resumes when the window rolls over (see rlWindow()). Nothing ' +
+        'was lost: the next successful save writes the current state.'
+      );
+      return;
+    }
+    console.error('Error saving data:', error);
+  }
 
   saveGardenSummary(cleanTasks, rlOpensWindow);
 }
@@ -1476,36 +1619,44 @@ function writeGardenSummary(cleanTasks, rlOpensWindow, retryIndex) {
       // Left flagged as written even on failure would strand the
       // backstop, so clear it and let the next save or snapshot retry.
       gardenSummaryWritten = false;
-
-      if (!isRateLimitDenial(error)) {
-        console.error('DISCIPLANT: error saving garden summary:', error);
-        return;
-      }
-
-      // Same branch flip as the profile write above, and this document
-      // needs it more than any other: the client NEVER reads
-      // gardenSummaries, so it has no listener to learn the real
-      // window from and is guessing off the GARDEN's window instead.
-      // The two drift apart every time a save skips the summary
-      // because the user has no friends yet - and they drift furthest
-      // exactly when the summary is first published, which is the one
-      // write that has to land.
-      var next = (typeof retryIndex === 'number') ? retryIndex + 1 : 0;
-      if (next < PROFILE_RETRY_DELAYS_MS.length) {
-        setTimeout(function () {
-          writeGardenSummary(cleanTasks, !opensWindow, next);
-        }, PROFILE_RETRY_DELAYS_MS[next]);
-        return;
-      }
-
-      console.error(
-        'DISCIPLANT: could not write gardenSummaries/' + currentUserId + ' on ' +
-        'either rate-limit branch. Most likely the per-window write limit for ' +
-        'this account has been reached; if the rules were only just published, ' +
-        'reload once. Your own garden is unaffected - only the friend-visible ' +
-        'copy is stale, and the next successful save republishes it.'
-      );
+      classifyDenial(error, function (kind) { onSummaryWriteDenied(kind, error); });
     });
+
+  function onSummaryWriteDenied(kind, error) {
+    if (kind === 'appcheck') {
+      reportAppCheckFailure('the friend-visible summary write (gardenSummaries/' + currentUserId + ')');
+      return;
+    }
+
+    if (kind !== 'ratelimit') {
+      console.error('DISCIPLANT: error saving garden summary:', error);
+      return;
+    }
+
+    // Same branch flip as the profile write above, and this document
+    // needs it more than any other: the client NEVER reads
+    // gardenSummaries, so it has no listener to learn the real
+    // window from and is guessing off the GARDEN's window instead.
+    // The two drift apart every time a save skips the summary
+    // because the user has no friends yet - and they drift furthest
+    // exactly when the summary is first published, which is the one
+    // write that has to land.
+    var next = (typeof retryIndex === 'number') ? retryIndex + 1 : 0;
+    if (next < PROFILE_RETRY_DELAYS_MS.length) {
+      setTimeout(function () {
+        writeGardenSummary(cleanTasks, !opensWindow, next);
+      }, PROFILE_RETRY_DELAYS_MS[next]);
+      return;
+    }
+
+    console.error(
+      'DISCIPLANT: could not write gardenSummaries/' + currentUserId + ' on ' +
+      'either rate-limit branch. Most likely the per-window write limit for ' +
+      'this account has been reached; if the rules were only just published, ' +
+      'reload once. Your own garden is unaffected - only the friend-visible ' +
+      'copy is stale, and the next successful save republishes it.'
+    );
+  }
 }
 
 function getNextId(taskArray) {

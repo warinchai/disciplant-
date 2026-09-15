@@ -1,6 +1,6 @@
 # Disciplant — Roadmap
 
-**Last updated:** 3 September 2026
+**Last updated:** 15 September 2026
 
 Legend: ✅ done · ⬜ open · 🔜 next up · ❌ dropped
 
@@ -62,7 +62,7 @@ Legend: ✅ done · ⬜ open · 🔜 next up · ❌ dropped
 
 ## Infrastructure
 
-* ⬜ Fix `writeUserProfileDoc` in `02-auth-tasks.js` — the `isRateLimitDenial()` catch misattributes App Check `permission-denied` to the rate limiter, making real App Check failures look like throttling
+* ✅ Fix App Check misattribution in `02-auth-tasks.js` — `isRateLimitDenial()` treated every `permission-denied` as the rate limiter, so a broken attestation token was reported as a write-limit breach and retried three times for nothing. `classifyDenial()` now probes App Check for a fresh token at the moment of the denial and returns `appcheck` / `ratelimit` / `other`; all three write paths (`writeUserProfileDoc`, `saveData`, `writeGardenSummary`) branch on it, stop retrying when attestation is the cause, and roll back the optimistic `rlStart` they had recorded
 * ⬜ App Check rollout checklist
 * ⬜ Attach Cloud Billing to unlock finer reCAPTCHA score levels
 
@@ -111,6 +111,7 @@ Tests are additive — none should be lost between sessions.
 | `test-app.js` | ~194 checks | jsdom |
 | `verify-history.js` | 77 assertions, round-trip losslessness | node |
 | `test-impact.js` | UI smoke test | jsdom |
+| `test-appcheck.js` | 28 checks, App Check vs rate-limit denial | jsdom |
 
 Validate syntax with `node --check` after every change.
 Serve locally with `python3 -m http.server 8000` so root-absolute paths resolve.
