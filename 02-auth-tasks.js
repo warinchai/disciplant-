@@ -845,6 +845,11 @@ auth.onIdTokenChanged(function (user) {
               // "use the automatic layout" (see computePlantLayout).
               posX:              (typeof t.posX === 'number') ? t.posX : null,
               posY:              (typeof t.posY === 'number') ? t.posY : null,
+              // Manual list position, same override semantics as
+              // posX/posY. Anything unparseable reads as null, which
+              // means "sort me automatically" - so a corrupt value
+              // costs the user a position, never a place in the list.
+              order:             normalizeOrder(t.order),
 
               // ---- The task model (01-app-core.js) --------------
               // Every field here tolerates being absent, which is
@@ -1013,6 +1018,10 @@ function buildCleanTasks() {
     if (t.due)                      clean.due       = t.due;
     if (t.doneAt)                   clean.doneAt    = t.doneAt;
     if (t.notes)                    clean.notes     = t.notes;
+    // Written only once the user has actually placed this task, so a
+    // garden nobody has reordered keeps saving the document it saved
+    // before ordering existed.
+    if (hasManualOrder(t))          clean.order     = t.order;
     if (t.subtasks && t.subtasks.length) {
       clean.subtasks = t.subtasks.map(function (s) {
         return { id: s.id, text: s.text, done: !!s.done };

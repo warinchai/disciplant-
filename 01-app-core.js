@@ -2392,6 +2392,9 @@ function makeTask(id, text, catId) {
     // ignored by them. 1 is both the default and what every task in
     // every existing garden effectively already had.
     impact:            TASK_IMPACT_DEFAULT,
+    // Manual list position. null until the user drags or nudges
+    // this task, exactly like posX/posY above.
+    order:             null,
   };
 }
 
@@ -2586,6 +2589,174 @@ function removeSubtask(task, subId) {
   retuneAward(task, prevAward);
   syncParentFromSubtasks(task, was);
 }
+
+// ============================================
+// Manual ordering
+//
+// `order` is a manual override in exactly the sense posX/posY
+// already are: a number means the user put this task here, null
+// means "use the automatic sort". That parallel is the whole design.
+// The garden lets you drag a plant somewhere and leaves every other
+// plant to the automatic layout; the list works the same way.
+//
+// WHY NOT SORT ONLY MANUALLY once the user has dragged anything.
+// Because the automatic sorts are load-bearing: assignments by due
+// date is how the queue stays legible, and habits by growth puts the
+// garden's elders on top. Throwing those away the first time someone
+// drags one row would be a large, silent loss for a small, local
+// intent. Ordered tasks take the top of their list in the order
+// given; everything else keeps sorting itself underneath.
+//
+// The numbers are dense (0..n-1) and rewritten wholesale on every
+// move. Sparse or fractional keys would avoid the rewrite, but
+// `tasks` is one Firestore array rewritten whole on every save
+// anyway, so there is nothing to buy with the complexity.
+// ============================================
+
+// A list longer than this is not a list anyone is ordering by hand,
+// and the ceiling keeps a hand-edited document from producing an
+// order that sorts oddly against honest ones.
+var TASK_ORDER_MAX = 9999;
+
+function normalizeOrder(value) {
+  if (value === null || value === undefined || value === '') return null;
+  var n = Number(value);
+  if (!isFinite(n)) return null;
+  n = Math.round(n);
+  if (n < 0 || n > TASK_ORDER_MAX) return null;
+  return n;
+}
+
+function hasManualOrder(task) {
+  return !!task && typeof task.order === 'number' && isFinite(task.order);
+}
+
+// Returns 0 when manual order has nothing to say, so callers can
+// fall through to their automatic sort with `||`.
+function compareManualOrder(a, b) {
+  var ao = hasManualOrder(a);
+  var bo = hasManualOrder(b);
+  if (ao && bo) return a.order - b.order;
+  if (ao) return -1;
+  if (bo) return 1;
+  return 0;
+}
+
+// THE ONE SORT. 12-tasks-page.js used to hold two comparators of its
+// own; they live here now because reordering has to be able to ask
+// "what order is this list actually in" without reaching into the
+// page that draws it.
+//
+// Assignments sort by due date, undated last. Habits sort by the
+// plant furthest along. Both tie-break on id, so the result is total
+// and stable — which matters, because the renumbering below turns
+// whatever this returns into stored state.
+function compareTasks(a, b) {
+  var manual = compareManualOrder(a, b);
+  if (manual) return manual;
+
+  if (a.kind === 'once' && b.kind === 'once') {
+    if (!a.due && !b.due) return a.id - b.id;
+    if (!a.due) return 1;
+    if (!b.due) return -1;
+    if (a.due === b.due) return a.id - b.id;
+    return a.due < b.due ? -1 : 1;
+  }
+
+  return (b.totalGrowthDays || 0) - (a.totalGrowthDays || 0) || a.id - b.id;
+}
+
+// Habits and assignments are ordered separately. They are drawn in
+// separate columns and read for different reasons, so a single
+// sequence across both would let a drag in one column silently
+// renumber the other.
+function taskOrderKind(task) {
+  return (task && task.kind === 'once') ? 'once' : 'habit';
+}
+
+function tasksOfKindSorted(kind) {
+  return tasks
+    .filter(function (t) { return taskOrderKind(t) === kind; })
+    .sort(compareTasks);
+}
+
+// Renumber a whole kind from a sequence. Dense, from zero, no gaps.
+function assignOrders(seq) {
+  seq.forEach(function (t, i) { t.order = i; });
+}
+
+// Move a task `delta` places within its own kind. Powers the up/down
+// controls in the detail sheet, which are the keyboard-reachable way
+// to do what the drag handle does.
+function moveTaskBy(taskId, delta) {
+  var task = tasks.find(function (t) { return t.id === taskId; });
+  if (!task || !delta) return false;
+
+  var seq = tasksOfKindSorted(taskOrderKind(task));
+  var from = seq.indexOf(task);
+  var to   = from + delta;
+  if (from < 0 || to < 0 || to >= seq.length) return false;
+
+  seq.splice(from, 1);
+  seq.splice(to, 0, task);
+  assignOrders(seq);
+  return true;
+}
+
+// Commit the order of ONE section after a drag.
+//
+// A section is a filter over the task array, not a list of its own —
+// "Habits today" and "Not today" are both windows onto the same
+// sequence. So a drag inside one section must not disturb where the
+// other section's tasks sit. The trick is to take the slots the
+// dragged section already occupies in the full sequence and refill
+// just those, in the new order, leaving every other task exactly
+// where it was.
+function applySectionOrder(idsInDisplayedOrder) {
+  var members = (idsInDisplayedOrder || [])
+    .map(function (id) {
+      return tasks.find(function (t) { return t.id === id; });
+    })
+    .filter(Boolean);
+  if (members.length < 2) return false;
+
+  // A section never mixes kinds, and a caller that hands over a
+  // mixture is confused about something — refuse rather than pick.
+  var kind = taskOrderKind(members[0]);
+  for (var i = 0; i < members.length; i++) {
+    if (taskOrderKind(members[i]) !== kind) return false;
+  }
+
+  var seq   = tasksOfKindSorted(kind);
+  var slots = [];
+  seq.forEach(function (t, idx) {
+    if (members.indexOf(t) !== -1) slots.push(idx);
+  });
+  if (slots.length !== members.length) return false;
+
+  slots.forEach(function (slotIdx, k) { seq[slotIdx] = members[k]; });
+  assignOrders(seq);
+  return true;
+}
+
+// Hand a kind back to the automatic sort.
+function clearManualOrder(kind) {
+  var changed = false;
+  tasks.forEach(function (t) {
+    if (kind && taskOrderKind(t) !== kind) return;
+    if (hasManualOrder(t)) { t.order = null; changed = true; }
+  });
+  return changed;
+}
+
+// Is any task of this kind manually placed? Drives whether the
+// "back to automatic" control is worth showing at all.
+function hasAnyManualOrder(kind) {
+  return tasks.some(function (t) {
+    return (!kind || taskOrderKind(t) === kind) && hasManualOrder(t);
+  });
+}
+
 
 // ============================================
 // Day-boundary logic

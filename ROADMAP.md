@@ -83,7 +83,7 @@ IDs are provisional; nothing here is committed.
 
 * **H1** — Onboarding / seeded first habit. New users land on an empty garden, which is the worst possible first screen for an app whose value proposition is a plant growing.
 * **H2** — Undo a tick. No clean reversal today; `retuneAward()` machinery is mostly already in place.
-* **H3** — Manual task ordering. No reorder in the task list; daily habits should be able to sit at the top.
+* ✅ **H3** — Manual task ordering *(adopted and shipped)*. `task.order`, a manual override with the same semantics as `posX`/`posY`: a number means the user placed it, `null` means use the automatic sort. Placed tasks take the top of their list in the given order; everything unplaced keeps sorting itself underneath, so dragging one row never discards the due-date or growth sorts wholesale. Habits and assignments order separately. Drag handle on each row (pointer events, works on touch) plus up/down controls and a "back to automatic" reset in the detail sheet for keyboard reach. `compareTasks()` in 01 is now the single comparator; `tpSortHabits`/`tpSortAssignments` delegate to it. Orders are dense 0..n-1, rewritten per move, and written to Firestore only once a task is actually placed.
 * **H4** — Archive instead of delete. Deleting a finished habit destroys the history that made it satisfying. Archive keeps it out of the denominator but preserves the plant.
 
 ### I. Correctness
@@ -108,7 +108,7 @@ Tests are additive — none should be lost between sessions.
 
 | File | Coverage | Runner |
 | --- | --- | --- |
-| `test-app.js` | ~194 checks | jsdom |
+| `test-app.js` | ~217 checks (incl. manual ordering) | jsdom |
 | `verify-history.js` | 77 assertions, round-trip losslessness | node |
 | `test-impact.js` | UI smoke test | jsdom |
 | `test-appcheck.js` | 28 checks, App Check vs rate-limit denial | jsdom |

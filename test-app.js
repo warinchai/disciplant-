@@ -1020,6 +1020,133 @@ check('and walks back through each day\'s own effort',
   [0, 1, 2.5, 4.5]);
 
 // =====================================================================
+console.log('\n--- manual ordering ---');
+
+run(`
+  tasks = [];
+  nextId = 1;
+  var a = makeTask(1, 'Alpha', 'education');   a.totalGrowthDays = 10;
+  var b = makeTask(2, 'Bravo', 'exercise');    b.totalGrowthDays = 30;
+  var c = makeTask(3, 'Charlie', 'chores');    c.totalGrowthDays = 20;
+  tasks = [a, b, c];
+`);
+
+const names = (code) => run(code + ".map(function (t) { return t.text; })");
+
+check('habits sort by growth while nothing is placed by hand',
+  names('tasksOfKindSorted("habit")'),
+  ['Bravo', 'Charlie', 'Alpha']);
+
+check('nothing carries an order yet', run('hasAnyManualOrder("habit")'), false);
+
+// Alpha is last by growth. One nudge should not be needed three times
+// to get it to the top — but one nudge should move it exactly one place.
+run('moveTaskBy(1, -1);');
+check('a nudge moves one place, not to the end',
+  names('tasksOfKindSorted("habit")'),
+  ['Bravo', 'Alpha', 'Charlie']);
+
+check('and the whole kind is renumbered densely from zero',
+  run('tasksOfKindSorted("habit").map(function (t) { return t.order; })'),
+  [0, 1, 2]);
+
+run('moveTaskBy(1, -1);');
+check('a second nudge reaches the top',
+  names('tasksOfKindSorted("habit")'),
+  ['Alpha', 'Bravo', 'Charlie']);
+
+check('nudging past the top does nothing', run('moveTaskBy(1, -1)'), false);
+check('and the order is unchanged',
+  names('tasksOfKindSorted("habit")'),
+  ['Alpha', 'Bravo', 'Charlie']);
+
+check('nudging past the bottom does nothing too', run('moveTaskBy(3, 1)'), false);
+
+// The point of the hybrid: a placed task outranks growth, an unplaced
+// one still sorts by it.
+run(`
+  tasks.forEach(function (t) { t.order = null; });
+  tasks.find(function (t) { return t.text === 'Alpha'; }).order = 0;
+`);
+check('one placed task takes the top, the rest sort themselves below',
+  names('tasksOfKindSorted("habit")'),
+  ['Alpha', 'Bravo', 'Charlie']);
+
+check('clearing hands the list back to the automatic sort',
+  [run('clearManualOrder("habit")'), names('tasksOfKindSorted("habit")')],
+  [true, ['Bravo', 'Charlie', 'Alpha']]);
+
+check('clearing again reports nothing to do', run('clearManualOrder("habit")'), false);
+
+console.log('\n--- ordering keeps the two kinds apart ---');
+
+run(`
+  tasks = [];
+  var h1 = makeTask(1, 'Habit one', 'education');   h1.totalGrowthDays = 5;
+  var h2 = makeTask(2, 'Habit two', 'exercise');    h2.totalGrowthDays = 9;
+  var o1 = makeTask(3, 'Essay', 'education');       setTaskKind(o1, 'once'); o1.due = '2026-01-10';
+  var o2 = makeTask(4, 'Report', 'education');      setTaskKind(o2, 'once'); o2.due = '2026-01-05';
+  tasks = [h1, h2, o1, o2];
+`);
+
+check('assignments sort by due date', names('tasksOfKindSorted("once")'), ['Report', 'Essay']);
+
+run('moveTaskBy(1, -1);');   // reorder the habits
+check('reordering habits leaves assignments untouched',
+  run('tasksOfKindSorted("once").every(function (t) { return t.order === null; })'),
+  true);
+
+console.log('\n--- committing a section after a drag ---');
+
+// The case that makes applySectionOrder() non-trivial: a section is a
+// FILTER, so committing one must not move the tasks that were not in it.
+run(`
+  tasks = [];
+  var a = makeTask(1, 'A', 'education');  a.totalGrowthDays = 50;
+  var b = makeTask(2, 'B', 'exercise');   b.totalGrowthDays = 40; b.completed = true;
+  var c = makeTask(3, 'C', 'chores');     c.totalGrowthDays = 30;
+  var d = makeTask(4, 'D', 'misc');       d.totalGrowthDays = 20; d.completed = true;
+  var e = makeTask(5, 'E', 'mindfulness'); e.totalGrowthDays = 10;
+  tasks = [a, b, c, d, e];
+`);
+
+check('the full habit sequence starts by growth',
+  names('tasksOfKindSorted("habit")'),
+  ['A', 'B', 'C', 'D', 'E']);
+
+// The undone rows (A, C, E) occupy slots 0, 2 and 4. Dragging E above
+// A within that section must refill only those three slots.
+check('a section commit reports success', run('applySectionOrder([5, 3, 1])'), true);
+
+check('the dragged section takes its new order in its own slots',
+  names('tasksOfKindSorted("habit")'),
+  ['E', 'B', 'C', 'D', 'A']);
+
+check('done rows never moved', run('tasks.find(function(t){return t.text==="B";}).order'), 1);
+
+check('a one-row section is not a reorder', run('applySectionOrder([1])'), false);
+check('an empty commit is not a reorder', run('applySectionOrder([])'), false);
+check('unknown ids are ignored, so a stale DOM cannot corrupt the order',
+  run('applySectionOrder([999, 998])'), false);
+
+console.log('\n--- the order field survives a save ---');
+
+check('a placed task writes its order',
+  run('buildCleanTasks().find(function (t) { return t.id === 5; }).order'),
+  0);
+
+run(`
+  tasks.forEach(function (t) { t.order = null; });
+`);
+check('a garden nobody has reordered writes no order field at all',
+  run('buildCleanTasks().some(function (t) { return "order" in t; })'),
+  false);
+
+check('a nonsense stored order normalizes to automatic',
+  [run('normalizeOrder("x")'), run('normalizeOrder(-1)'), run('normalizeOrder(1e9)'), run('normalizeOrder(3)')],
+  [null, null, null, 3]);
+
+// =====================================================================
 console.log('');
 if (fail.length) {
   console.log(fail.length + ' FAILURE(S):\n');

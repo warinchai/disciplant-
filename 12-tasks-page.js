@@ -274,21 +274,19 @@ function tpVisibleTasks() {
 }
 
 // Assignments sort by due date, undated last. Habits sort by the plant
-// that is furthest along, so the garden's elders sit at the top.
+// that is furthest along, so the garden's elders sit at the top — and
+// anything the user has placed by hand sits above both, in the order
+// they placed it.
+//
+// The comparator itself lives in 01 (compareTasks), because the
+// reordering operations need to ask what order a list is currently in,
+// and a second copy here would be a second answer waiting to diverge.
 function tpSortAssignments(list) {
-  return list.slice().sort(function (a, b) {
-    if (!a.due && !b.due) return a.id - b.id;
-    if (!a.due) return 1;
-    if (!b.due) return -1;
-    if (a.due === b.due) return a.id - b.id;
-    return a.due < b.due ? -1 : 1;
-  });
+  return list.slice().sort(compareTasks);
 }
 
 function tpSortHabits(list) {
-  return list.slice().sort(function (a, b) {
-    return (b.totalGrowthDays || 0) - (a.totalGrowthDays || 0) || a.id - b.id;
-  });
+  return list.slice().sort(compareTasks);
 }
 
 // Which column a section belongs in:
@@ -581,6 +579,19 @@ function tpRowHtml(task) {
         barHtml +
       '</button>' +
       '<span class="tp-row-art" aria-hidden="true">' + tpTaskArt(task, 26) + '</span>' +
+      // Not a [data-act] button: the delegated click listener below
+      // opens the sheet for anything it does not recognise, and a grip
+      // that opened the sheet every time you finished dragging would be
+      // unusable. It is driven by pointerdown instead, and the click
+      // that follows a drag is swallowed.
+      '<button type="button" class="tp-grip" data-grip="1" tabindex="-1" ' +
+        'aria-hidden="true" title="Drag to reorder">' +
+        '<svg viewBox="0 0 10 16" width="10" height="16" aria-hidden="true">' +
+        '<circle cx="2.5" cy="4" r="1.2"/><circle cx="7.5" cy="4" r="1.2"/>' +
+        '<circle cx="2.5" cy="8" r="1.2"/><circle cx="7.5" cy="8" r="1.2"/>' +
+        '<circle cx="2.5" cy="12" r="1.2"/><circle cx="7.5" cy="12" r="1.2"/>' +
+        '</svg>' +
+      '</button>' +
     '</li>'
   );
 }
@@ -765,6 +776,101 @@ if (tpSectionsEl) {
 
     tpOpenSheet(id);
   });
+}
+
+
+
+// ============================================
+// Reordering by drag
+//
+// Pointer events rather than HTML5 drag-and-drop, for the same reason
+// the garden uses them: HTML5 dragging does not exist on touch, and
+// this list is read on a phone more than anywhere else.
+//
+// The drag moves the <li> in the DOM as you go, so the row you are
+// holding is always where you are holding it. Nothing is committed
+// until you let go, and what gets committed is simply the order the
+// list ended up in — see applySectionOrder() in 01.
+// ============================================
+var tpDrag = null;
+
+function tpBeginDrag(li, pointerId) {
+  var ul = li.parentElement;
+  if (!ul || ul.children.length < 2) return;
+
+  tpDrag = { li: li, ul: ul, moved: false };
+  li.classList.add('is-dragging');
+  document.body.classList.add('tp-dragging');
+
+  try { li.setPointerCapture(pointerId); } catch (e) {}
+  document.addEventListener('pointermove', tpDragMove);
+  document.addEventListener('pointerup', tpDragEnd);
+  document.addEventListener('pointercancel', tpDragEnd);
+}
+
+function tpDragMove(e) {
+  if (!tpDrag) return;
+  tpDrag.moved = true;
+
+  // Whatever row is under the pointer, provided it is a sibling in
+  // the same list. Dragging out of the section does nothing rather
+  // than something surprising: the sections mean different things
+  // ("Not today" is not a place you can put a habit), so a drop
+  // across them would be claiming an edit the user did not make.
+  var under = document.elementFromPoint(e.clientX, e.clientY);
+  var row   = under && under.closest ? under.closest('.tp-row') : null;
+  if (!row || row === tpDrag.li || row.parentElement !== tpDrag.ul) return;
+
+  // Past the midpoint means the pointer has committed to the far
+  // side of that row. Without the midpoint test the two rows swap
+  // back and forth on every pixel of movement along their shared edge.
+  var box   = row.getBoundingClientRect();
+  var after = e.clientY > (box.top + box.height / 2);
+  tpDrag.ul.insertBefore(tpDrag.li, after ? row.nextSibling : row);
+}
+
+function tpDragEnd() {
+  document.removeEventListener('pointermove', tpDragMove);
+  document.removeEventListener('pointerup', tpDragEnd);
+  document.removeEventListener('pointercancel', tpDragEnd);
+  if (!tpDrag) return;
+
+  var drag = tpDrag;
+  tpDrag = null;
+  drag.li.classList.remove('is-dragging');
+  document.body.classList.remove('tp-dragging');
+
+  if (!drag.moved) return;
+
+  var ids = Array.prototype.map.call(drag.ul.children, function (el) {
+    return parseInt(el.getAttribute('data-id'), 10);
+  }).filter(function (n) { return !isNaN(n); });
+
+  if (applySectionOrder(ids)) {
+    saveData();
+    render();
+  }
+}
+
+// A drag ends in a click on whatever was under the pointer. Swallow
+// it, or letting go of a row opens that row's sheet.
+if (tpSectionsEl) {
+  tpSectionsEl.addEventListener('pointerdown', function (e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    var grip = e.target.closest ? e.target.closest('[data-grip]') : null;
+    if (!grip) return;
+    var li = grip.closest('.tp-row');
+    if (!li) return;
+    e.preventDefault();
+    tpBeginDrag(li, e.pointerId);
+  });
+
+  tpSectionsEl.addEventListener('click', function (e) {
+    if (e.target.closest && e.target.closest('[data-grip]')) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }, true);
 }
 
 
@@ -1029,6 +1135,39 @@ function tpRenderSheet() {
       '</div>' +
     '</div>';
 
+  // ---- Position in the list ----
+  //
+  // The keyboard-reachable half of reordering. The grip on the row is
+  // pointer-only by nature, so without these the feature would exist
+  // for mice and thumbs and nobody else.
+  var posKind  = taskOrderKind(task);
+  var posSeq   = tasksOfKindSorted(posKind);
+  var posIndex = posSeq.map(function (t) { return t.id; }).indexOf(task.id);
+  if (posSeq.length > 1) {
+    html +=
+      '<div class="tp-field">' +
+        '<label class="tp-label">Position</label>' +
+        '<div class="tp-order-row">' +
+          '<button type="button" class="tp-btn-nudge" data-act="move-up"' +
+            (posIndex <= 0 ? ' disabled' : '') + ' aria-label="Move up">&uarr;</button>' +
+          '<button type="button" class="tp-btn-nudge" data-act="move-down"' +
+            (posIndex < 0 || posIndex >= posSeq.length - 1 ? ' disabled' : '') +
+            ' aria-label="Move down">&darr;</button>' +
+          '<span class="tp-order-at">' + (posIndex + 1) + ' of ' + posSeq.length + '</span>' +
+          (hasAnyManualOrder(posKind)
+            ? '<button type="button" class="tp-btn-quiet" data-act="order-auto">Back to automatic</button>'
+            : '') +
+        '</div>' +
+        '<p class="tp-hint tp-hint-quiet">' +
+          (hasAnyManualOrder(posKind)
+            ? 'Placed by hand. Everything unplaced sorts itself underneath.'
+            : (posKind === 'once'
+                ? 'Sorting by due date. Moving this pins it to the top.'
+                : 'Sorting by how far along the plant is. Moving this pins it to the top.')) +
+        '</p>' +
+      '</div>';
+  }
+
   // ---- Provenance + delete ----
   if (task.createdAt) {
     html += '<p class="tp-hint tp-hint-quiet">Planted ' + tpFormatDate(task.createdAt) + '.</p>';
@@ -1096,6 +1235,13 @@ if (tpSheetBodyEl) {
       tpCloseSheet();
       if (typeof openPlantSkins === 'function') openPlantSkins(task.id);
       return;
+    } else if (act === 'move-up' || act === 'move-down') {
+      // Nothing to save if the task is already at the end it was
+      // asked to move toward. The buttons are disabled in that state
+      // anyway; this is the belt to that braces.
+      if (!moveTaskBy(task.id, act === 'move-up' ? -1 : 1)) return;
+    } else if (act === 'order-auto') {
+      if (!clearManualOrder(taskOrderKind(task))) return;
     } else if (act === 'delete') {
       if (!tpConfirmDelete) {
         tpConfirmDelete = true;

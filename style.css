@@ -6556,6 +6556,96 @@ body.tp-sheet-open { overflow: hidden; }
 }
 
 .tp-hint-quiet { opacity: 0.75; }
+
+/* ---- Reordering -------------------------------------------------
+   The grip is deliberately faint until the row is hovered. It sits on
+   every row, and six dots at full contrast on every row would read as
+   texture rather than as a control. */
+.tp-grip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-faint);
+  fill: currentColor;
+  opacity: 0.45;
+  cursor: grab;
+  /* Stops the browser claiming the gesture for scrolling before the
+     drag handler ever sees it. Same reason the garden sets it. */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: opacity 0.16s, color 0.16s;
+}
+
+.tp-row:hover .tp-grip { opacity: 1; color: var(--bark-light); }
+.tp-grip:active { cursor: grabbing; }
+
+/* On touch there is no hover to reveal it, so it stays visible. */
+@media (hover: none) {
+  .tp-grip { opacity: 0.7; }
+}
+
+.tp-row.is-dragging {
+  opacity: 0.9;
+  border-color: var(--leaf);
+  box-shadow: 0 6px 14px rgba(58, 40, 26, 0.28);
+  transform: scale(1.01);
+}
+
+/* While a drag is live, nothing else on the page should look
+   interactive or be selectable by the gesture. */
+body.tp-dragging { cursor: grabbing; -webkit-user-select: none; user-select: none; }
+body.tp-dragging .tp-row { transition: none; }
+
+.tp-order-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tp-btn-nudge {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--ink);
+  background: var(--linen);
+  border: 2px solid var(--linen-edge);
+  border-radius: var(--r-sm, 8px);
+  cursor: pointer;
+  transition: border-color 0.16s, background 0.16s;
+}
+
+.tp-btn-nudge:hover:not(:disabled) { border-color: var(--leaf); background: #FDF7EA; }
+.tp-btn-nudge:disabled { opacity: 0.35; cursor: default; }
+
+.tp-order-at {
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+}
+
+.tp-btn-quiet {
+  margin-left: auto;
+  padding: 5px 10px;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+  background: none;
+  border: 2px solid var(--linen-edge);
+  border-radius: var(--r-sm, 8px);
+  cursor: pointer;
+  transition: border-color 0.16s, color 0.16s;
+}
+
+.tp-btn-quiet:hover { border-color: var(--leaf); color: var(--ink); }
 .tp-hint-warn  { color: var(--bloom-deep); font-weight: 700; }
 
 /* Seven days, seven buttons. Nothing shorter reads as a week. */
