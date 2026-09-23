@@ -714,7 +714,11 @@ function tpRenderSections() {
       '<div class="tp-section"><p class="tp-empty">' +
       'Nothing planted yet. Write one thing above - a habit you want to keep, ' +
       'or an assignment you need off your mind - and it becomes a plant.' +
-      '</p></div>';
+      '</p>' +
+      // The same one-tap starters an empty garden offers (H1). Guarded
+      // because 13-onboarding.js loads after this file.
+      (typeof onboardStarterHtml === 'function' ? onboardStarterHtml() : '') +
+      '</div>';
     return;
   }
 

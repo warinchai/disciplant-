@@ -668,6 +668,15 @@
            two states at once. -->
       <p class="garden-toolbar-note hidden" id="gardenToolbarNote">Add a task to grow a plant you can move around.</p>
     </div>
+
+    <!-- First run (H1). Filled by 13-onboarding.js: on an empty plot it
+         offers six starter habits and a box for your own, and once the
+         first plant is in it asks whether it was done today, then
+         points at Show today's growth. Every stage is derived from the
+         garden, so it costs no read and no stored field. While it is up
+         it stands in for the toolbar note above and the empty-plot
+         message out in the scene. -->
+    <div class="ob-card hidden" id="gardenOnboard" role="region" aria-label="Your first plant"></div>
   </div>
 
   <!-- ================================================
@@ -1109,6 +1118,12 @@
        getPlantSVG and escapeHtml (04), skinPipHtml and
        openPlantSkins (05), and the whole task model (01). -->
   <script src="12-tasks-page.js"></script>
+
+  <!-- First run (H1): the starter picker on an empty garden and the
+       one-time walk through tick and grow. Needs 01, 02, 04 and 05
+       above it; 04 and 12 only call into it through typeof guards, so
+       the app still works with this tag removed. -->
+  <script src="13-onboarding.js"></script>
 
   <!-- Account data: export and permanent deletion. Numbered 10 because
        08 and 09 were taken; loaded here, ahead of both, because unlike

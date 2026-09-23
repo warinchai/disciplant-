@@ -1,6 +1,6 @@
 # Disciplant — Roadmap
 
-**Last updated:** 15 September 2026
+**Last updated:** 23 September 2026
 
 Legend: ✅ done · ⬜ open · 🔜 next up · ❌ dropped
 
@@ -22,7 +22,7 @@ Legend: ✅ done · ⬜ open · 🔜 next up · ❌ dropped
 * ✅ **B1** — Custom schedule (7-bit weekday mask); streaks only break on scheduled days
 * ⬜ **B2** — Streak insurance
 * ⬜ **B3** — Pause / vacation mode
-* 🔜 **B4** — Retroactive ticking — *priority for retention*
+* ⬜ **B4** — Retroactive ticking — *started, then shelved before any code was written*
 * ✅ **B5** — Heatmap denominator rebuilt on B1 + A7
 
 ## C. Growth & visibility
@@ -81,7 +81,7 @@ IDs are provisional; nothing here is committed.
 
 ### H. First run & list hygiene
 
-* **H1** — Onboarding / seeded first habit. New users land on an empty garden, which is the worst possible first screen for an app whose value proposition is a plant growing.
+* ✅ **H1** — Onboarding / seeded first habit *(adopted and shipped)*. An empty plot now shows a first-run card instead of two lines of text: six one-tap starter habits, one per plot and each drawn as the plant it grows into, plus a box for your own with the same Habit / Assignment switch and plant picker the Tasks page form has (defaults: habit, Miscellaneous). Planting walks the loop once on the real garden: "did you do it today?", then a pointer at Show today's growth. The stage is derived from the garden every time it is asked (`onboardStage()` in `13-onboarding.js`), so there is no new field, no new read and no localStorage, and a reload part-way through simply drops it. The Tasks page's empty state offers the same starters. The first tick skips the effort question and is logged Steady.
 * **H2** — Undo a tick. No clean reversal today; `retuneAward()` machinery is mostly already in place.
 * ✅ **H3** — Manual task ordering *(adopted and shipped)*. `task.order`, a manual override with the same semantics as `posX`/`posY`: a number means the user placed it, `null` means use the automatic sort. Placed tasks take the top of their list in the given order; everything unplaced keeps sorting itself underneath, so dragging one row never discards the due-date or growth sorts wholesale. Habits and assignments order separately. Drag handle on each row (pointer events, works on touch) plus up/down controls and a "back to automatic" reset in the detail sheet for keyboard reach. `compareTasks()` in 01 is now the single comparator; `tpSortHabits`/`tpSortAssignments` delegate to it. Orders are dense 0..n-1, rewritten per move, and written to Firestore only once a task is actually placed.
 * **H4** — Archive instead of delete. Deleting a finished habit destroys the history that made it satisfying. Archive keeps it out of the denominator but preserves the plant.
@@ -108,7 +108,7 @@ Tests are additive — none should be lost between sessions.
 
 | File | Coverage | Runner |
 | --- | --- | --- |
-| `test-app.js` | ~217 checks (incl. manual ordering) | jsdom |
+| `test-app.js` | ~262 checks (incl. manual ordering, onboarding) | jsdom |
 | `verify-history.js` | 77 assertions, round-trip losslessness | node |
 | `test-impact.js` | UI smoke test | jsdom |
 | `test-appcheck.js` | 28 checks, App Check vs rate-limit denial | jsdom |

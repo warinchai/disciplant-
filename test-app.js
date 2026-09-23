@@ -59,7 +59,7 @@ function runScript(code, label) {
 runScript('var db = firebase.firestore(); var auth = firebase.auth();', 'config');
 
 const files = ['01-app-core.js', '02-auth-tasks.js', '03-plant-art.js', '04-garden-scene.js',
-               '05-stats-app.js', '06-friends.js', '07-friend-garden.js', '12-tasks-page.js',
+               '05-stats-app.js', '06-friends.js', '07-friend-garden.js', '12-tasks-page.js', '13-onboarding.js',
                '10-account-data.js'];
 for (const f of files) runScript(fs.readFileSync(f, 'utf8'), f);
 console.log('all files loaded, no throw');
@@ -1147,6 +1147,116 @@ check('a nonsense stored order normalizes to automatic',
   [null, null, null, 3]);
 
 // =====================================================================
+// =====================================================================
+console.log('\n--- H1: onboarding ---');
+
+// Fresh garden. tpAskId is reset because the rendering tests above
+// ticked a row, and a stale id matching the plant planted below would
+// open the effort dialog on its own.
+run(`
+  tasks = [];
+  nextId = 1;
+  onboardPlantedId = null;
+  tpAskId = null;
+  dailyGrowthShown = false;
+  currentPage = 'garden';
+  render();
+`);
+const ob = () => $('gardenOnboard');
+
+check('an empty plot is at the pick stage', run('onboardStage()'), 'pick');
+check('the garden card is showing', ob().classList.contains('hidden'), false);
+check('it offers six starters', ob().querySelectorAll('[data-ob-starter]').length, 6);
+check('each starter shows its plant', ob().querySelectorAll('.ob-starter-art svg').length, 6);
+check('the toolbar note steps aside for it', $('gardenToolbarNote').classList.contains('hidden'), true);
+check('and so does the empty-plot message', $('gardenEmptyMsg').classList.contains('hidden'), true);
+
+run('authReady = false;');
+check('before the garden loads there is no walkthrough', run('onboardStage()'), 'none');
+run('authReady = true;');
+
+// One tap from the garden card.
+ob().querySelector('[data-ob-starter="1"]').click();
+check('one tap plants something', run('tasks.length'), 1);
+check('a habit', run('tasks[0].kind'), 'habit');
+check('in the plot the starter named', run('tasks[0].categoryId'), run('ONBOARD_STARTERS[1].cat'));
+check('with the starter text', run('tasks[0].text'), run('ONBOARD_STARTERS[1].text'));
+check('as a seed', run('tasks[0].totalGrowthDays'), 0);
+check('the plant is standing in the garden',
+  !!$('gardenSceneTrack').querySelector('.garden-plant[data-task-id="1"]'), true);
+check('the card moves on to asking about today', run('onboardStage()'), 'tick');
+check('and names the species',
+  ob().textContent.indexOf(run('getCategoryById(tasks[0].categoryId).species')) > -1, true);
+
+ob().querySelector('[data-ob-act="tick"]').click();
+check('yes ticks it', run('tasks[0].completed'), true);
+check('and grows it a day', run('tasks[0].totalGrowthDays'), 1);
+check('the first tick does not open the effort question',
+  $('effortAsk').classList.contains('hidden'), true);
+check('the day is held back for the reveal', run('onboardStage()'), 'grow');
+check('and the grow button has it ready', run('getGrownTodayTasks().length'), 1);
+
+run('dailyGrowthShown = true; updateGardenGrowUI();');
+check('showing the growth ends the walkthrough', run('onboardStage()'), 'none');
+check('and the card goes away', ob().classList.contains('hidden'), true);
+run('dailyGrowthShown = false; updateGardenGrowUI();');
+check('hiding it again does not bring the card back', run('onboardStage()'), 'none');
+
+// "Not yet" leaves the plant alone and closes the card.
+run('tasks = []; nextId = 1; render();');
+ob().querySelector('[data-ob-starter="0"]').click();
+ob().querySelector('[data-ob-act="later"]').click();
+check('not yet leaves it unticked', run('tasks[0].completed'), false);
+check('and closes the card', ob().classList.contains('hidden'), true);
+
+// Your own habit, through the box.
+function submitOwn(value) {
+  ob().querySelector('[data-ob-form] input').value = value;
+  ob().querySelector('[data-ob-form]').dispatchEvent(
+    new win.Event('submit', { bubbles: true, cancelable: true }));
+}
+run('tasks = []; nextId = 1; render();');
+submitOwn('   ');
+check('a blank box plants nothing', run('tasks.length'), 0);
+submitOwn('  Stretch  ');
+check('your own habit is planted, trimmed', run('tasks.length && tasks[0].text'), 'Stretch');
+check('in Miscellaneous', run('tasks[0].categoryId'), 'misc');
+check('as a habit, by default', run('tasks[0].kind'), 'habit');
+
+// Your own can pick its type and its plant, like the Tasks page form.
+run('tasks = []; nextId = 1; render();');
+check('the box offers a type switch', ob().querySelectorAll('[data-ob-kind]').length, 2);
+check('and a plant for every plot', ob().querySelectorAll('[data-ob-cat] option').length,
+  run('CATEGORIES.length'));
+ob().querySelector('[data-ob-kind="once"]').click();
+check('the switch moves', ob().querySelector('[data-ob-kind="once"]').getAttribute('aria-pressed'), 'true');
+check('and lets go of the other', ob().querySelector('[data-ob-kind="habit"]').classList.contains('active'), false);
+ob().querySelector('[data-ob-cat]').value = 'sleep';
+submitOwn('Hand in the essay');
+check('an assignment can be planted first', run('tasks[0].kind'), 'once');
+check('in the plot chosen', run('tasks[0].categoryId'), 'sleep');
+check('the card asks whether it is done rather than about today',
+  ob().textContent.indexOf('already done') > -1, true);
+ob().querySelector('[data-ob-act="tick"]').click();
+check('ticking it finishes it', run('tasks[0].completed && tasks[0].doneAt === getTodayString()'), true);
+check('and the walkthrough moves on the same way', run('onboardStage()'), 'grow');
+
+// A planted starter saves exactly like a plant from the add form.
+check('it writes the same fields as any new habit',
+  run('Object.keys(buildCleanTasks()[0]).sort().join(",")'),
+  run('Object.keys((function () { var t = makeTask(1, "x", "misc"); tasks = [t]; return buildCleanTasks()[0]; }())).sort().join(",")'));
+
+// The Tasks page's empty state offers the same starters.
+run("tasks = []; nextId = 1; onboardPlantedId = null; tpScope = 'today'; currentPage = 'tasks'; render();");
+check('the empty tasks page offers the starters too',
+  $('tpSections').querySelectorAll('[data-ob-starter]').length, 6);
+$('tpSections').querySelector('[data-ob-starter="4"]').click();
+check('planting from there works the same', run('tasks.length'), 1);
+check('the list shows it straight away', $('tpSections').querySelectorAll('.tp-row').length, 1);
+check('and the garden picks the walkthrough up', run('onboardStage()'), 'tick');
+check('a garden with plants in it never shows the picker',
+  run('onboardPlantedId = null; onboardStage()'), 'none');
+
 console.log('');
 if (fail.length) {
   console.log(fail.length + ' FAILURE(S):\n');

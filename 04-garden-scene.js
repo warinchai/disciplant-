@@ -1475,6 +1475,12 @@ var gardenGrowHintEl  = document.getElementById('gardenGrowHint');
 // gets ignored. Hidden on an empty plot, and in edit mode (resizing a
 // plant mid-drag is a fight nobody needs).
 function updateGardenGrowUI() {
+  // The first-run card (13-onboarding.js) can only change stage at the
+  // two moments this runs: a garden render, and a press of the growth
+  // toggle. Called before the early return below, because an empty
+  // plot is the card's main case and this function bails out on one.
+  if (typeof renderGardenOnboarding === 'function') renderGardenOnboarding();
+
   if (!gardenGrowBarEl) return;
 
   var show = tasks.length > 0 && !gardenEditMode;
@@ -1871,7 +1877,10 @@ function renderGarden() {
   var emptyMsgEl = document.getElementById('gardenEmptyMsg');
 
   if (tasks.length === 0) {
-    if (emptyMsgEl) emptyMsgEl.classList.remove('hidden');
+    // Kept back while the first-run card is offering starters (see
+    // 13-onboarding.js), and shown as before on a page without it.
+    if (emptyMsgEl) emptyMsgEl.classList.toggle('hidden',
+      typeof isOnboardingCoveringEmptyPlot === 'function' && isOnboardingCoveringEmptyPlot());
     // Nothing to pan to yet - keep the message in view, which means
     // parking on the plot rather than up in the sky above it.
     gardenSceneEl.scrollLeft = 0;
@@ -2103,7 +2112,13 @@ function updateGardenEditUI() {
   // waiting to be planted. The note takes their place and says what
   // the missing buttons would have done, so it goes exactly where they
   // were rather than off in a corner.
-  if (gardenToolbarNoteEl) gardenToolbarNoteEl.classList.toggle('hidden', !plotEmpty);
+  //
+  // While the first-run card is up it takes the note's place too, so
+  // the row never carries two empty states at once. 13-onboarding.js
+  // loads after this file, hence the guard.
+  var onboardCovers = typeof isOnboardingCoveringEmptyPlot === 'function' &&
+                      isOnboardingCoveringEmptyPlot();
+  if (gardenToolbarNoteEl) gardenToolbarNoteEl.classList.toggle('hidden', !plotEmpty || onboardCovers);
 
   if (gardenEditStartEl)   gardenEditStartEl.classList.toggle('hidden', gardenEditMode);
   if (gardenEditActionsEl) gardenEditActionsEl.classList.toggle('hidden', !gardenEditMode);
