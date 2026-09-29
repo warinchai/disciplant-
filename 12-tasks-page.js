@@ -608,6 +608,8 @@ function tpRowHtml(task) {
 function renderTaskList() {
   tpRenderHeader();
   tpRenderPlot();
+  // 14 loads after this file.
+  if (typeof tpRenderGuideLink === 'function') tpRenderGuideLink();
   tpRenderSections();
   tpRenderSheet();
   tpRenderAsk();

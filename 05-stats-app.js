@@ -893,6 +893,7 @@ function render() {
   if (currentPage === 'stats' && authReady) renderStatsPage();
   if (currentPage === 'greenhouse' && authReady) renderGreenhouse();
   if (currentPage === 'friends' && authReady) renderFriendsPage();
+  if (currentPage === 'guide' && typeof renderGuidePage === 'function') renderGuidePage();
 }
 
 

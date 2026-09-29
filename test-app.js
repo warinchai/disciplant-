@@ -60,7 +60,7 @@ runScript('var db = firebase.firestore(); var auth = firebase.auth();', 'config'
 
 const files = ['01-app-core.js', '02-auth-tasks.js', '03-plant-art.js', '04-garden-scene.js',
                '05-stats-app.js', '06-friends.js', '07-friend-garden.js', '12-tasks-page.js', '13-onboarding.js',
-               '10-account-data.js'];
+               '14-guides.js', '10-account-data.js'];
 for (const f of files) runScript(fs.readFileSync(f, 'utf8'), f);
 console.log('all files loaded, no throw');
 
@@ -1256,6 +1256,107 @@ check('the list shows it straight away', $('tpSections').querySelectorAll('.tp-r
 check('and the garden picks the walkthrough up', run('onboardStage()'), 'tick');
 check('a garden with plants in it never shows the picker',
   run('onboardPlantedId = null; onboardStage()'), 'none');
+
+// =====================================================================
+console.log('\n--- guides ---');
+
+// Content fits the task model, so nothing is cut or reset on plant.
+check('every category has a guide',
+  run('CATEGORIES.every(function (c) { return !!CATEGORY_GUIDES[c.id]; })'), true);
+check('suggestion ids are unique across all guides', run(`
+  var seen = {}, dup = false;
+  Object.keys(CATEGORY_GUIDES).forEach(function (k) {
+    CATEGORY_GUIDES[k].suggestions.forEach(function (s) {
+      if (seen[s.id]) dup = true; seen[s.id] = true;
+    });
+  });
+  dup;
+`), false);
+check('every suggestion fits the length caps and a valid shape', run(`
+  var bad = [];
+  Object.keys(CATEGORY_GUIDES).forEach(function (k) {
+    CATEGORY_GUIDES[k].suggestions.forEach(function (s) {
+      if (s.text.length > TASK_TEXT_MAX) bad.push(s.id + ' text');
+      (s.subtasks || []).forEach(function (t) { if (t.length > SUBTASK_TEXT_MAX) bad.push(s.id + ' step'); });
+      if (s.kind === 'habit' && s.schedule !== null && normalizeSchedule(s.schedule) !== s.schedule) bad.push(s.id + ' schedule');
+      if (s.kind === 'once' && normalizeImpact(s.impact) !== s.impact) bad.push(s.id + ' impact');
+      if (['start', 'level', 'once'].indexOf(s.tier) === -1) bad.push(s.id + ' tier');
+      if ((s.tier === 'once') !== (s.kind === 'once')) bad.push(s.id + ' tier/kind');
+    });
+  });
+  bad;
+`), []);
+
+run(`tasks = []; nextId = 1; tpCategory = 'all'; renderTaskList();`);
+check('tasks page links to the guide front page',
+  $('tpGuideLink').textContent.indexOf("Grower's Guide") !== -1, true);
+run(`tpCategory = 'sleep'; renderTaskList();`);
+check('a single plot links to its own guide',
+  $('tpGuideLink').textContent.indexOf('How to grow Sleep') !== -1, true);
+
+run(`navigateTo('guide');`);
+check('guide page is shown',        $('page-guide').classList.contains('hidden'), false);
+check('tasks page is hidden',       $('page-tasks').classList.contains('hidden'), true);
+check('front page lists seven categories',
+  $('guideContent').querySelectorAll('.guide-card').length, 7);
+check('front page hash',            win.location.hash, '#guide');
+
+run(`navigateTo('guide', { guideCat: 'education' });`);
+check('category guide hash',        win.location.hash, '#guide/education');
+check('category guide renders its sections',
+  $('guideContent').textContent.indexOf('How to actually do it') !== -1, true);
+check('every education suggestion has a plant button',
+  $('guideContent').querySelectorAll('[data-guide-plant]').length,
+  run('CATEGORY_GUIDES.education.suggestions.length'));
+
+win.location.hash = '#guide/nonsense';
+check('an unknown category in the hash falls back to the front page',
+  run('parseNavHash()'), { page: 'guide', guideCat: null });
+win.location.hash = '#guide/finance';
+check('a known category in the hash is read',
+  run('parseNavHash()'), { page: 'guide', guideCat: 'finance' });
+win.location.hash = '#guide/education';
+
+// Plant a habit with a schedule and steps.
+$('guideContent').querySelector('[data-guide-plant="edu-self-quiz"]').click();
+check('planting adds one task',     run('tasks.length'), 1);
+check('planted in the right plot',  run('tasks[0].categoryId'), 'education');
+check('planted as a habit',         run('tasks[0].kind'), 'habit');
+check('with its Saturday schedule', run('tasks[0].schedule'), '0000001');
+check('with its three steps',       run('tasks[0].subtasks.map(function (s) { return s.id + ":" + s.done; })'),
+  ['1:false', '2:false', '3:false']);
+check('nextId moved on',            run('nextId'), 2);
+check('lands on the tasks page',    run('currentPage'), 'tasks');
+check('filtered to that plot',      run('tpCategory'), 'education');
+check('with the new task open',     run('tpOpenTaskId'), 1);
+run('tpCloseSheet();');
+
+// Plant an assignment.
+run(`navigateTo('guide', { guideCat: 'education' });`);
+$('guideContent').querySelector('[data-guide-plant="edu-exam-plan"]').click();
+check('assignment kind',            run('tasks[1].kind'), 'once');
+check('assignment impact',          run('tasks[1].impact'), 3);
+check('assignment has no schedule', run('tasks[1].schedule'), null);
+run('tpCloseSheet();');
+
+// Planted suggestions can't be planted twice.
+run(`navigateTo('guide', { guideCat: 'education' });`);
+check('planted suggestions show as planted',
+  $('guideContent').querySelectorAll('.guide-planted').length, 2);
+check('and lose their button',
+  $('guideContent').querySelector('[data-guide-plant="edu-self-quiz"]'), null);
+run(`guidePlant('education', 'edu-self-quiz');`);
+check('planting again directly is a no-op', run('tasks.length'), 2);
+
+// Back to that plot's tasks from the guide.
+$('guideContent').querySelector('[data-guide-back]').click();
+check('crumb goes back to tasks',   run('currentPage'), 'tasks');
+check('on that plot',               run('tpCategory'), 'education');
+check('guide lights the tasks plank', run(`
+  navigateTo('guide');
+  var p = document.querySelector('.nav-plank.current');
+  p ? p.dataset.page : null;
+`), 'tasks');
 
 console.log('');
 if (fail.length) {

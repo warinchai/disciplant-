@@ -1,0 +1,432 @@
+/* ============================================
+   GUIDE PAGE - the Grower's Guide (14-guides.js)
+
+   Kept out of style.css the same way story.css is, so nothing shared
+   can regress while this is still being iterated on. Built entirely
+   from the tokens and recipes already in style.css: wood-grain
+   boards for headers, linen cards for content, the leaf button for
+   the one action on the page.
+   ============================================ */
+
+.page-guide {
+  background: rgba(58, 40, 26, 0.55);
+}
+
+.guide-content {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 12px 18px 72px;
+}
+
+@media (min-width: 760px) {
+  .guide-content { max-width: 940px; }
+}
+
+
+/* ---------- Crumbs ---------- */
+
+.guide-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.guide-crumb {
+  padding: 7px 14px 8px;
+  border: 2px solid var(--bark-deep);
+  border-radius: var(--r-sm);
+  background: var(--bark-light);
+  color: var(--linen);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--lip) var(--bark-deep);
+  transition: transform 0.1s, box-shadow 0.1s, filter 0.16s;
+}
+
+.guide-crumb:hover  { filter: brightness(1.08); }
+.guide-crumb:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--bark-deep); }
+
+
+/* ---------- Hero board ---------- */
+
+.guide-hero {
+  margin: 0 0 18px;
+  padding: 18px 20px 16px;
+  background-color: var(--bark);
+  background-image: var(--wood-grain);
+  border: 2px solid var(--bark-deep);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lip) var(--bark-deep);
+  color: var(--linen);
+}
+
+.guide-hero-cat {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.guide-hero-art {
+  flex: 0 0 auto;
+  display: flex;
+  width: 96px;
+  height: 96px;
+  align-items: flex-end;
+  justify-content: center;
+  border-radius: 52% 48% 58% 42% / 55% 62% 40% 50%;
+  background: rgba(248, 238, 220, 0.14);
+}
+
+.guide-hero-art svg { max-width: 100%; max-height: 100%; }
+
+.guide-hero-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--linen);
+}
+
+.guide-hero-species {
+  margin: 0 0 6px;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sun);
+}
+
+.guide-hero-lede {
+  margin: 6px 0 0;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--clay);
+}
+
+.guide-hero-tip {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  background: rgba(8, 5, 2, 0.22);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--clay-edge);
+}
+
+.guide-hero-tip b { color: var(--sun); }
+
+
+/* ---------- Front page: category cards ---------- */
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.guide-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px 12px 10px;
+  background: var(--linen);
+  border: 2px solid var(--linen-edge);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lip) var(--clay-deep);
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.16s, transform 0.1s, box-shadow 0.1s;
+}
+
+.guide-card:hover  { border-color: var(--leaf); }
+.guide-card:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--clay-deep); }
+
+.guide-card-art {
+  flex: 0 0 72px;
+  display: flex;
+  height: 72px;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.guide-card-art svg { max-width: 100%; max-height: 100%; }
+
+.guide-card-text {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.guide-card-name {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.guide-card-species {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.guide-card-tagline {
+  margin-top: 4px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ink-soft);
+}
+
+.guide-card-arrow {
+  flex: 0 0 auto;
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--leaf-deep);
+}
+
+
+/* ---------- Category page ---------- */
+
+.guide-cols {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+@media (min-width: 760px) {
+  .guide-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    gap: 18px;
+    align-items: start;
+  }
+}
+
+.guide-card-panel {
+  margin: 0 0 12px;
+  padding: 14px 16px;
+  background: var(--linen);
+  border: 2px solid var(--linen-edge);
+  border-radius: var(--r-lg);
+  box-shadow: 0 3px 0 rgba(58, 40, 26, 0.22);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.guide-card-panel p { margin: 0; }
+.guide-card-panel p + p { margin-top: 8px; }
+
+.guide-panel-title {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: var(--fs-base);
+  font-weight: 800;
+  color: var(--bark-deep);
+}
+
+.guide-how {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.guide-how-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.guide-how-item b { color: var(--ink); }
+
+.guide-how-num {
+  flex: 0 0 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 52% 48% 58% 42% / 55% 62% 40% 50%;
+  background: var(--leaf);
+  color: var(--linen);
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+}
+
+.guide-missed { border-left: 5px solid var(--sun); }
+
+.guide-support {
+  background: var(--bloom-tint);
+  border-color: var(--bloom);
+}
+
+.guide-support a {
+  color: var(--bloom-deep);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.guide-support a:hover { text-decoration: underline; }
+
+.guide-note {
+  margin: 0 4px 12px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--clay-edge);
+}
+
+
+/* ---------- Suggestions ---------- */
+
+.guide-tier { margin-bottom: 18px; }
+
+.guide-sugs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.guide-sug {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 13px;
+  background: var(--linen);
+  border: 2px solid var(--linen-edge);
+  border-radius: var(--r-md);
+  box-shadow: 0 2px 0 rgba(58, 40, 26, 0.18);
+}
+
+/* Same edge the task list gives an assignment. */
+.guide-sug.is-once { border-left: 5px solid var(--sun); }
+
+.guide-sug.is-planted { opacity: 0.7; }
+
+.guide-sug-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.guide-sug-text {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.guide-sug-meta {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--ink-faint);
+}
+
+.guide-sug-steps {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.guide-plant-btn {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 2px solid var(--leaf-dark);
+  border-radius: var(--r-sm);
+  background: var(--leaf-deep);
+  color: var(--linen);
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--leaf-dark);
+  transition: transform 0.1s, box-shadow 0.1s, filter 0.16s;
+}
+
+.guide-plant-btn:hover    { filter: brightness(1.07); }
+.guide-plant-btn:active   { transform: translateY(3px); box-shadow: 0 0 0 var(--leaf-dark); }
+.guide-plant-btn:disabled { opacity: 0.55; cursor: default; filter: none; }
+
+.guide-planted {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 20px;
+  background: rgba(127, 169, 104, 0.18);
+  color: var(--leaf-dark);
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+
+/* ---------- The way in, on the Tasks page ---------- */
+
+.tp-guide-link { margin: 0 14px 12px; }
+
+.tp-guide-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px dashed rgba(231, 205, 166, 0.45);
+  border-radius: var(--r-md);
+  background: rgba(8, 5, 2, 0.2);
+  color: var(--clay);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.16s, background 0.16s, color 0.16s;
+}
+
+.tp-guide-btn:hover {
+  border-color: var(--sun);
+  background: rgba(8, 5, 2, 0.3);
+  color: var(--linen);
+}
+
+.tp-guide-icon  { display: flex; color: var(--sun); }
+.tp-guide-label { flex: 1 1 auto; min-width: 0; }
+.tp-guide-arrow { color: var(--sun); font-weight: 800; }
+
+
+/* ---------- Phones ---------- */
+
+@media (max-width: 480px) {
+  .guide-content { padding-left: 16px; padding-right: 16px; }
+  .guide-hero-cat { align-items: flex-start; }
+  .guide-hero-art { width: 72px; height: 72px; }
+  .guide-sug { align-items: flex-start; }
+  .guide-plant-btn { padding: 7px 10px; }
+}

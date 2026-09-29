@@ -292,7 +292,19 @@ const authModalBody      = document.getElementById('authModalBody');
 // from the back button would land on a page with no friend loaded.
 // Leaving the browser on whatever hash it already had for that case
 // (see the guard in navigateTo below) is a smaller gap than that.
-var NAV_HASH_PAGES = ['home', 'garden', 'tasks', 'stats', 'greenhouse', 'friends'];
+var NAV_HASH_PAGES = ['home', 'garden', 'tasks', 'stats', 'greenhouse', 'friends', 'guide'];
+
+// The guide is the one page with a second part to its hash:
+// "#guide/education" is that category's guide, bare "#guide" the
+// front page. Everything else is just "#page".
+function parseNavHash() {
+  var parts = (location.hash || '').slice(1).split('/');
+  var page  = parts[0];
+  if (NAV_HASH_PAGES.indexOf(page) === -1) page = 'home';
+  var cat = (page === 'guide' && typeof isGuideCategory === 'function' &&
+             isGuideCategory(parts[1])) ? parts[1] : null;
+  return { page: page, guideCat: cat };
+}
 
 function navigateTo(page, opts) {
   opts = opts || {};
@@ -329,6 +341,12 @@ function navigateTo(page, opts) {
 
   currentPage = page;
 
+  // Which guide is showing. Only navigating TO the guide changes it,
+  // so the Back button from a category's tasks returns to that guide.
+  if (page === 'guide' && typeof guideCategory !== 'undefined') {
+    guideCategory = opts.guideCat || null;
+  }
+
   // Picking a destination is the end of using the menu.
   if (typeof setNavDrawer === 'function') setNavDrawer(false);
   if (typeof highlightNavPlank === 'function') highlightNavPlank();
@@ -340,6 +358,9 @@ function navigateTo(page, opts) {
   if (pageGreenhouseEl) pageGreenhouseEl.classList.toggle('hidden', page !== 'greenhouse');
   if (pageFriendsEl)    pageFriendsEl.classList.toggle('hidden',    page !== 'friends');
   if (pageFriendGardenEl) pageFriendGardenEl.classList.toggle('hidden', page !== 'friend-garden');
+  if (typeof pageGuideEl !== 'undefined' && pageGuideEl) {
+    pageGuideEl.classList.toggle('hidden', page !== 'guide');
+  }
 
   // Garden scene: only visible on garden page once auth is ready
   if (gardenSceneEl) gardenSceneEl.classList.toggle('hidden', page !== 'garden' || !authReady);
@@ -421,6 +442,13 @@ function navigateTo(page, opts) {
     // not the same as asking to be prompted.
   }
 
+  if (page === 'guide' && typeof renderGuidePage === 'function') {
+    // Static content, so it draws without waiting on auth. Only the
+    // "Plant this" buttons need the garden, and render() redraws
+    // this page when it arrives.
+    renderGuidePage();
+  }
+
   if (page === 'friend-garden') {
     // 07 loads after this file, so guard the call the same way the
     // friends hooks in 02 do.
@@ -435,6 +463,7 @@ function navigateTo(page, opts) {
   if (page === 'greenhouse' && pageGreenhouseEl) pageGreenhouseEl.scrollTop = 0;
   if (page === 'friends' && pageFriendsEl) pageFriendsEl.scrollTop = 0;
   if (page === 'friend-garden' && pageFriendGardenEl) pageFriendGardenEl.scrollTop = 0;
+  if (page === 'guide' && typeof pageGuideEl !== 'undefined' && pageGuideEl) pageGuideEl.scrollTop = 0;
 
   // Keep the URL in sync so the back/forward buttons work between
   // pages, without doing this for a popstate-triggered call (the
@@ -443,6 +472,9 @@ function navigateTo(page, opts) {
   // NAV_HASH_PAGES above).
   if (!opts.fromPopState && NAV_HASH_PAGES.indexOf(page) !== -1) {
     var hash = '#' + page;
+    if (page === 'guide' && typeof guideCategory !== 'undefined' && guideCategory) {
+      hash += '/' + guideCategory;
+    }
     if (location.hash !== hash) history.pushState(null, '', hash);
   }
 }
@@ -452,9 +484,8 @@ function navigateTo(page, opts) {
 // falls back to home. fromPopState stops navigateTo from pushing a new
 // history entry for a transition the browser already recorded.
 window.addEventListener('popstate', function () {
-  var page = (location.hash || '').slice(1);
-  if (NAV_HASH_PAGES.indexOf(page) === -1) page = 'home';
-  navigateTo(page, { fromPopState: true });
+  var nav = parseNavHash();
+  navigateTo(nav.page, { fromPopState: true, guideCat: nav.guideCat });
 });
 
 // Deep-linking: a bookmarked or shared "#tasks" (etc.) link opens
@@ -466,9 +497,9 @@ window.addEventListener('popstate', function () {
 // browser's own initial history entry already matches this hash; we're
 // just catching it up to what that hash means, not creating a new one.
 document.addEventListener('DOMContentLoaded', function () {
-  var initialPage = (location.hash || '').slice(1);
-  if (NAV_HASH_PAGES.indexOf(initialPage) !== -1 && initialPage !== 'home') {
-    navigateTo(initialPage, { fromPopState: true });
+  var nav = parseNavHash();
+  if (nav.page !== 'home') {
+    navigateTo(nav.page, { fromPopState: true, guideCat: nav.guideCat });
   }
 });
 
@@ -590,7 +621,9 @@ function toggleNavDrawer() {
 // the drawer is already correct the moment it opens.
 function highlightNavPlank() {
   document.querySelectorAll('.nav-plank').forEach(function (plank) {
-    plank.classList.toggle('current', plank.dataset.page === currentPage);
+    // The guide is reached from Tasks, so it lights that plank.
+    var here = (currentPage === 'guide') ? 'tasks' : currentPage;
+    plank.classList.toggle('current', plank.dataset.page === here);
   });
 }
 

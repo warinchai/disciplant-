@@ -12,6 +12,7 @@
        #page-home) back out, or fold the rules into style.css proper,
        once the wording and placement are actually approved. -->
   <link rel="stylesheet" href="story.css" />
+  <link rel="stylesheet" href="guide.css" />
 
   <!-- Icons. The same sprout circle the account picture uses, drawn
        once more in favicon.svg rather than shared with 02's
@@ -733,6 +734,11 @@
       <!-- The plots. A filter now, not a set of tabs. -->
       <div class="tp-plot" id="tpPlot"></div>
 
+      <!-- The way into the Grower's Guide: the front page from "All
+           plots", a category's own guide from that plot. Filled in
+           by tpRenderGuideLink() in 14-guides.js. -->
+      <div class="tp-guide-link" id="tpGuideLink"></div>
+
       <div class="tp-seg tp-scope" id="tpScope" role="group" aria-label="Which tasks to show"></div>
 
       <div class="tp-sections" id="tpSections"></div>
@@ -981,6 +987,18 @@
        stays put, the planks slide out over whatever page
        you happen to be on.
        ================================================ -->
+  <!-- ================================================
+       PAGE: GUIDE
+       ================================================
+       The Grower's Guide: a front page of categories, and one
+       page per category with tips and one-tap suggestions.
+       Reached from the Tasks page, not the menu. Body is built
+       by renderGuidePage() in 14-guides.js.
+       ================================================ -->
+  <div id="page-guide" class="page page-guide hidden">
+    <div id="guideContent" class="guide-content"></div>
+  </div>
+
   <button id="navPost" class="nav-post" aria-controls="navDrawer" aria-expanded="false">
     <span class="nav-post-slat" aria-hidden="true"></span>
     <span class="nav-post-label">Menu</span>
@@ -1124,6 +1142,10 @@
        above it; 04 and 12 only call into it through typeof guards, so
        the app still works with this tag removed. -->
   <script src="13-onboarding.js"></script>
+
+  <!-- The Grower's Guide. After 12 and 13, because it reuses the schedule
+       label and task sheet from there. -->
+  <script src="14-guides.js"></script>
 
   <!-- Account data: export and permanent deletion. Numbered 10 because
        08 and 09 were taken; loaded here, ahead of both, because unlike
