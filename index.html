@@ -14,6 +14,11 @@
   <link rel="stylesheet" href="story.css" />
   <link rel="stylesheet" href="guide.css" />
 
+  <!-- Dew, the garden currency: the Greenhouse balance panel, the
+       shop tiles and the "+3 Dew" toast. Its own file, beside the
+       script that draws them (15-wallet.js). -->
+  <link rel="stylesheet" href="15-wallet.css" />
+
   <!-- Icons. The same sprout circle the account picture uses, drawn
        once more in favicon.svg rather than shared with 02's
        AVATAR_SPROUT_SVG: a tab icon is 16px, so the plant is scaled up
@@ -553,7 +558,7 @@
           <p class="home-about-a">Press Edit garden, drag your plants wherever you want them, then save. Outside that mode nothing moves, so you cannot knock a plant over by scrolling past it.</p>
 
           <h3 class="home-about-q">The greenhouse</h3>
-          <p class="home-about-a">This is where looks live. Every plant has a set of skins and the garden itself has a set of landscapes. The landscapes are all open from the start. Plant skins unlock as you go, two of them once you have 3 and then 7 friends, one from a 10 day streak on that plant, one from 30 days of growth on it.</p>
+          <p class="home-about-a">This is where looks live. Every plant has a set of skins and the garden itself has a set of landscapes. Each plant’s first skin and the Meadow landscape are free. Everything else is bought with Dew. You earn a little every time you tick a habit, more for finishing an assignment, and a bonus when a habit reaches 7, 30, 100 and 365 days in a row. Your balance sits in the top corner of the garden. Some plant skins can still be earned without spending anything: two once you have 3 and then 7 friends, one from a 10 day streak on that plant, one from 30 days of growth on it.</p>
 
           <h3 class="home-about-q">Friends</h3>
           <p class="home-about-a">Pick a username, add someone by theirs, and you can visit each other’s gardens. A friend sees your plants and how far along each one is, which does show roughly what kind of habit it is. A friend never sees what you actually wrote.</p>
@@ -880,6 +885,9 @@
         <p class="greenhouse-subtitle">Every plant you’re growing, and every look it can wear. Tap a plant to open its skins - whatever you pick shows up in the garden straight away.</p>
       </header>
 
+      <!-- The Dew balance panel is inserted here, just above the
+           landscape picker, by renderDewBalance() in 15-wallet.js. -->
+
       <!-- The garden's own landscape skin (populated by JS).
            Above the plant cards on purpose: it changes the ground
            every one of those plants is standing in, so it reads as
@@ -1153,6 +1161,13 @@
        currentUserId and tasks from 01, clearPerAccountState from 02,
        escapeHtml from 04, the friends state from 06 and 07. -->
   <script src="10-account-data.js"></script>
+
+  <!-- Dew, the garden currency. After 10 because it wraps functions
+       from 01, 02, 03, 05 and 10 (toggleTask, retuneAward, the skin
+       unlock rules, the Greenhouse pickers, the data export). 02 only
+       calls into it through typeof guards, so the app still works with
+       this tag removed - Dew simply stops existing. -->
+  <script src="15-wallet.js"></script>
 
   <!-- Analytics consent. Loaded LAST and depends on nothing above it -
        it only needs the DOM. This is the file that decides whether

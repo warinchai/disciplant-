@@ -545,7 +545,7 @@ function renderAuthModal() {
     : (profile.displayName || 'Signed in');
 
   var subtitleText = profile.isAnonymous
-    ? 'You\u2019re gardening as a guest. Sign in with Google to save your garden to your account and access it anywhere.'
+    ? 'You’re gardening as a guest. Sign in with Google to save your garden to your account and access it anywhere.'
     : (profile.email || 'Signed in with Google');
 
   var actionHtml = profile.isAnonymous
@@ -885,10 +885,13 @@ auth.onIdTokenChanged(function (user) {
           // exists resolves to the default at render time rather than
           // here, so a skin that comes back later comes back worn.
           gardenSkinId  = data.gardenSkinId || null;
+          // The Dew wallet rides on the same document - see 15-wallet.js.
+          if (typeof dewLoadFromDoc === 'function') dewLoadFromDoc(data);
         } else {
           tasks         = [];
           lastResetDate = null;
           gardenSkinId  = null;
+          if (typeof dewLoadFromDoc === 'function') dewLoadFromDoc(null);
 
           // No garden document means a brand new account — a fresh
           // guest, or a sign-out into a new one. Any window state
@@ -1361,6 +1364,9 @@ function saveData(rlOpensWindow, retryIndex) {
     // no extra read: it arrives in the same snapshot as the tasks.
     gardenSkinId:  gardenSkinId || GARDEN_SKIN_DEFAULT_ID,
   };
+  // The Dew wallet (15-wallet.js). Same write, no extra cost.
+  if (typeof dewWalletPayload === 'function') payload.wallet = dewWalletPayload();
+
   var counters = rlFields(rlOpensWindow);
   for (var k in counters) payload[k] = counters[k];
 
