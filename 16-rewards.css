@@ -1,0 +1,489 @@
+/* ============================================
+   REWARDS PAGE - Morning dew, quests, badges (16-rewards.js)
+
+   Built from the same recipes as the Greenhouse: wood-grain benches
+   for each board, linen cards laid on them, the sun for headings.
+   Dew blue is the one accent that belongs to this page, the same
+   blue as the drop in 15-wallet.css, so everything that pays reads
+   as the same currency.
+   ============================================ */
+
+.page-rewards {
+  background: rgba(8, 5, 2, 0.42);
+}
+
+.rewards-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 12px 18px 72px;
+}
+
+/* ---------- Header: title, balance, the jar ---------- */
+
+.rw-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 4px 0 18px;
+}
+
+.rw-header-text { flex: 1 1 auto; min-width: 0; }
+
+.rw-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  color: var(--sun);
+  margin: 0 0 5px;
+  letter-spacing: 0.02em;
+}
+
+.rw-subtitle {
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--clay);
+  margin: 0 0 12px;
+  max-width: 54ch;
+}
+
+.rw-balance {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(20, 16, 10, 0.55);
+  border: 1.5px solid rgba(108, 196, 232, 0.45);
+  color: var(--linen);
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.rw-balance strong { color: var(--dew-drop, #6CC4E8); font-size: var(--fs-lg); }
+
+.rw-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--fs-xs);
+  color: var(--clay);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.rw-jar-wrap {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.rw-jar { width: 104px; height: auto; display: block; }
+.rw-jar-water { transition: d 0.6s ease; }
+
+.rw-jar-label {
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--clay);
+}
+
+/* ---------- Shared board ---------- */
+
+.rw-morning,
+.rw-board {
+  margin: 0 0 16px;
+  padding: 14px;
+  background-color: var(--bark);
+  background-image: var(--wood-grain);
+  border: 2px solid var(--bark-deep);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lip-deep, 0 4px 0) var(--bark-deep);
+}
+
+.rw-h {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--sun);
+}
+
+.rw-sub {
+  margin: 2px 0 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--linen);
+  opacity: 0.9;
+}
+
+.rw-board-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+
+.rw-board-icon { width: 30px; height: 30px; flex: none; }
+
+.rw-resets {
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--clay);
+  white-space: nowrap;
+}
+
+/* ---------- Morning dew ---------- */
+
+.rw-pips {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin: 12px 0;
+  padding: 0;
+}
+
+.rw-pip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 2px 6px;
+  border-radius: var(--r-sm);
+  background: rgba(20, 16, 10, 0.32);
+  border: 2px dashed rgba(248, 238, 220, 0.25);
+  color: var(--clay);
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+.rw-pip .dew-drop { width: 16px; height: 21px; opacity: 0.35; filter: grayscale(0.6); }
+
+.rw-pip.is-filled {
+  background: var(--linen);
+  border: 2px solid var(--linen-edge);
+  color: var(--dew-ink, #1F5E78);
+}
+.rw-pip.is-filled .dew-drop { opacity: 1; filter: none; }
+
+.rw-pip.is-next {
+  border: 2px solid var(--dew-drop, #6CC4E8);
+  color: var(--linen);
+  animation: rwPulse 1.8s ease-in-out infinite;
+}
+.rw-pip.is-next .dew-drop { opacity: 1; filter: none; }
+
+.rw-pip.is-big .dew-drop { width: 21px; height: 27px; }
+
+@keyframes rwPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(108, 196, 232, 0.0); }
+  50%      { box-shadow: 0 0 0 4px rgba(108, 196, 232, 0.35); }
+}
+
+.rw-morning-action { display: flex; justify-content: center; }
+
+.rw-hint {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--clay);
+}
+
+/* ---------- Quest cards ---------- */
+
+.rw-quests {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+/* Three across on a wide screen: icon beside the text, the button
+   along the bottom of the card. */
+@media (min-width: 760px) {
+  .rw-quests { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rw-quest  { flex-wrap: wrap; align-items: flex-start; }
+  .rw-quest .rw-collect,
+  .rw-quest .rw-collected { width: 100%; margin-top: auto; text-align: center; }
+}
+
+.rw-quest {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--linen);
+  border: 2px solid var(--linen-edge);
+  border-radius: var(--r-md);
+  color: var(--ink);
+}
+
+.rw-quest-icon { width: 34px; height: 34px; flex: none; }
+
+.rw-quest-body { flex: 1 1 0; min-width: 0; }
+
+.rw-quest-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rw-quest-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-base);
+}
+
+.rw-quest-text {
+  margin: 1px 0 8px;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--ink-soft);
+}
+
+.rw-bar {
+  height: 9px;
+  border-radius: 999px;
+  background: var(--linen-edge);
+  overflow: hidden;
+}
+
+.rw-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--leaf);
+  transition: width 0.4s ease;
+}
+
+.rw-quest.is-done .rw-bar span { background: var(--dew-drop, #6CC4E8); }
+
+.rw-quest.is-collected { opacity: 0.68; }
+.rw-quest.is-collected .rw-bar span { background: var(--leaf-deep); }
+
+.rw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--dew-glint, #E6F7FF);
+  color: var(--dew-ink, #1F5E78);
+  font-weight: 800;
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+/* ---------- Buttons ---------- */
+
+.rw-collect {
+  flex: none;
+  min-width: 84px;
+  padding: 8px 14px 9px;
+  border: 2px solid #3E8FB0;
+  border-radius: var(--r-sm);
+  background: var(--dew-drop, #6CC4E8);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  box-shadow: 0 3px 0 #3E8FB0;
+  transition: transform 0.1s, box-shadow 0.1s, filter 0.16s;
+}
+
+.rw-collect:hover:not(:disabled) { filter: brightness(1.07); }
+.rw-collect:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 #3E8FB0; }
+
+.rw-collect:disabled {
+  background: var(--linen-edge);
+  border-color: var(--clay-edge);
+  color: var(--ink-soft);
+  box-shadow: none;
+  cursor: default;
+}
+
+.rw-collect:not(:disabled) { animation: rwPulse 1.8s ease-in-out infinite; }
+
+.rw-collect-big { font-size: var(--fs-base); padding: 10px 22px 11px; }
+
+.rw-collected {
+  flex: none;
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--leaf-deep);
+}
+
+.rw-morning .rw-collected { color: var(--linen); }
+
+/* ---------- Badges ---------- */
+
+.rw-badges {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.rw-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: 14px 10px 12px;
+  background: var(--linen);
+  border: 2px solid var(--linen-edge);
+  border-radius: var(--r-md);
+  color: var(--ink);
+}
+
+.rw-medal {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #FBE4AF, var(--sun) 60%, var(--sun-deep));
+  border: 3px solid var(--sun-deep);
+  box-shadow: inset 0 -3px 0 rgba(94, 70, 50, 0.25), 0 3px 0 rgba(94, 70, 50, 0.25);
+}
+
+.rw-medal-icon { width: 34px; height: 34px; }
+
+.rw-badge-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-sm);
+}
+
+.rw-badge-text {
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+  color: var(--ink-soft);
+  flex: 1 1 auto;
+}
+
+.rw-badge-foot {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  color: var(--ink-faint);
+}
+
+.rw-badge.is-earned .rw-badge-foot { color: var(--leaf-deep); }
+
+/* Locked: the medal is unpainted wood with the icon pressed in. */
+.rw-badge.is-locked .rw-medal {
+  background: radial-gradient(circle at 35% 30%, var(--clay), var(--clay-deep));
+  border-color: var(--clay-edge);
+}
+.rw-badge.is-locked .rw-medal-icon { filter: grayscale(1); opacity: 0.4; }
+
+.rw-badge.is-ready { border-color: var(--dew-drop, #6CC4E8); }
+.rw-badge.is-ready .rw-medal { animation: rwPulse 1.8s ease-in-out infinite; }
+.rw-badge .rw-collect { min-width: 0; padding: 6px 10px 7px; font-size: var(--fs-xs); }
+
+/* ---------- Phone ---------- */
+
+@media (max-width: 480px) {
+  .rw-header { align-items: center; }
+  .rw-jar { width: 78px; }
+  .rw-pips { gap: 4px; }
+  .rw-pip { padding: 6px 0 4px; }
+  .rw-quest { flex-wrap: wrap; }
+  .rw-quest .rw-collect, .rw-quest .rw-collected { margin-left: 46px; }
+  .rw-badges { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+
+/* ============================================
+   FRONT PAGE - the two new signs
+   ============================================
+   Two more paints, pulled toward the bench palette the same way the
+   first four were: a plum for the guide (the dusk accent, deepened)
+   and a teal for rewards (dew blue, weathered). Their lettering
+   colours live in HB_SIGNS in 01 and 16. */
+
+.marker-plum {
+  --face-lit:  #B6A6D2;
+  --face:      #8E7BAE;
+  --face-deep: #725F92;
+  --rim-lit:   #6E5C8C;
+  --rim:       #5B4A77;
+  --rim-deep:  #3C3052;
+}
+
+.marker-teal {
+  --face-lit:  #84C9CF;
+  --face:      #579FA6;
+  --face-deep: #3F8189;
+  --rim-lit:   #3E7F87;
+  --rim:       #316A71;
+  --rim-deep:  #1F484D;
+}
+
+.marker-guide   { --tilt: -2.4deg; margin-top: 18px; }
+.marker-rewards { --tilt:  1.6deg; margin-top: 4px;  }
+
+/* Six signs on a phone: three and three, so none of them ends up
+   under the Menu post at the right edge. */
+@media (max-width: 480px) {
+  .home-markers { max-width: 300px; margin-left: auto; margin-right: auto; row-gap: 14px; }
+  .marker-guide { margin-top: 10px; }
+}
+
+
+/* ============================================
+   "Something to collect" dot
+   ============================================
+   On the Rewards plank, the Rewards sign and the Dew pill. Set by
+   updateRewardsDots() in 16-rewards.js. */
+
+/* The pill is already position: fixed, which anchors the dot too. */
+.nav-plank[data-rw-dot] { position: relative; }
+
+.nav-plank.rw-has-dot::after,
+.marker.rw-has-dot::after,
+.dew-pill.rw-has-dot::after {
+  content: attr(data-rw-count);
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: var(--dew-drop, #6CC4E8);
+  border: 2px solid var(--linen);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  z-index: 2;
+  animation: rwPulse 1.8s ease-in-out infinite;
+}
+
+.nav-plank.rw-has-dot::after { top: 50%; right: 12px; transform: translateY(-50%); }
+.dew-pill.rw-has-dot::after { content: ''; min-width: 12px; width: 12px; height: 12px; padding: 0; top: -3px; right: -3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rw-pip.is-next, .rw-collect:not(:disabled), .rw-badge.is-ready .rw-medal,
+  .nav-plank.rw-has-dot::after, .marker.rw-has-dot::after, .dew-pill.rw-has-dot::after { animation: none; }
+}

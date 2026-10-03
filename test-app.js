@@ -1352,11 +1352,11 @@ check('planting again directly is a no-op', run('tasks.length'), 2);
 $('guideContent').querySelector('[data-guide-back]').click();
 check('crumb goes back to tasks',   run('currentPage'), 'tasks');
 check('on that plot',               run('tpCategory'), 'education');
-check('guide lights the tasks plank', run(`
+check('guide lights its own plank', run(`
   navigateTo('guide');
   var p = document.querySelector('.nav-plank.current');
   p ? p.dataset.page : null;
-`), 'tasks');
+`), 'guide');
 
 console.log('');
 if (fail.length) {

@@ -19,6 +19,10 @@
        script that draws them (15-wallet.js). -->
   <link rel="stylesheet" href="15-wallet.css" />
 
+  <!-- Rewards: Morning dew, the daily / weekly / monthly quests and
+       the lifelong badges (16-rewards.js). -->
+  <link rel="stylesheet" href="16-rewards.css" />
+
   <!-- Icons. The same sprout circle the account picture uses, drawn
        once more in favicon.svg rather than shared with 02's
        AVATAR_SPROUT_SVG: a tab icon is 16px, so the plant is scaled up
@@ -439,6 +443,17 @@
         </button>
         <button class="marker marker-sm marker-red marker-friends" id="btn-to-friends" aria-label="Friends">
           <span class="marker-face" id="cutFriends"></span>
+        </button>
+
+        <!-- The Grower's Guide and Rewards. Two more destinations, so
+             two more paints: a plum for the guide and a dew teal for
+             rewards. Rewards carries the "something to collect" dot
+             (data-rw-dot, set by 16-rewards.js). -->
+        <button class="marker marker-sm marker-plum marker-guide" id="btn-to-guide" aria-label="Grower's Guide">
+          <span class="marker-face" id="cutGuide"></span>
+        </button>
+        <button class="marker marker-sm marker-teal marker-rewards" id="btn-to-rewards" aria-label="Rewards" data-rw-dot>
+          <span class="marker-face" id="cutRewards"></span>
         </button>
 
         <!-- Opens the panel below rather than navigating anywhere, so
@@ -1000,11 +1015,24 @@
        ================================================
        The Grower's Guide: a front page of categories, and one
        page per category with tips and one-tap suggestions.
-       Reached from the Tasks page, not the menu. Body is built
-       by renderGuidePage() in 14-guides.js.
+       Reached from the Tasks page, the menu and the front page.
+       Body is built by renderGuidePage() in 14-guides.js.
        ================================================ -->
   <div id="page-guide" class="page page-guide hidden">
     <div id="guideContent" class="guide-content"></div>
+  </div>
+
+  <!-- ================================================
+       PAGE: REWARDS
+       ================================================
+       Morning dew, the quest boards for today / this week /
+       this month, and the lifelong badges. Everything inside
+       #rewardsContent is built by renderRewardsPage() in
+       16-rewards.js.
+       ================================================ -->
+  <div id="page-rewards" class="page page-rewards hidden">
+    <p id="rewardsLoadingState" class="loading-state">Loading your garden...</p>
+    <div id="rewardsContent" class="rewards-content hidden"></div>
   </div>
 
   <button id="navPost" class="nav-post" aria-controls="navDrawer" aria-expanded="false">
@@ -1021,6 +1049,8 @@
     <button class="nav-plank" data-page="tasks">Tasks</button>
     <button class="nav-plank" data-page="stats">Stats</button>
     <button class="nav-plank" data-page="greenhouse">Greenhouse</button>
+    <button class="nav-plank" data-page="rewards" data-rw-dot>Rewards</button>
+    <button class="nav-plank" data-page="guide">Grower's Guide</button>
     <button class="nav-plank" data-page="friends">Friends</button>
   </nav>
 
@@ -1168,6 +1198,11 @@
        calls into it through typeof guards, so the app still works with
        this tag removed - Dew simply stops existing. -->
   <script src="15-wallet.js"></script>
+
+  <!-- Rewards: more ways to earn Dew. After 15 because it credits
+       through the wallet and rides on its save; it wraps navigateTo
+       and render the same way 15 does. -->
+  <script src="16-rewards.js"></script>
 
   <!-- Analytics consent. Loaded LAST and depends on nothing above it -
        it only needs the DOM. This is the file that decides whether

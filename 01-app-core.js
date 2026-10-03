@@ -621,9 +621,7 @@ function toggleNavDrawer() {
 // the drawer is already correct the moment it opens.
 function highlightNavPlank() {
   document.querySelectorAll('.nav-plank').forEach(function (plank) {
-    // The guide is reached from Tasks, so it lights that plank.
-    var here = (currentPage === 'guide') ? 'tasks' : currentPage;
-    plank.classList.toggle('current', plank.dataset.page === here);
+    plank.classList.toggle('current', plank.dataset.page === currentPage);
   });
 }
 
@@ -646,6 +644,7 @@ document.getElementById('btn-to-garden').addEventListener('click',     function 
 document.getElementById('btn-to-tasks').addEventListener('click',      function () { navigateTo('tasks');      });
 document.getElementById('btn-to-greenhouse').addEventListener('click', function () { navigateTo('greenhouse'); });
 document.getElementById('btn-to-friends').addEventListener('click',    function () { navigateTo('friends');    });
+document.getElementById('btn-to-guide').addEventListener('click',      function () { navigateTo('guide');      });
 
 
 // ============================================
@@ -1100,6 +1099,9 @@ var HB_SIGNS = [
     lit: '#FBE4AF', shadow: '#563608', floor: '#8C6019' },
   { hostId: 'cutFriends',    text: 'FRIENDS',
     lit: '#F4BAA9', shadow: '#4A1C12', floor: '#7C3B29' },
+  { hostId: 'cutGuide',      text: 'GUIDE',
+    lit: '#DCCFF0', shadow: '#2E2240', floor: '#56456F' },
+  // REWARDS is added by 16-rewards.js, so its sign goes with its page.
 
   // The tagline, cut into the pale board under the plank rather than
   // printed on it. Its three colours are the odd ones out: the board
