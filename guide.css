@@ -390,35 +390,110 @@
 
 /* ---------- The way in, on the Tasks page ---------- */
 
-.tp-guide-link { margin: 0 14px 12px; }
+.tp-guide-link { margin: 0 14px 14px; }
 
+/* A board in the garden's own recipe - linen face, a gold frame and
+   the --lip bevel - so it reads as a sign to stop at, not a hint to
+   skim past. Gold rather than bark because gold is what the app uses
+   for "this way". */
 .tp-guide-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   width: 100%;
-  padding: 10px 14px;
-  border: 2px dashed rgba(231, 205, 166, 0.45);
-  border-radius: var(--r-md);
-  background: rgba(8, 5, 2, 0.2);
-  color: var(--clay);
-  font-family: var(--font-display);
-  font-size: var(--fs-sm);
-  font-weight: 700;
+  padding: 12px 16px 12px 12px;
+  border: 3px solid var(--sun-deep);
+  border-radius: var(--r-lg);
+  background: linear-gradient(180deg, #FFF8E8 0%, var(--linen) 100%);
+  color: var(--ink);
+  font-family: var(--font-body);
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.16s, background 0.16s, color 0.16s;
+  box-shadow: var(--lip) var(--sun-deep), 0 8px 18px rgba(0, 0, 0, 0.22);
+  transition: transform 0.12s, box-shadow 0.12s, border-color 0.16s;
 }
 
 .tp-guide-btn:hover {
-  border-color: var(--sun);
-  background: rgba(8, 5, 2, 0.3);
-  color: var(--linen);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--sun-deep), 0 12px 22px rgba(0, 0, 0, 0.26);
 }
 
-.tp-guide-icon  { display: flex; color: var(--sun); }
-.tp-guide-label { flex: 1 1 auto; min-width: 0; }
-.tp-guide-arrow { color: var(--sun); font-weight: 800; }
+.tp-guide-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--sun-deep), 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.tp-guide-btn:focus-visible { outline: 3px solid var(--leaf); outline-offset: 3px; }
+
+.tp-guide-art {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 92px;
+  height: 64px;
+  border-radius: 52% 48% 58% 42% / 55% 62% 40% 50%;
+  background: rgba(127, 169, 104, 0.18);
+}
+
+.tp-guide-plant { display: flex; }
+.tp-guide-plant svg { display: block; }
+.tp-guide-art .tp-guide-plant + .tp-guide-plant { margin-left: -14px; }
+.tp-guide-btn.is-cat .tp-guide-art { width: 72px; }
+
+.tp-guide-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tp-guide-kicker {
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sun-deep);
+}
+
+.tp-guide-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.tp-guide-sub {
+  font-size: var(--fs-sm);
+  line-height: 1.35;
+  color: var(--ink-soft);
+}
+
+.tp-guide-cta {
+  flex: none;
+  padding: 10px 16px;
+  border: 2px solid var(--leaf-dark);
+  border-radius: var(--r-sm);
+  background: var(--leaf-deep);
+  color: var(--linen);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 3px 0 var(--leaf-dark);
+}
+
+/* Narrow: the button drops to its own full-width line under the
+   words, so the heading keeps its size instead of wrapping to three
+   lines beside it. */
+@media (max-width: 560px) {
+  .tp-guide-btn { flex-wrap: wrap; gap: 10px 12px; }
+  .tp-guide-text { flex-basis: calc(100% - 106px); }
+  .tp-guide-cta { flex-basis: 100%; text-align: center; }
+}
 
 
 /* ---------- Phones ---------- */

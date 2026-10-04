@@ -685,23 +685,39 @@ function tpRenderGuideLink() {
   if (!tpGuideLinkEl) return;
   var cat = (tpCategory && tpCategory !== 'all') ? guideCategoryById(tpCategory) : null;
 
-  var label = cat
-    ? 'How to grow ' + cat.name + ': ideas and tips'
-    : "Not sure what to plant? Read the Grower's Guide";
+  // A board, not a strip. The guide is the part of the app that tells
+  // someone WHAT to grow, so it gets the same weight as the list it
+  // sits above: plant art, a heading you can read from arm's length,
+  // one line on what is inside, and a button that looks like one.
+  var title = cat ? 'How to grow ' + cat.name : 'Not sure what to plant?';
+  var sub   = cat
+    ? 'Why it matters, how to stick with it, and tasks you can plant in one tap.'
+    : 'Ideas for every part of your life, each one ready to plant in one tap.';
   var target = cat ? cat.id : '';
 
   if (tpGuideLinkEl.dataset.target === target && tpGuideLinkEl.innerHTML) return;
   tpGuideLinkEl.dataset.target = target;
   tpGuideLinkEl.innerHTML =
-    '<button type="button" class="tp-guide-btn" data-guide-open="' + target + '">' +
-      '<span class="tp-guide-icon" aria-hidden="true">' +
-        '<svg viewBox="0 0 20 20" width="18" height="18"><path d="M4 3.5h8.5a3 3 0 0 1 3 3V17H7a3 3 0 0 1-3-3z" ' +
-        'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>' +
-        '<path d="M8 7.5h4.5M8 10.5h4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
+    '<button type="button" class="tp-guide-btn' + (cat ? ' is-cat' : '') + '" data-guide-open="' + target + '">' +
+      '<span class="tp-guide-art" aria-hidden="true">' + tpGuideArt(cat) + '</span>' +
+      '<span class="tp-guide-text">' +
+        '<span class="tp-guide-kicker">The Grower\'s Guide</span>' +
+        '<span class="tp-guide-title">' + escapeHtml(title) + '</span>' +
+        '<span class="tp-guide-sub">' + escapeHtml(sub) + '</span>' +
       '</span>' +
-      '<span class="tp-guide-label">' + escapeHtml(label) + '</span>' +
-      '<span class="tp-guide-arrow" aria-hidden="true">&rarr;</span>' +
+      '<span class="tp-guide-cta">Open the guide <span aria-hidden="true">&rarr;</span></span>' +
     '</button>';
+}
+
+// One plant for a single plot's guide; three from different plots,
+// leaning together, for the guide as a whole.
+var TP_GUIDE_TRIO = ['education', 'exercise', 'finance'];
+
+function tpGuideArt(cat) {
+  if (cat) return '<span class="tp-guide-plant">' + guideArt(cat.id, 64) + '</span>';
+  return TP_GUIDE_TRIO.map(function (id) {
+    return '<span class="tp-guide-plant">' + guideArt(id, 48) + '</span>';
+  }).join('');
 }
 
 if (tpGuideLinkEl) {
