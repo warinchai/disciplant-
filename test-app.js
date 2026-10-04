@@ -1241,10 +1241,21 @@ ob().querySelector('[data-ob-act="tick"]').click();
 check('ticking it finishes it', run('tasks[0].completed && tasks[0].doneAt === getTodayString()'), true);
 check('and the walkthrough moves on the same way', run('onboardStage()'), 'grow');
 
-// A planted starter saves exactly like a plant from the add form.
+// A planted starter saves exactly like a plant from the add form. On a
+// fresh plot: tasks[0] above is a ticked assignment, not a starter.
+run('tasks = []; nextId = 1; onboardPlantedId = null; render();');
+ob().querySelector('[data-ob-starter="0"]').click();
 check('it writes the same fields as any new habit',
   run('Object.keys(buildCleanTasks()[0]).sort().join(",")'),
   run('Object.keys((function () { var t = makeTask(1, "x", "misc"); tasks = [t]; return buildCleanTasks()[0]; }())).sort().join(",")'));
+
+// And an assignment from the box saves like one from the add form.
+run('tasks = []; nextId = 1; onboardPlantedId = null; render();');
+ob().querySelector('[data-ob-kind="once"]').click();
+submitOwn('Essay');
+check('it writes the same fields as any new assignment',
+  run('Object.keys(buildCleanTasks()[0]).sort().join(",")'),
+  run('Object.keys((function () { var t = makeTask(1, "x", "misc"); setTaskKind(t, "once"); tasks = [t]; return buildCleanTasks()[0]; }())).sort().join(",")'));
 
 // The Tasks page's empty state offers the same starters.
 run("tasks = []; nextId = 1; onboardPlantedId = null; tpScope = 'today'; currentPage = 'tasks'; render();");
