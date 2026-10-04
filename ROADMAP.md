@@ -92,7 +92,7 @@ IDs are provisional; nothing here is committed.
 
 ### I. Correctness
 
-* **I1** — Timezone / travel handling. `getTodayString()` is local-date based with no stored home timezone; crossing zones can silently break a streak or grant a double day.
+* ✅ **I1** — Timezone / travel handling *(adopted and shipped)*. `getTodayString()` never goes backwards: if the device date falls behind `lastResetDate` by up to `DAY_HOLD_MAX_DAYS` (2, the widest any two timezones differ), the garden stays on the later day until the local date catches up, so flying west can no longer re-open and double-pay a day. A bigger fall is a corrected clock and trusts the device. Flying east far enough to skip a calendar day is an ordinary missed day, which B4 offers. The Stats heatmap now counts from the same today instead of reading the clock itself
 * **I2** — Import. Export exists in `10-account-data.js` and `verify-history.js` proves the round-trip is lossless, but there is no import path.
 * **I3** — Harden the Dew wallet in `firestore.rules`. Today the rules never look at the wallet, so the balance is one edit away. Free, partial fix: require `bal == earned - spent`, cap the balance rise per write (largest single reward is 80), and only allow a new `owned` entry when `spent` rose by at least its price. Not urgent while Dew buys only cosmetics and is never shown to anyone else; becomes necessary the moment it does either
 
@@ -109,6 +109,7 @@ IDs are provisional; nothing here is committed.
 * **`bal == earned - spent`** on the wallet, through every credit, refund and purchase. I3 relies on it.
 * **Rewards are derived, not counted.** Quest and badge progress is read off history; only collected IDs are stored. Don't add a tick counter alongside toggleTask().
 * **A past day is banked unless it was back-filled today.** `lateOn === today` is the only thing that makes yesterday changeable; never widen B4 past yesterday without rethinking that.
+* **Read the date through `getTodayString()`, never `new Date()`.** It is the only thing that knows to hold a day after a westward flight; anything that reads the clock itself can disagree with the rest of the app about which day it is.
 * **The repo is public.** Every commit, old ones included, is world-readable. Secrets (`serviceAccountKey.json`, `.env*`) stay gitignored.
 * **`cleanUrls: true` on Vercel** requires root-absolute paths in HTML, and breaks HTML-file Search Console verification (use the meta tag method).
 
@@ -123,6 +124,7 @@ Tests are additive — none should be lost between sessions.
 | `test-appcheck.js` | 29 checks, App Check vs rate-limit denial | jsdom |
 | `test-wallet.js` | 82 checks, Dew earning, refunds, caps, shop, pill | jsdom |
 | `test-rewards.js` | 50 checks, Morning dew, quests, badges, navigation | jsdom |
+| `test-timezone.js` | 25 checks, flying west / east, corrected clocks, heatmap's today | jsdom |
 | `test-yesterday.js` | 70 checks, logging yesterday: eligibility, growth, streak, Dew, undo, card, sheet | jsdom |
 | `verify-history.js` | 77 assertions, round-trip losslessness | node |
 

@@ -35,11 +35,12 @@ function formatDateStr(d) {
   return yyyy + '-' + mm + '-' + dd;
 }
 
+// Counted back from the garden's today (getTodayString in 01), not the
+// device clock, so the Stats page and the rest of the app always agree
+// about which day it is - including while a westward flight is holding
+// the day.
 function getDateNDaysAgo(n) {
-  var d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - n);
-  return formatDateStr(d);
+  return shiftDate(getTodayString(), -n);
 }
 
 // Builds a GitHub-style grid: an array of weeks, each an array of 7
@@ -48,8 +49,7 @@ function getDateNDaysAgo(n) {
 // so columns line up as real calendar weeks; the last week is padded
 // with nulls past today so it's always exactly 7 cells.
 function buildYearGrid() {
-  var today = new Date();
-  today.setHours(0, 0, 0, 0);
+  var today = new Date(getTodayString() + 'T00:00:00');
 
   var totalDays = 371; // 53 weeks
   var start = new Date(today);

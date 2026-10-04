@@ -1495,12 +1495,43 @@ if (document.readyState === 'loading') {
 // ============================================
 // Date helpers
 // ============================================
-function getTodayString() {
+// The calendar date on this device, in whatever timezone it is in now.
+function localDateString() {
   var d    = new Date();
   var yyyy = d.getFullYear();
   var mm   = String(d.getMonth() + 1).padStart(2, '0');
   var dd   = String(d.getDate()).padStart(2, '0');
   return yyyy + '-' + mm + '-' + dd;
+}
+
+// The garden's "today". Usually just the device's date - except that it
+// NEVER GOES BACKWARDS (roadmap I1).
+//
+// Fly west - Bangkok to London - and the device's date can fall back a
+// day. Without this, applyDayBoundaries() saw a date that was merely
+// different from lastResetDate, rolled over, unticked everything, and
+// let the same day be ticked and paid a second time. Holding "today" at
+// the last day the garden rolled into means the day simply lasts longer
+// for someone who flew west, until the local date catches up.
+//
+// Only a fall of up to DAY_HOLD_MAX_DAYS is held, because that is the
+// most two timezones can ever disagree by. Anything bigger is not
+// travel: it is a device clock that was wrong and has been put right,
+// and holding then would pin the garden to a date in the future. That
+// case trusts the device, and the next rollover sets lastResetDate back
+// to the real date.
+//
+// The opposite direction - flying east far enough to skip a calendar
+// day - is a missed day like any other, and 17-yesterday.js offers it.
+var DAY_HOLD_MAX_DAYS = 2;
+
+function getTodayString() {
+  var local = localDateString();
+  if (lastResetDate && lastResetDate > local &&
+      dayGap(local, lastResetDate) <= DAY_HOLD_MAX_DAYS) {
+    return lastResetDate;
+  }
+  return local;
 }
 
 function dayGap(earlierDate, laterDate) {
