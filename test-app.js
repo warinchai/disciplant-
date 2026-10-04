@@ -1376,3 +1376,6 @@ if (fail.length) {
   process.exit(1);
 }
 console.log('all checks passed');
+// pretendToBeVisual keeps a requestAnimationFrame loop alive, so the
+// process would otherwise never exit - and piped output never flushes.
+process.exit(0);

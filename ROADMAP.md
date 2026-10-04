@@ -1,6 +1,6 @@
 # Disciplant — Roadmap
 
-**Last updated:** 23 September 2026
+**Last updated:** 4 October 2026
 
 Legend: ✅ done · ⬜ open · 🔜 next up · ❌ dropped
 
@@ -43,9 +43,11 @@ Legend: ✅ done · ⬜ open · 🔜 next up · ❌ dropped
 ## D. Progression & rewards
 
 * ⬜ **D1** — Harvest a mature plant into a seed
-* ⬜ **D2** — Seeds spendable on head starts or skin unlocks
+* ⬜ **D2** — Seeds spendable on head starts or skin unlocks *(skin unlocks now covered by Dew, D5; head starts deliberately not — Dew never buys growth)*
 * ⬜ **D3** — Garden-level aggregate goals
 * ⬜ **D4** — Plot expansion / new terrain
+* ✅ **D5** — Dew currency (`15-wallet.js`). Earned: 1 per habit tick (cap 10/day), an assignment's impact on completion (cap 25/day, nothing for one under 10 minutes old), and streak bonuses at 7/30/100/365 days off `maxStreak`. Spent on plant skins (per species, by slot: 30/40/50/80) and landscapes (100–150). Same-day unticks refund exactly what was paid; achievement unlocks still work as a free route. Stored as one `wallet` map on `gardens/{uid}`, riding on the existing save; never mirrored to `gardenSummaries`
+* ✅ **D6** — Rewards page (`16-rewards.js`): Morning dew (a 7-step daily collect ladder, reset by a missed day), three daily / weekly / monthly quests, and 12 lifelong badges. All progress is derived from stored history, `doneAt` and `maxStreak`; the only new state is which rewards were collected (`wallet.rw`)
 
 ## E. Social
 
@@ -63,6 +65,7 @@ Legend: ✅ done · ⬜ open · 🔜 next up · ❌ dropped
 ## Infrastructure
 
 * ✅ Fix App Check misattribution in `02-auth-tasks.js` — `isRateLimitDenial()` treated every `permission-denied` as the rate limiter, so a broken attestation token was reported as a write-limit breach and retried three times for nothing. `classifyDenial()` now probes App Check for a fresh token at the moment of the denial and returns `appcheck` / `ratelimit` / `other`; all three write paths (`writeUserProfileDoc`, `saveData`, `writeGardenSummary`) branch on it, stop retrying when attestation is the cause, and roll back the optimistic `rlStart` they had recorded
+* ✅ Contributors' pushes deploy on their own (4 October 2026). On Hobby with a private repo, Vercel blocked any commit not authored by the project owner, so every outside push needed a "redeploy" commit. Deploy hooks do not get round this — Vercel checks the latest commit's author for hook and CLI deploys too (tested: hook accepted, nothing went live). Fixed by making the GitHub repo public; verified with two pushes live in ~30 s each
 * ⬜ App Check rollout checklist
 * ⬜ Attach Cloud Billing to unlock finer reCAPTCHA score levels
 
@@ -85,11 +88,13 @@ IDs are provisional; nothing here is committed.
 * **H2** — Undo a tick. No clean reversal today; `retuneAward()` machinery is mostly already in place.
 * ✅ **H3** — Manual task ordering *(adopted and shipped)*. `task.order`, a manual override with the same semantics as `posX`/`posY`: a number means the user placed it, `null` means use the automatic sort. Placed tasks take the top of their list in the given order; everything unplaced keeps sorting itself underneath, so dragging one row never discards the due-date or growth sorts wholesale. Habits and assignments order separately. Drag handle on each row (pointer events, works on touch) plus up/down controls and a "back to automatic" reset in the detail sheet for keyboard reach. `compareTasks()` in 01 is now the single comparator; `tpSortHabits`/`tpSortAssignments` delegate to it. Orders are dense 0..n-1, rewritten per move, and written to Firestore only once a task is actually placed.
 * **H4** — Archive instead of delete. Deleting a finished habit destroys the history that made it satisfying. Archive keeps it out of the denominator but preserves the plant.
+* ✅ **H5** — The Grower's Guide *(adopted and shipped)*, `14-guides.js`. One page per category (`#guide`, `#guide/<category>`): why it matters for a student, three how-tos, "if you miss a day", and Start here / Level up / One-off suggestions, each planted in one tap with its schedule, type, impact and steps prefilled, then opened in the task sheet. Static content, nothing new stored. Linked from the Tasks page and a home-page sign. Mindfulness carries the 1323 / 1669 support note. Each suggestion's `next` field is in place for the later level-up nudge but not read yet
 
 ### I. Correctness
 
 * **I1** — Timezone / travel handling. `getTodayString()` is local-date based with no stored home timezone; crossing zones can silently break a streak or grant a double day.
 * **I2** — Import. Export exists in `10-account-data.js` and `verify-history.js` proves the round-trip is lossless, but there is no import path.
+* **I3** — Harden the Dew wallet in `firestore.rules`. Today the rules never look at the wallet, so the balance is one edit away. Free, partial fix: require `bal == earned - spent`, cap the balance rise per write (largest single reward is 80), and only allow a new `owned` entry when `spent` rose by at least its price. Not urgent while Dew buys only cosmetics and is never shown to anyone else; becomes necessary the moment it does either
 
 ---
 
@@ -100,6 +105,10 @@ IDs are provisional; nothing here is committed.
 * **Migrations should be no-ops where possible.** C1 and C3 both shipped as genuine no-ops on existing data. Aim for that.
 * **Denominators err toward flattering the past.** The `firstSeen` approximation is deliberate — using current task count for historical heatmap cells produces misleading shading.
 * **SVG colours use `style="fill:var(--c-leaf,…)"`,** never `fill="var(…)"` — CSS custom properties in SVG presentation attributes are unreliable cross-browser.
+* **Dew buys looks, never growth.** The wallet is client-authoritative, which is only acceptable because nothing it buys changes growth, streaks or stats, or is visible to anyone else. Anything that breaks that needs I3 (or a server) first.
+* **`bal == earned - spent`** on the wallet, through every credit, refund and purchase. I3 relies on it.
+* **Rewards are derived, not counted.** Quest and badge progress is read off history; only collected IDs are stored. Don't add a tick counter alongside toggleTask().
+* **The repo is public.** Every commit, old ones included, is world-readable. Secrets (`serviceAccountKey.json`, `.env*`) stay gitignored.
 * **`cleanUrls: true` on Vercel** requires root-absolute paths in HTML, and breaks HTML-file Search Console verification (use the meta tag method).
 
 ## Test suites
@@ -108,10 +117,14 @@ Tests are additive — none should be lost between sessions.
 
 | File | Coverage | Runner |
 | --- | --- | --- |
-| `test-app.js` | ~262 checks (incl. manual ordering, onboarding) | jsdom |
+| `test-app.js` | 294 checks (incl. manual ordering, onboarding, guides) | jsdom |
+| `test-impact.js` | 62 checks, impact picker / effort dialog smoke test | jsdom |
+| `test-appcheck.js` | 29 checks, App Check vs rate-limit denial | jsdom |
+| `test-wallet.js` | 82 checks, Dew earning, refunds, caps, shop, pill | jsdom |
+| `test-rewards.js` | 50 checks, Morning dew, quests, badges, navigation | jsdom |
 | `verify-history.js` | 77 assertions, round-trip losslessness | node |
-| `test-impact.js` | UI smoke test | jsdom |
-| `test-appcheck.js` | 28 checks, App Check vs rate-limit denial | jsdom |
+
+Every suite exits on its own with 0 on success, 1 on failure (`test-app.js` used to hang after passing; fixed 4 October 2026).
 
 Validate syntax with `node --check` after every change.
 Serve locally with `python3 -m http.server 8000` so root-absolute paths resolve.
