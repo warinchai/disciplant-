@@ -871,7 +871,10 @@ auth.onIdTokenChanged(function (user) {
                                  firstCompletedDate(hist) || null,
               due:               normalizeDateString(t.due),
               doneAt:            normalizeDateString(t.doneAt),
-              notes:             (typeof t.notes === 'string')
+              // The day yesterday was back-filled on (17-yesterday.js).
+              // Only ever means anything while it is today.
+              lateOn:            normalizeDateString(t.lateOn),
+              notes:            (typeof t.notes === 'string')
                                    ? t.notes.slice(0, NOTE_MAX) : '',
               subtasks:          normalizeSubtasks(t.subtasks),
               // What finishing this is worth. Absent means 1, which
@@ -1020,6 +1023,9 @@ function buildCleanTasks() {
     if (t.createdAt)                clean.createdAt = t.createdAt;
     if (t.due)                      clean.due       = t.due;
     if (t.doneAt)                   clean.doneAt    = t.doneAt;
+    // Only while it can still be undone - see 17-yesterday.js. A
+    // stale one is dropped by the first save of a new day.
+    if (t.lateOn && t.lateOn === getTodayString()) clean.lateOn = t.lateOn;
     if (t.notes)                    clean.notes     = t.notes;
     // Written only once the user has actually placed this task, so a
     // garden nobody has reordered keeps saving the document it saved

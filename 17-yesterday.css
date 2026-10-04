@@ -1,0 +1,138 @@
+/* ========================================
+   Yesterday - the "Forgot to tick yesterday?" card on the Tasks page
+   and the row in the detail sheet (17-yesterday.js).
+
+   The card is a clay board in a bark frame, the same recipe as the
+   onboarding card, because it is the same kind of thing: a one-off
+   question laid over the list rather than part of it. Its rows are
+   linen like the task rows they stand for. The buttons and the effort
+   switch reuse .ob-btn and .tp-seg as they are.
+   ======================================== */
+
+.yd-card {
+  margin: 0 14px 16px;
+  padding: 12px 14px 12px;
+  background: var(--clay);
+  border: 3px solid var(--bark);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lip) var(--bark-deep);
+}
+
+.yd-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.yd-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-base);
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.yd-hide {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.yd-hide:hover { background: rgba(58, 40, 26, 0.10); color: var(--ink); }
+
+.yd-sub {
+  margin: 4px 0 10px;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--ink-soft);
+}
+
+.yd-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.yd-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 8px 10px;
+  background: var(--linen);
+  border: 2px solid var(--linen-edge);
+  border-radius: var(--r-md);
+  box-shadow: 0 2px 0 rgba(58, 40, 26, 0.18);
+}
+
+.yd-row.is-fixed { border-color: var(--leaf); }
+
+.yd-row-art { flex: none; display: inline-flex; }
+
+.yd-row-text {
+  flex: 1 1 140px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.yd-row-name {
+  font-weight: 700;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.yd-row-meta {
+  font-size: var(--fs-xs);
+  color: var(--ink-soft);
+}
+
+.yd-fix { padding: 7px 14px; }
+
+.yd-done {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.yd-done-label {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  color: var(--leaf-dark);
+}
+
+.yd-effort .tp-seg-btn { padding: 5px 10px; font-size: var(--fs-xs); }
+
+.yd-undo {
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.yd-undo:hover { color: var(--ink); }
+
+.yd-field-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Below the two-column breakpoint the whole row stacks, so the
+   button gets a line of its own instead of squeezing the name. */
+@media (max-width: 520px) {
+  .yd-fix,
+  .yd-done { flex-basis: 100%; }
+  .yd-fix { justify-content: center; }
+}

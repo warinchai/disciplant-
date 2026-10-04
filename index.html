@@ -23,6 +23,10 @@
        the lifelong badges (16-rewards.js). -->
   <link rel="stylesheet" href="16-rewards.css" />
 
+  <!-- "Forgot to tick yesterday?" - the card on the Tasks page and
+       the row in the detail sheet (17-yesterday.js). -->
+  <link rel="stylesheet" href="17-yesterday.css" />
+
   <!-- Icons. The same sprout circle the account picture uses, drawn
        once more in favicon.svg rather than shared with 02's
        AVATAR_SPROUT_SVG: a tab icon is 16px, so the plant is scaled up
@@ -1203,6 +1207,11 @@
        through the wallet and rides on its save; it wraps navigateTo
        and render the same way 15 does. -->
   <script src="16-rewards.js"></script>
+
+  <!-- Logging yesterday for a habit that was done but not ticked.
+       After 12 (wraps its section and sheet renders) and after 15/16
+       (pays Dew through the wallet and rides on its save). -->
+  <script src="17-yesterday.js"></script>
 
   <!-- Analytics consent. Loaded LAST and depends on nothing above it -
        it only needs the DOM. This is the file that decides whether

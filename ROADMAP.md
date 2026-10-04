@@ -22,7 +22,7 @@ Legend: ✅ done · ⬜ open · 🔜 next up · ❌ dropped
 * ✅ **B1** — Custom schedule (7-bit weekday mask); streaks only break on scheduled days
 * ⬜ **B2** — Streak insurance
 * ⬜ **B3** — Pause / vacation mode
-* ⬜ **B4** — Retroactive ticking — *started, then shelved before any code was written*
+* ✅ **B4** — Retroactive ticking (`17-yesterday.js`). Yesterday only, habits only, only a day the habit was scheduled for and not before it existed. Offered from a "Forgot to tick yesterday?" card on the Tasks page (hideable for the day) and a Yesterday row in the detail sheet. Logs yesterday with an effort level, grows the plant by an ordinary tick, rebuilds the streak from history, and pays the habit-tick Dew plus any milestone crossed. Re-ratable and undoable until today ends, then banked. One optional task field, `lateOn` (the day the fix was made), written only while it is today's; the Dew paid sits in `wallet.ly` for the same day
 * ✅ **B5** — Heatmap denominator rebuilt on B1 + A7
 
 ## C. Growth & visibility
@@ -85,7 +85,7 @@ IDs are provisional; nothing here is committed.
 ### H. First run & list hygiene
 
 * ✅ **H1** — Onboarding / seeded first habit *(adopted and shipped)*. An empty plot now shows a first-run card instead of two lines of text: six one-tap starter habits, one per plot and each drawn as the plant it grows into, plus a box for your own with the same Habit / Assignment switch and plant picker the Tasks page form has (defaults: habit, Miscellaneous). Planting walks the loop once on the real garden: "did you do it today?", then a pointer at Show today's growth. The stage is derived from the garden every time it is asked (`onboardStage()` in `13-onboarding.js`), so there is no new field, no new read and no localStorage, and a reload part-way through simply drops it. The Tasks page's empty state offers the same starters. The first tick skips the effort question and is logged Steady.
-* **H2** — Undo a tick. No clean reversal today; `retuneAward()` machinery is mostly already in place.
+* ✅ **H2** — Undo a tick *(already covered)*. Unticking on the same day reverses everything — growth, streak, history and Dew. After midnight a tick is banked on purpose, and B4 covers the opposite case
 * ✅ **H3** — Manual task ordering *(adopted and shipped)*. `task.order`, a manual override with the same semantics as `posX`/`posY`: a number means the user placed it, `null` means use the automatic sort. Placed tasks take the top of their list in the given order; everything unplaced keeps sorting itself underneath, so dragging one row never discards the due-date or growth sorts wholesale. Habits and assignments order separately. Drag handle on each row (pointer events, works on touch) plus up/down controls and a "back to automatic" reset in the detail sheet for keyboard reach. `compareTasks()` in 01 is now the single comparator; `tpSortHabits`/`tpSortAssignments` delegate to it. Orders are dense 0..n-1, rewritten per move, and written to Firestore only once a task is actually placed.
 * **H4** — Archive instead of delete. Deleting a finished habit destroys the history that made it satisfying. Archive keeps it out of the denominator but preserves the plant.
 * ✅ **H5** — The Grower's Guide *(adopted and shipped)*, `14-guides.js`. One page per category (`#guide`, `#guide/<category>`): why it matters for a student, three how-tos, "if you miss a day", and Start here / Level up / One-off suggestions, each planted in one tap with its schedule, type, impact and steps prefilled, then opened in the task sheet. Static content, nothing new stored. Linked from the Tasks page and a home-page sign. Mindfulness carries the 1323 / 1669 support note. Each suggestion's `next` field is in place for the later level-up nudge but not read yet
@@ -108,6 +108,7 @@ IDs are provisional; nothing here is committed.
 * **Dew buys looks, never growth.** The wallet is client-authoritative, which is only acceptable because nothing it buys changes growth, streaks or stats, or is visible to anyone else. Anything that breaks that needs I3 (or a server) first.
 * **`bal == earned - spent`** on the wallet, through every credit, refund and purchase. I3 relies on it.
 * **Rewards are derived, not counted.** Quest and badge progress is read off history; only collected IDs are stored. Don't add a tick counter alongside toggleTask().
+* **A past day is banked unless it was back-filled today.** `lateOn === today` is the only thing that makes yesterday changeable; never widen B4 past yesterday without rethinking that.
 * **The repo is public.** Every commit, old ones included, is world-readable. Secrets (`serviceAccountKey.json`, `.env*`) stay gitignored.
 * **`cleanUrls: true` on Vercel** requires root-absolute paths in HTML, and breaks HTML-file Search Console verification (use the meta tag method).
 
@@ -122,6 +123,7 @@ Tests are additive — none should be lost between sessions.
 | `test-appcheck.js` | 29 checks, App Check vs rate-limit denial | jsdom |
 | `test-wallet.js` | 82 checks, Dew earning, refunds, caps, shop, pill | jsdom |
 | `test-rewards.js` | 50 checks, Morning dew, quests, badges, navigation | jsdom |
+| `test-yesterday.js` | 70 checks, logging yesterday: eligibility, growth, streak, Dew, undo, card, sheet | jsdom |
 | `verify-history.js` | 77 assertions, round-trip losslessness | node |
 
 Every suite exits on its own with 0 on success, 1 on failure (`test-app.js` used to hang after passing; fixed 4 October 2026).
