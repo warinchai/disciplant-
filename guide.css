@@ -80,7 +80,15 @@
   background: rgba(248, 238, 220, 0.14);
 }
 
-.guide-hero-art svg { max-width: 100%; max-height: 100%; }
+.guide-hero-art {
+  box-sizing: border-box;
+  /* Plant art is drawn with overflow:visible and some species (the oak's
+     canopy) reach past the top of their own viewBox, so the drawing is
+     inset rather than allowed to fill the bubble edge to edge. */
+  padding: 14px 10px 6px;
+}
+
+.guide-hero-art svg { max-width: 100%; max-height: 100%; width: auto; height: 100%; }
 
 .guide-hero-title {
   margin: 0;
@@ -427,19 +435,23 @@
 
 .tp-guide-art {
   flex: none;
+  box-sizing: border-box;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  width: 92px;
-  height: 64px;
+  width: 96px;
+  height: 76px;
+  /* Room above for canopies that reach past their viewBox - see
+     .guide-hero-art. The plants are sized by height to fit inside. */
+  padding: 12px 6px 4px;
   border-radius: 52% 48% 58% 42% / 55% 62% 40% 50%;
   background: rgba(127, 169, 104, 0.18);
 }
 
-.tp-guide-plant { display: flex; }
-.tp-guide-plant svg { display: block; }
-.tp-guide-art .tp-guide-plant + .tp-guide-plant { margin-left: -14px; }
-.tp-guide-btn.is-cat .tp-guide-art { width: 72px; }
+.tp-guide-plant { display: flex; height: 100%; }
+.tp-guide-plant svg { display: block; width: auto; height: 100%; }
+.tp-guide-art .tp-guide-plant + .tp-guide-plant { margin-left: -8px; }
+.tp-guide-btn.is-cat .tp-guide-art { width: 76px; }
 
 .tp-guide-text {
   flex: 1 1 auto;
@@ -491,7 +503,7 @@
    lines beside it. */
 @media (max-width: 560px) {
   .tp-guide-btn { flex-wrap: wrap; gap: 10px 12px; }
-  .tp-guide-text { flex-basis: calc(100% - 106px); }
+  .tp-guide-text { flex-basis: calc(100% - 110px); }
   .tp-guide-cta { flex-basis: 100%; text-align: center; }
 }
 
