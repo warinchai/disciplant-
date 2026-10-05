@@ -1379,6 +1379,21 @@ check('guide lights its own plank', run(`
   p ? p.dataset.page : null;
 `), 'guide');
 
+// =====================================================================
+console.log('\n--- the menu ---');
+
+check('the menu runs in order of importance',
+  Array.from(win.document.querySelectorAll('#navDrawer .nav-plank')).map(p => p.textContent.trim()),
+  ['Home', 'Garden', 'Tasks', "Grower's Guide", 'Friends', 'Rewards', 'Greenhouse', 'Stats', 'About', 'Our Mission']);
+run(`navigateTo('stats'); setHomeAboutOpen(false);`);
+win.document.querySelector('#navDrawer [data-nav="about"]').click();
+check('About goes Home', run('currentPage'), 'home');
+check('and opens the About panel', $('homeAbout').classList.contains('hidden'), false);
+check('without lighting up as a page', run(`document.querySelectorAll('.nav-plank.current').length`), 1);
+check('Our Mission links to the story page',
+  win.document.querySelector('#navDrawer a.nav-plank').getAttribute('href'), '/story');
+run('setHomeAboutOpen(false);');
+
 console.log('');
 if (fail.length) {
   console.log(fail.length + ' FAILURE(S):\n');

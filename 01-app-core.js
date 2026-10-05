@@ -630,7 +630,15 @@ if (navScrimEl) navScrimEl.addEventListener('click', function () { setNavDrawer(
 
 document.querySelectorAll('.nav-plank').forEach(function (plank) {
   plank.addEventListener('click', function () {
-    navigateTo(plank.dataset.page);
+    // A page plank goes to its page. "About" is not a page: it is the
+    // panel on Home, so it goes Home and opens it. "Our Mission" is a
+    // plain link to /story and needs nothing from here.
+    if (plank.dataset.page) {
+      navigateTo(plank.dataset.page);
+    } else if (plank.dataset.nav === 'about') {
+      navigateTo('home');
+      setHomeAboutOpen(true);
+    }
   });
 });
 

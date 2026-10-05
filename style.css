@@ -4217,6 +4217,9 @@ a:focus-visible,
   transition: transform 0.1s, box-shadow 0.1s, filter 0.16s;
 }
 
+/* "Our Mission" is a link to /story, not a button - same plank. */
+a.nav-plank { box-sizing: border-box; text-decoration: none; }
+
 .nav-plank:hover { filter: brightness(1.09); }
 
 .nav-plank:active {

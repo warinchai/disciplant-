@@ -124,7 +124,7 @@ Tests are additive — none should be lost between sessions.
 
 | File | Coverage | Runner |
 | --- | --- | --- |
-| `test-app.js` | 298 checks (incl. manual ordering, onboarding, guides, scope switch) | jsdom |
+| `test-app.js` | 303 checks (incl. manual ordering, onboarding, guides, scope switch, menu order) | jsdom |
 | `test-impact.js` | 62 checks, impact picker / effort dialog smoke test | jsdom |
 | `test-appcheck.js` | 29 checks, App Check vs rate-limit denial | jsdom |
 | `test-wallet.js` | 86 checks, Dew earning, refunds, caps, shop, pill | jsdom |

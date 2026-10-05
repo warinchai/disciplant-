@@ -1053,14 +1053,20 @@
 
   <nav id="navDrawer" class="nav-drawer" aria-label="Main navigation" aria-hidden="true">
     <p class="nav-drawer-title">Disciplant</p>
+    <!-- Ordered by how often a student needs each one: the daily
+         loop first (garden, tasks, the guide that feeds it), then the
+         social and reward pages, then reference. About opens the panel
+         on Home; Our Mission is the separate story page. -->
     <button class="nav-plank" data-page="home">Home</button>
     <button class="nav-plank" data-page="garden">Garden</button>
     <button class="nav-plank" data-page="tasks">Tasks</button>
-    <button class="nav-plank" data-page="stats">Stats</button>
-    <button class="nav-plank" data-page="greenhouse">Greenhouse</button>
-    <button class="nav-plank" data-page="rewards" data-rw-dot>Rewards</button>
     <button class="nav-plank" data-page="guide">Grower's Guide</button>
     <button class="nav-plank" data-page="friends">Friends</button>
+    <button class="nav-plank" data-page="rewards" data-rw-dot>Rewards</button>
+    <button class="nav-plank" data-page="greenhouse">Greenhouse</button>
+    <button class="nav-plank" data-page="stats">Stats</button>
+    <button class="nav-plank" data-nav="about">About</button>
+    <a class="nav-plank" href="/story">Our Mission</a>
   </nav>
 
   <!-- Shared tooltip for heatmap cells, positioned via JS on hover -->
