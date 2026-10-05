@@ -782,6 +782,7 @@ auth.onIdTokenChanged(function (user) {
 
       try {
 
+        gardenDocExists = !!docSnapshot.exists;
         if (docSnapshot.exists) {
           var data  = docSnapshot.data();
 
@@ -1078,6 +1079,10 @@ function buildCleanTasks() {
 var SAVE_MIN_INTERVAL_MS = 1500;
 var lastSaveAt      = 0;
 var pendingSaveTimer = null;
+
+// Whether gardens/{uid} exists, as the snapshot listener last saw it.
+// Decides update() (exists) versus set(merge:true) (create) in saveData.
+var gardenDocExists = false;
 
 
 // ============================================
@@ -1408,28 +1413,41 @@ function saveData(rlOpensWindow, retryIndex) {
     gardenRlStartIsLocal = true;
   }
 
-  // mergeFields, not merge:true and not a plain set().
+  // update() on an existing garden; set(merge:true) only to create one.
   //
   // Not a plain set(): on the "same window" branch the client
   // deliberately does NOT send rlStart (it has no way to produce the
   // server's exact value), so a full overwrite would delete the counter
   // it is trying to increment.
   //
-  // Not merge:true either, which is what this used to be. merge:true
-  // merges DEEP: inside a map like `wallet`, a key the payload leaves
-  // out is kept from the stored document instead of going away. The
-  // wallet leaves keys out on purpose when they are empty - so an
-  // ended Pause came straight back on the next snapshot and could
-  // never end, and an unticked habit's "already paid" entry lingered
-  // and could be refunded twice.
+  // Not merge:true, which is what this used to be: merge:true merges
+  // DEEP, so inside a map like `wallet` a key the payload leaves out is
+  // kept from the stored document - an ended Pause came straight back,
+  // and an unticked habit's "already paid" entry lingered.
   //
-  // mergeFields with exactly the payload's own top-level keys replaces
-  // each of those fields WHOLE, and leaves every field it does not name
-  // (rlStart on the same-window branch) exactly as stored. So the rule
-  // is now simply: what the payload says a field is, it is.
-  db.collection('gardens').doc(currentUserId)
-    .set(payload, { mergeFields: Object.keys(payload) })
+  // And NOT set() with mergeFields, which replaced it for a day and
+  // broke every save: an explicit field mask that names a transformed
+  // field (rlCount is FieldValue.increment) clears that field before
+  // the transform runs, so the increment counted from 0 and wrote 1.
+  // The rules' "rlCount == old + 1" then refused every same-window
+  // save, and only the one save that opened each 10-minute window got
+  // through. Verified against the Firestore emulator with the live
+  // rules on 6 Oct 2026.
+  //
+  // update() replaces each named top-level field WHOLE (so the wallet
+  // is exactly what the payload says), leaves unnamed ones alone
+  // (rlStart), and applies transforms to the stored value. It needs
+  // the document to exist, which the snapshot listener tells us; a
+  // brand new garden is created with merge:true, where there is
+  // nothing stored to linger.
+  var gardenRef = db.collection('gardens').doc(currentUserId);
+  (gardenDocExists ? gardenRef.update(payload) : gardenRef.set(payload, { merge: true }))
     .catch(function (error) {
+      if (error && error.code === 'not-found') {
+        gardenDocExists = false;
+        saveData(true, isRetry ? retryIndex : 0);
+        return;
+      }
       classifyDenial(error, function (kind) { onGardenSaveDenied(kind, error); });
     });
 

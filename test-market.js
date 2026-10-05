@@ -312,21 +312,31 @@ check('nonsense on the document becomes nothing',
   run('JSON.stringify(mkNormalize({ mulch: 999, fz: 999, cov: { x: ["nope"] }, fert: { "1": [{ f: "2026-01-01", t: "2027-01-01" }] } }))'),
   run('JSON.stringify(Object.assign(mkEmpty(), { mulch: MULCH_HELD_CEILING, fz: FERT_HELD_CEILING }))'));
 
-// THE PAUSE BUG. The garden used to be written with merge:true, which
-// merges DEEP: a key the wallet left out stayed in the stored document,
-// so an ended Pause - and an unticked habit's "already paid" entry -
-// came straight back on the next snapshot. The write now names its
-// top-level fields, which Firestore replaces whole.
+// HOW THE GARDEN IS WRITTEN. Two bugs live here, so it is pinned.
+//   merge:true merges DEEP: a key the wallet left out stayed in the
+//     stored document, so an ended Pause came straight back.
+//   set() with mergeFields fixed that and broke every save: naming the
+//     increment-transformed rlCount in the field mask clears it before
+//     the increment runs, so it always wrote 1, and the rules' "old + 1"
+//     refused every save but the one that opened each 10-minute window.
+// Both confirmed on the Firestore emulator with the live rules. An
+// existing garden is now written with update() (each field replaced
+// whole, increments applied to the stored value); only creating one
+// uses set(merge:true), where nothing is stored to linger.
 reset();
 run(`var gardenWrites = [];
      db = { collection: function () { return { doc: function () { return {
-       set: function (data, opts) { gardenWrites.push({ data: data, opts: opts }); return { catch: function () {} }; }
+       set: function (data, opts) { gardenWrites.push({ how: 'set', data: data, opts: opts }); return { catch: function () {} }; },
+       update: function (data) { gardenWrites.push({ how: 'update', data: data }); return { catch: function () {} }; }
      }; } }; } };
-     currentUserId = 'u1'; lastSaveAt = 0; realSaveData();`);
-check('the garden is saved with mergeFields, not merge:true', run('!!gardenWrites[0].opts.mergeFields && !gardenWrites[0].opts.merge'), true);
-check('naming every field it writes', run('gardenWrites[0].opts.mergeFields.slice().sort().join()'),
-  run('Object.keys(gardenWrites[0].data).sort().join()'));
-check('the wallet among them, so it is replaced whole', run('gardenWrites[0].opts.mergeFields.indexOf("wallet") !== -1'), true);
+     currentUserId = 'u1';`);
+run('gardenDocExists = true; lastSaveAt = 0; realSaveData();');
+check('an existing garden is written with update()', run('gardenWrites[0].how'), 'update');
+check('never with mergeFields', run('JSON.stringify(gardenWrites[0].opts || {})'), '{}');
+check('the wallet is sent whole', run('!!gardenWrites[0].data.wallet && !!gardenWrites[0].data.wallet.mk'), true);
+run('gardenWrites = []; gardenDocExists = false; lastSaveAt = 0; realSaveData();');
+check('a garden that does not exist yet is created with set(merge:true)',
+  run('gardenWrites[0].how + " " + JSON.stringify(gardenWrites[0].opts)'), 'set {"merge":true}');
 
 console.log('\n--- one Greenhouse, two markets ---');
 reset();
