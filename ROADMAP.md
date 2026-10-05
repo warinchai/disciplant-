@@ -68,6 +68,7 @@ Legend: ✅ done · ⬜ open · 🔜 next up · ❌ dropped
 
 * ✅ Fix App Check misattribution in `02-auth-tasks.js` — `isRateLimitDenial()` treated every `permission-denied` as the rate limiter, so a broken attestation token was reported as a write-limit breach and retried three times for nothing. `classifyDenial()` now probes App Check for a fresh token at the moment of the denial and returns `appcheck` / `ratelimit` / `other`; all three write paths (`writeUserProfileDoc`, `saveData`, `writeGardenSummary`) branch on it, stop retrying when attestation is the cause, and roll back the optimistic `rlStart` they had recorded
 * ✅ Contributors' pushes deploy on their own (4 October 2026). On Hobby with a private repo, Vercel blocked any commit not authored by the project owner, so every outside push needed a "redeploy" commit. Deploy hooks do not get round this — Vercel checks the latest commit's author for hook and CLI deploys too (tested: hook accepted, nothing went live). Fixed by making the GitHub repo public; verified with two pushes live in ~30 s each
+* ✅ Garden and garden-summary write limits raised from 200 to 300 per 10 minutes (`rlGardenMax`, `rlSummaryMax`), published in the Console on 6 October 2026. A heavy testing session hit 200 and every save after it was refused until the window rolled over, which looked like digging, collecting and ticking all being broken. A real student never gets near either number; App Check keeps one abuser to one uid
 * ⬜ App Check rollout checklist
 * ⬜ Attach Cloud Billing to unlock finer reCAPTCHA score levels
 
