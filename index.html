@@ -27,6 +27,9 @@
        the row in the detail sheet (17-yesterday.js). -->
   <link rel="stylesheet" href="17-yesterday.css" />
 
+  <!-- Market: Mulch and Pause (18-market.js). -->
+  <link rel="stylesheet" href="18-market.css" />
+
   <!-- Icons. The same sprout circle the account picture uses, drawn
        once more in favicon.svg rather than shared with 02's
        AVATAR_SPROUT_SVG: a tab icon is 16px, so the plant is scaled up
@@ -1039,6 +1042,18 @@
     <div id="rewardsContent" class="rewards-content hidden"></div>
   </div>
 
+  <!-- ================================================
+       PAGE: MARKET
+       ================================================
+       What Dew does besides looks: Mulch, which saves a streak
+       through one missed day, and Pause, which is free. Built by
+       renderMarketPage() in 18-market.js.
+       ================================================ -->
+  <div id="page-market" class="page page-rewards page-market hidden">
+    <p id="marketLoadingState" class="loading-state">Loading your garden...</p>
+    <div id="marketContent" class="rewards-content hidden"></div>
+  </div>
+
   <button id="navPost" class="nav-post" aria-controls="navDrawer" aria-expanded="false">
     <span class="nav-post-slat" aria-hidden="true"></span>
     <span class="nav-post-label">Menu</span>
@@ -1054,6 +1069,7 @@
     <button class="nav-plank" data-page="stats">Stats</button>
     <button class="nav-plank" data-page="greenhouse">Greenhouse</button>
     <button class="nav-plank" data-page="rewards" data-rw-dot>Rewards</button>
+    <button class="nav-plank" data-page="market">Market</button>
     <button class="nav-plank" data-page="guide">Grower's Guide</button>
     <button class="nav-plank" data-page="friends">Friends</button>
   </nav>
@@ -1212,6 +1228,11 @@
        After 12 (wraps its section and sheet renders) and after 15/16
        (pays Dew through the wallet and rides on its save). -->
   <script src="17-yesterday.js"></script>
+
+  <!-- The Market. After 15 (spends through the wallet), 16 and 17
+       (wraps the yesterday fix so logging a Mulched day hands the
+       Mulch back). -->
+  <script src="18-market.js"></script>
 
   <!-- Analytics consent. Loaded LAST and depends on nothing above it -
        it only needs the DOM. This is the file that decides whether

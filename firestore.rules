@@ -211,10 +211,45 @@ service cloud.firestore {
     // because a lone delete resets the rate-limit counter; requiring
     // the profile document to go in the same commit keeps that true
     // while still allowing erasure.
+    // ---- The Dew wallet (15-wallet.js, 18-market.js) ----
+    //
+    // The wallet rides on gardens/{uid} and the browser writes it, so
+    // these checks cannot make it honest - a determined owner can
+    // still edit earned and bal together. What they do is make the
+    // one-number edit fail: the balance has to be what was earned
+    // minus what was spent, a look can only join `owned` in a write
+    // that also spends, and nobody can hold more Mulch than the
+    // Market sells. The app keeps all three true itself (see
+    // dewCredit, dewRefund and dewNormalizeWallet), so an honest save
+    // never trips them. Roadmap I3.
+    //
+    // No per-write cap on how much the balance can rise: saves are
+    // coalesced (SAVE_MIN_INTERVAL_MS in 02), so a first visit to
+    // Rewards can legitimately collect several hundred Dew in one
+    // write. Costs nothing - only `request.resource` and `resource`.
+    function walletOk(old) {
+      let w = request.resource.data.get('wallet', null);
+      return w == null || (
+        w.bal is number && w.earned is number && w.spent is number
+        && w.earned >= 0 && w.spent >= 0
+        && w.bal == w.earned - w.spent
+        && w.bal <= 99999
+        && (!('mk' in w) || !('mulch' in w.mk) || (w.mk.mulch is number && w.mk.mulch <= 3))
+        && ownedOk(w, old)
+      );
+    }
+
+    function ownedOk(w, old) {
+      return old == null || !('owned' in old) || !('owned' in w)
+        || w.owned.size() <= old.owned.size()
+        || w.spent > old.spent;
+    }
+
     match /gardens/{uid} {
       allow read:   if isSignedIn() && me() == uid;
-      allow create: if isSignedIn() && me() == uid && rlOkCreate();
-      allow update: if isSignedIn() && me() == uid && rlOkUpdate(rlGardenMax(), rlWindow());
+      allow create: if isSignedIn() && me() == uid && rlOkCreate() && walletOk(null);
+      allow update: if isSignedIn() && me() == uid && rlOkUpdate(rlGardenMax(), rlWindow())
+        && walletOk(resource.data.get('wallet', null));
       allow delete: if isSignedIn() && me() == uid
         && gone(/databases/$(database)/documents/users/$(uid));
     }

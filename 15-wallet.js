@@ -165,6 +165,16 @@ function dewNormalizeWallet(raw) {
     });
   }
 
+  // bal == earned - spent, always. Every credit, refund and purchase
+  // below keeps it, and firestore.rules refuses a garden write that
+  // breaks it - so a document that arrives broken (hand-edited, or
+  // saved before the clamps below were made symmetric) is repaired
+  // here, on the side that keeps the spendable balance as it was.
+  if (w.bal !== w.earned - w.spent) {
+    w.earned = Math.max(0, w.bal + w.spent);
+    w.spent  = w.earned - w.bal;
+  }
+
   dewRollDay(w);
   dewPruneBorn(w);
   return w;
@@ -253,9 +263,13 @@ function dewCredit(amount, cap) {
   if (cap) {
     var f = dewCapField(cap);
     amount = Math.min(amount, Math.max(0, dewCapMax(cap) - wallet[f]));
-    wallet[f] += amount;
   }
-  wallet.bal    = Math.min(DEW_BALANCE_MAX, wallet.bal + amount);
+  // Clamped BEFORE it lands, so the balance and the lifetime total
+  // move by the same amount and bal == earned - spent survives the
+  // ceiling.
+  amount = Math.min(amount, Math.max(0, DEW_BALANCE_MAX - wallet.bal));
+  if (cap) wallet[dewCapField(cap)] += amount;
+  wallet.bal    += amount;
   wallet.earned += amount;
   return amount;
 }
@@ -266,8 +280,10 @@ function dewRefund(amount, cap) {
   dewRollDay();
   amount = Math.max(0, Math.round(amount) || 0);
   var f = dewCapField(cap || 'a');
-  wallet.bal    = Math.max(DEW_BALANCE_MIN, wallet.bal - amount);
-  wallet.earned = Math.max(0, wallet.earned - amount);
+  // Same symmetry as dewCredit: one amount, clamped once, off both.
+  amount = Math.min(amount, wallet.earned, Math.max(0, wallet.bal - DEW_BALANCE_MIN));
+  wallet.bal    -= amount;
+  wallet.earned -= amount;
   wallet[f]     = Math.max(0, wallet[f] - amount);
   return amount;
 }

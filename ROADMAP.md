@@ -20,8 +20,8 @@ Legend: ✅ done · ⬜ open · 🔜 next up · ❌ dropped
 ## B. Scheduling & fairness
 
 * ✅ **B1** — Custom schedule (7-bit weekday mask); streaks only break on scheduled days
-* ⬜ **B2** — Streak insurance
-* ⬜ **B3** — Pause / vacation mode
+* ✅ **B2** — Streak insurance: **Mulch** (`18-market.js`). 25 Dew, hold at most 2. Spent automatically at the midnight rollover on a habit that missed exactly one scheduled day; longest streak first; one per plant per 7 days, so never two days in a row. The covered day stops counting as due (via `isScheduledOn` / `wasDueOn`), so the streak, the heatmap and B4 all agree. Never grows the plant or writes history. Logging the day through B4 hands the Mulch back; undoing that puts it back on
+* ✅ **B3** — Pause / vacation mode (`18-market.js`). Free. 3, 7 or 14 days, starting today or tomorrow, never backdated; the next can start 7 days after the last one ended. Paused days are not due, so nothing can be missed; ticking still works. Can be ended early, keeping the days already behind it
 * ✅ **B4** — Retroactive ticking (`17-yesterday.js`). Yesterday only, habits only, only a day the habit was scheduled for and not before it existed. Offered from a "Forgot to tick yesterday?" card under the Tasks page list (hideable for the day) and a Yesterday row in the detail sheet. Logs yesterday with an effort level, grows the plant by an ordinary tick, rebuilds the streak from history, and pays the habit-tick Dew plus any milestone crossed. Re-ratable and undoable until today ends, then banked. One optional task field, `lateOn` (the day the fix was made), written only while it is today's; the Dew paid sits in `wallet.ly` for the same day
 * ✅ **B5** — Heatmap denominator rebuilt on B1 + A7
 
@@ -47,6 +47,7 @@ Legend: ✅ done · ⬜ open · 🔜 next up · ❌ dropped
 * ⬜ **D3** — Garden-level aggregate goals
 * ⬜ **D4** — Plot expansion / new terrain
 * ✅ **D5** — Dew currency (`15-wallet.js`). Earned: 1 per habit tick (cap 10/day), an assignment's impact on completion (cap 25/day, nothing for one under 10 minutes old), and streak bonuses at 7/30/100/365 days off `maxStreak`. Spent on plant skins (per species, by slot: 30/40/50/80) and landscapes (100–150). Same-day unticks refund exactly what was paid; achievement unlocks still work as a free route. Stored as one `wallet` map on `gardens/{uid}`, riding on the existing save; never mirrored to `gardenSummaries`
+* ✅ **D7** — The Market page (`#market`, in the menu, linked from the Greenhouse's Dew balance). Protect shelf: Mulch and Pause. Decorate shelf: links to the Greenhouse, which keeps skins and landscapes because a look needs its plant on screen to choose. Fertilizer (multiplies real ticks, never adds growth) and pets/props are deferred
 * ✅ **D6** — Rewards page (`16-rewards.js`): Morning dew (a 7-step daily collect ladder, reset by a missed day), three daily / weekly / monthly quests, and 12 lifelong badges. All progress is derived from stored history, `doneAt` and `maxStreak`; the only new state is which rewards were collected (`wallet.rw`)
 
 ## E. Social
@@ -94,7 +95,7 @@ IDs are provisional; nothing here is committed.
 
 * ✅ **I1** — Timezone / travel handling *(adopted and shipped)*. `getTodayString()` never goes backwards: if the device date falls behind `lastResetDate` by up to `DAY_HOLD_MAX_DAYS` (2, the widest any two timezones differ), the garden stays on the later day until the local date catches up, so flying west can no longer re-open and double-pay a day. A bigger fall is a corrected clock and trusts the device. Flying east far enough to skip a calendar day is an ordinary missed day, which B4 offers. The Stats heatmap now counts from the same today instead of reading the clock itself
 * **I2** — Import. Export exists in `10-account-data.js` and `verify-history.js` proves the round-trip is lossless, but there is no import path.
-* **I3** — Harden the Dew wallet in `firestore.rules`. Today the rules never look at the wallet, so the balance is one edit away. Free, partial fix: require `bal == earned - spent`, cap the balance rise per write (largest single reward is 80), and only allow a new `owned` entry when `spent` rose by at least its price. Not urgent while Dew buys only cosmetics and is never shown to anyone else; becomes necessary the moment it does either
+* 🔜 **I3** — Harden the Dew wallet in `firestore.rules` — **written, not yet published**: `walletOk()` on gardens create/update requires `bal == earned - spent`, `bal <= 99999`, Mulch held `<= 3`, and a new `owned` entry only in a write that also spends. No per-write rise cap, because saves are coalesced and a first Rewards visit can legitimately collect hundreds at once. The client keeps the invariant itself (symmetric clamps in `dewCredit` / `dewRefund`, repair in `dewNormalizeWallet`). Must be pasted into the Firebase Console and published, after the client is live. Original note: Today the rules never look at the wallet, so the balance is one edit away. Free, partial fix: require `bal == earned - spent`, cap the balance rise per write (largest single reward is 80), and only allow a new `owned` entry when `spent` rose by at least its price. Not urgent while Dew buys only cosmetics and is never shown to anyone else; becomes necessary the moment it does either
 
 ---
 
@@ -105,7 +106,7 @@ IDs are provisional; nothing here is committed.
 * **Migrations should be no-ops where possible.** C1 and C3 both shipped as genuine no-ops on existing data. Aim for that.
 * **Denominators err toward flattering the past.** The `firstSeen` approximation is deliberate — using current task count for historical heatmap cells produces misleading shading.
 * **SVG colours use `style="fill:var(--c-leaf,…)"`,** never `fill="var(…)"` — CSS custom properties in SVG presentation attributes are unreliable cross-browser.
-* **Dew buys looks, never growth.** The wallet is client-authoritative, which is only acceptable because nothing it buys changes growth, streaks or stats, or is visible to anyone else. Anything that breaks that needs I3 (or a server) first.
+* **Dew never buys growth.** It buys looks and streak protection (Mulch); nothing it buys adds a day to a plant, writes history or changes height. Mulch does change streaks, which friends can see, which is why I3 shipped with it. Anything that buys growth itself needs a server first.
 * **`bal == earned - spent`** on the wallet, through every credit, refund and purchase. I3 relies on it.
 * **Rewards are derived, not counted.** Quest and badge progress is read off history; only collected IDs are stored. Don't add a tick counter alongside toggleTask().
 * **A past day is banked unless it was back-filled today.** `lateOn === today` is the only thing that makes yesterday changeable; never widen B4 past yesterday without rethinking that.
@@ -124,6 +125,7 @@ Tests are additive — none should be lost between sessions.
 | `test-appcheck.js` | 29 checks, App Check vs rate-limit denial | jsdom |
 | `test-wallet.js` | 82 checks, Dew earning, refunds, caps, shop, pill | jsdom |
 | `test-rewards.js` | 50 checks, Morning dew, quests, badges, navigation | jsdom |
+| `test-market.js` | 77 checks, Mulch buying / midnight / B4 hand-back, Pause, wallet invariant, saving, page | jsdom |
 | `test-timezone.js` | 25 checks, flying west / east, corrected clocks, heatmap's today | jsdom |
 | `test-yesterday.js` | 70 checks, logging yesterday: eligibility, growth, streak, Dew, undo, card, sheet | jsdom |
 | `verify-history.js` | 77 assertions, round-trip losslessness | node |

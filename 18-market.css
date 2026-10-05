@@ -1,0 +1,158 @@
+/* ============================================
+   MARKET - Mulch and Pause (18-market.js)
+
+   The page is the Rewards page's own recipe - .page-rewards, the
+   header, the wood-grain .rw-board and the dew-blue .rw-collect - so
+   the two places Dew is earned and spent read as one shop. Only what
+   is new lives here: the item layout, the "held" pips, the shelf
+   headings and the way into the Greenhouse.
+   ============================================ */
+
+.mk-shelf {
+  margin: 22px 4px 10px;
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--clay);
+}
+
+.mk-item-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.mk-art {
+  flex: none;
+  width: 64px;
+  height: 64px;
+}
+
+.mk-item-text { flex: 1 1 auto; min-width: 0; }
+
+.mk-free {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--leaf-deep);
+  color: var(--linen);
+  font-size: var(--fs-xs);
+  vertical-align: 2px;
+}
+
+.mk-item-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: rgba(20, 16, 10, 0.35);
+}
+
+.mk-held {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--linen);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+}
+
+.mk-held > span:last-child { margin-left: 4px; }
+
+.mk-pip {
+  width: 14px;
+  height: 14px;
+  border-radius: 52% 48% 58% 42% / 55% 62% 40% 50%;
+  border: 2px solid var(--clay-deep);
+  background: transparent;
+}
+
+.mk-pip.is-full { background: var(--clay-deep); border-color: var(--clay); }
+
+/* White drop on the blue button: set on the icon, not the button, whose
+   own background is var(--dew-drop) too. */
+.mk-buy .dew-drop { --dew-drop: #fff; --dew-glint: #6CC4E8; margin-right: 2px; }
+.mk-buy.is-armed { filter: brightness(1.1); box-shadow: 0 3px 0 #3E8FB0, 0 0 0 3px rgba(108, 196, 232, 0.45); }
+
+.mk-fine {
+  margin: 10px 2px 0;
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--clay);
+}
+
+.mk-log {
+  margin: 8px 0 0;
+  padding: 0 0 0 18px;
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  color: var(--linen);
+  opacity: 0.85;
+}
+
+.mk-status {
+  flex: 1 1 260px;
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--linen);
+}
+
+.mk-status b { color: var(--sun); }
+
+.mk-pause-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mk-pause-pick .tp-seg-btn { color: var(--clay-edge, #E7CDA6); }
+.mk-pause-pick .tp-seg-btn.active { color: var(--ink); }
+.mk-pause-pick .tp-seg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* The Decorate shelf: one board that is a button. */
+.mk-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  color: var(--linen);
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.mk-link-text { flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; }
+.mk-link-text b { font-family: var(--font-display); font-size: var(--fs-lg); color: var(--sun); }
+.mk-link-text span { font-size: var(--fs-sm); opacity: 0.9; }
+.mk-link-arrow { color: var(--sun); font-size: var(--fs-lg); font-weight: 800; }
+.mk-link:hover { filter: brightness(1.06); }
+
+/* The way in from the Greenhouse, under its Dew balance. */
+.mk-gh-link {
+  flex-basis: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--sun);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  .mk-art { width: 48px; height: 48px; }
+  .mk-item-foot .rw-collect,
+  .mk-item-foot .ob-btn { flex-basis: 100%; }
+}
