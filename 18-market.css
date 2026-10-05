@@ -305,3 +305,15 @@
   .bm-action .bm-buy,
   .bm-action .ob-btn { flex: 1 1 100%; justify-content: center; }
 }
+
+
+/* ---------- Fertilizer ---------- */
+
+.mk-pip-fert { border-color: var(--sun-deep); }
+.mk-pip-fert.is-full { background: var(--sun); }
+
+.bm-row.is-fed { border-color: var(--sun); background: #FFF6DF; }
+.bm-hint { margin-top: 8px; font-size: var(--fs-xs); }
+
+/* "Fertilized until 12 Oct" on a task row (tpRowMeta, 12). */
+.tp-meta-fed { color: var(--sun-deep); font-weight: 800; }

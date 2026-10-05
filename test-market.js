@@ -1,5 +1,5 @@
 // Market (18-market.js): buying Mulch, logging yesterday with it (the
-// only way now - it wraps 17), Pause, the wallet invariant the security rules
+// only way now - it wraps 17), Fertilizer, the wallet invariant the security rules
 // rely on, saving, and the Greenhouse's two tabs.
 // Same jsdom + Firebase-stub harness as test-yesterday.js.
 const fs = require('fs');
@@ -49,7 +49,7 @@ function check(label, actual, expected) {
   if (!ok) fail.push(`${label}\n     got:      ${JSON.stringify(actual)}\n     expected: ${JSON.stringify(expected)}`);
   console.log((ok ? '  ok   ' : '  FAIL ') + label);
 }
-run('saveData = function () {};');
+run('var realSaveData = saveData; saveData = function () {};');
 run('assignPermanentPositions = function () { return false; };');
 run('authReady = true;');
 run('try { localStorage.clear(); } catch (e) {}');
@@ -199,7 +199,8 @@ run(habit(1, [-3, -2]));
 run(habit(2, [-1]));
 run(`wallet.mk = mkEmpty(); wallet.mk.mulch = 1; lastResetDate = getTodayString(); navigateTo('market');`);
 const gb = () => $('ghBooster');
-check('only the habit not ticked yesterday is listed', gb().querySelectorAll('.bm-row').length, 1);
+const mulchCard = () => gb().querySelector('.bm-card');
+check('only the habit not ticked yesterday is listed', mulchCard().querySelectorAll('.bm-row').length, 1);
 gb().querySelector('.bm-row [data-yd-act="fix"]').click();
 check('Use Mulch there logs it', run(`histGet(tasks[0].history, ${YY})`), true);
 check('and it stays listed with Undo', !!gb().querySelector('.bm-row [data-yd-act="undo"]'), true);
@@ -209,39 +210,72 @@ reset();
 run(`navigateTo('market');`);
 check('with nothing to log it says so', !!gb().querySelector('.bm-empty'), true);
 
-console.log('\n--- Pause ---');
+console.log('\n--- Pause is gone ---');
 reset();
 run(habit(1, [-2], { streak: 1, maxStreak: 1 }));
-check('it cannot start in the past', run(`mkStartPause(${YY}, 3)`), false);
-check('or run past 14 days', run('mkStartPause(getTodayString(), 15)'), false);
-check('a week from today is fine', run('mkStartPause(getTodayString(), 7)'), true);
-check('and costs nothing', run('wallet.bal'), 0);
-check('habits are not due today', run('isScheduledOn(tasks[0], getTodayString())'), false);
-check('so the Tasks page lists none as due', run('tpBuildSections()[0].list.length'), 0);
-check('nor on its last day', run('isScheduledOn(tasks[0], shiftDate(getTodayString(), 6))'), false);
-check('but again the day after', run('isScheduledOn(tasks[0], shiftDate(getTodayString(), 7))'), true);
-check('a second pause cannot be set on top', run('mkStartPause(shiftDate(getTodayString(), 1), 3)'), false);
-run('mkEndPause();');
-check('one that started today ends cleanly', run('mkState().pause'), null);
-check('with no wait for the next', run('mkPauseEarliest() === getTodayString()'), true);
+check('an old pause on the document is dropped on load',
+  run('"pause" in mkNormalize({ mulch: 0, pause: { from: getTodayString(), to: shiftDate(getTodayString(), 6) } })'), false);
+run('wallet = dewNormalizeWallet({ bal: 0, earned: 0, spent: 0, mk: { pause: { from: getTodayString(), to: shiftDate(getTodayString(), 6) } } });');
+check('so habits are due again today', run('isScheduledOn(tasks[0], getTodayString())'), true);
+check('and nothing called Pause is sold', run('typeof mkStartPause'), 'undefined');
+
+console.log('\n--- Fertilizer ---');
+reset(); rich(100);
+run(habit(1, [-3, -2]));
+check('none held to begin with', run('mkState().fz'), 0);
+check('a plant cannot be fed without a bag', run('mkUseFert(1)'), false);
+check('a bag can be bought', run('mkBuyFert()'), true);
+check('for 40 Dew', run('wallet.bal'), 60);
+check('and the balance still adds up', inv(), true);
+run('mkBuyFert();');
+check('a second', run('mkState().fz'), 2);
+rich(100); run('wallet.mk.fz = 2;');
+check('but never a third', run('mkBuyFert()'), false);
+
+run('mkUseFert(1);');
+check('feeding uses a bag', run('mkState().fz'), 1);
+check('the plant is fed from today', run('mkFedToday(tasks[0])'), true);
+check('for seven days', run('mkFedWeek(tasks[0], getTodayString()).t === shiftDate(getTodayString(), 6)'), true);
+check('and not on the eighth', run('growthBonusOn(tasks[0], shiftDate(getTodayString(), 7))'), 0);
+check('feeding by itself grows nothing', run('tasks[0].totalGrowthDays'), 2);
+run('toggleTask(1, true);');
+check('a Steady tick on it grows 1.25', run('tasks[0].totalGrowthDays'), 3.25);
+run('setTaskEffort(tasks[0], 3);');
+check('All out grows 2.25', run('tasks[0].totalGrowthDays'), 4.25);
+check('the 7-day gain counts the bonus', run('recentGrowthPoints(tasks[0], 7, true)'), 4.25);
+check('the growth chart ends on the plant and walks it back exactly',
+  run('var g = buildGrowthSeries(tasks[0], 7); [g[g.length - 1].days, g[g.length - 2].days]'), [4.25, 2]);
+check('show today\'s growth hides the fed amount', run('growthEarnedToday(tasks[0])'), 2.25);
+run('toggleTask(1, false);');
+check('unticking takes back exactly what it gave', run('tasks[0].totalGrowthDays'), 2);
+check('one plant cannot take two bags at once', run('mkUseFert(1)'), false);
+check('the Tasks page says it is fed', run('tpRowMeta(tasks[0])[0].text.indexOf("Fertilized until") === 0'), true);
 
 reset();
-run(habit(1, [-4, -3], { streak: 2, maxStreak: 2 }));
+run(habit(1, [-2]));
+run('wallet.mk = mkEmpty(); wallet.mk.fz = 1; toggleTask(1, true);');
+check('ticked first: an ordinary day', run('tasks[0].totalGrowthDays'), 2);
+run('mkUseFert(1);');
+check('feeding afterwards tops today\'s tick up', run('tasks[0].totalGrowthDays'), 2.25);
+run('mkUndoFert(1);');
+check('undo takes the top-up back', run('tasks[0].totalGrowthDays'), 2);
+check('and the bag', run('mkState().fz'), 1);
+check('and the plant is no longer fed', run('mkFedToday(tasks[0])'), false);
+run('mkUseFert(1); wallet.mk.fuse.d = shiftDate(getTodayString(), -1);');
+check('a bag put on another day cannot be undone', run('mkUndoFert(1)'), false);
+
+reset();
+run(`(function () { var a = makeTask(1, 'Essay', 'education'); setTaskKind(a, 'once'); setTaskImpact(a, 3);
+      tasks.push(a); delete wallet.born['1']; })();`);
+run('wallet.mk = mkEmpty(); wallet.mk.fz = 1; mkUseFert(1); toggleTask(1, true);');
+check('an assignment can be fed too: Medium grows 3.75', run('tasks[0].totalGrowthDays'), 3.75);
+
+reset();
+run(habit(1, [-3, -2]));
 run(`wallet.mk = mkEmpty(); wallet.mk.mulch = 1;
-     wallet.mk.pause = { from: shiftDate(getTodayString(), -2), to: shiftDate(getTodayString(), 4) };
-     lastResetDate = shiftDate(getTodayString(), -2); applyDayBoundaries();`);
-check('paused days never break a streak', run('tasks[0].streak'), 2);
-check('and are not offered for Mulch', run('mkCanMulch(tasks[0])'), false);
-check('nor count against the heatmap', run(`dayTally(tasks[0], ${YY}).counted`), false);
-run('mkEndPause();');
-check('ending a running pause keeps the days behind it', run(`mkState().pend === ${YY}`), true);
-check('the next can start a week after', run('mkPauseEarliest() === shiftDate(getTodayString(), 7)'), true);
-check('not before', run('mkStartPause(getTodayString(), 3)'), false);
-
-reset();
-run(`wallet.mk = mkEmpty(); wallet.mk.pause = { from: shiftDate(getTodayString(), -6), to: ${YY} };`);
-check('a finished pause becomes the cooldown on its own',
-  run(`mkState().pause === null && mkState().pend === ${YY}`), true);
+     wallet.mk.fert = { "1": [{ f: ${YY}, t: shiftDate(getTodayString(), 5) }] }; lastResetDate = getTodayString();`);
+run('ydFix(1, EFFORT_DEFAULT);');
+check('a day logged late with Mulch inside a fed week is fed too', run('tasks[0].totalGrowthDays'), 3.25);
 
 console.log('\n--- the balance always adds up ---');
 reset();
@@ -258,19 +292,35 @@ check('a broken wallet is repaired on load',
 console.log('\n--- saving ---');
 reset();
 run(habit(1, [-2], { streak: 1 }));
-run(`wallet.mk = mkEmpty(); wallet.mk.mulch = 2;
+run(`wallet.mk = mkEmpty(); wallet.mk.mulch = 2; wallet.mk.fz = 1;
      wallet.mk.cov = { "1": [shiftDate(getTodayString(), -3)], "99": [shiftDate(getTodayString(), -3)] };
-     wallet.mk.pause = { from: getTodayString(), to: shiftDate(getTodayString(), 2) };`);
+     wallet.mk.fert = { "1": [{ f: getTodayString(), t: shiftDate(getTodayString(), 6) }], "99": [{ f: getTodayString(), t: shiftDate(getTodayString(), 6) }] };`);
 const saved = JSON.parse(run('JSON.stringify(dewWalletPayload().mk)'));
-check('what is held is saved', saved.mulch, 2);
-check('a covered day is saved', Object.keys(saved.cov), ['1']);
-check('a plant since dug up is dropped', saved.cov['99'], undefined);
-check('the pause is saved', !!saved.pause, true);
+check('what is held is saved', [saved.mulch, saved.fz], [2, 1]);
+check('a Mulched day is saved', Object.keys(saved.cov), ['1']);
+check('a fed week is saved', Object.keys(saved.fert), ['1']);
+check('a plant since dug up is dropped', [saved.cov['99'], saved.fert['99']], [undefined, undefined]);
 run('wallet = dewNormalizeWallet(JSON.parse(JSON.stringify(dewWalletPayload())));');
-check('and it all survives a reload', run('mkState().mulch === 2 && mkPaused(getTodayString())'), true);
+check('and it all survives a reload', run('mkState().mulch === 2 && mkState().fz === 1 && mkFedToday(tasks[0])'), true);
 check('nonsense on the document becomes nothing',
-  run('JSON.stringify(mkNormalize({ mulch: 999, cov: { x: ["nope"] }, pause: { from: "2026-01-01", to: "2027-01-01" } }))'),
-  run('JSON.stringify(Object.assign(mkEmpty(), { mulch: MULCH_HELD_CEILING }))'));
+  run('JSON.stringify(mkNormalize({ mulch: 999, fz: 999, cov: { x: ["nope"] }, fert: { "1": [{ f: "2026-01-01", t: "2027-01-01" }] } }))'),
+  run('JSON.stringify(Object.assign(mkEmpty(), { mulch: MULCH_HELD_CEILING, fz: FERT_HELD_CEILING }))'));
+
+// THE PAUSE BUG. The garden used to be written with merge:true, which
+// merges DEEP: a key the wallet left out stayed in the stored document,
+// so an ended Pause - and an unticked habit's "already paid" entry -
+// came straight back on the next snapshot. The write now names its
+// top-level fields, which Firestore replaces whole.
+reset();
+run(`var gardenWrites = [];
+     db = { collection: function () { return { doc: function () { return {
+       set: function (data, opts) { gardenWrites.push({ data: data, opts: opts }); return { catch: function () {} }; }
+     }; } }; } };
+     currentUserId = 'u1'; lastSaveAt = 0; realSaveData();`);
+check('the garden is saved with mergeFields, not merge:true', run('!!gardenWrites[0].opts.mergeFields && !gardenWrites[0].opts.merge'), true);
+check('naming every field it writes', run('gardenWrites[0].opts.mergeFields.slice().sort().join()'),
+  run('Object.keys(gardenWrites[0].data).sort().join()'));
+check('the wallet among them, so it is replaced whole', run('gardenWrites[0].opts.mergeFields.indexOf("wallet") !== -1'), true);
 
 console.log('\n--- one Greenhouse, two markets ---');
 reset();
@@ -287,7 +337,7 @@ $('ghTabBoost').click();
 check('the Booster tab switches over', $('ghBooster').classList.contains('hidden'), false);
 check('and hides Decoration', $('ghDecor').classList.contains('hidden'), true);
 check('and is marked as chosen', $('ghTabBoost').getAttribute('aria-selected'), 'true');
-check('it sells Mulch and Pause', Array.from(gb().querySelectorAll('.bm-name h3')).map(e => e.textContent), ['Mulch', 'Pause']);
+check('it sells Mulch and Fertilizer', Array.from(gb().querySelectorAll('.bm-name h3')).map(e => e.textContent), ['Mulch', 'Fertilizer']);
 check('there is no Market page any more', $('page-market'), null);
 check('nor a Market plank in the menu', win.document.querySelector('.nav-plank[data-page="market"]'), null);
 run('navigateTo("home"); ghTab = "decor"; navigateTo("market");');
@@ -295,27 +345,34 @@ check('the old Market address opens the Greenhouse', run('currentPage'), 'greenh
 check('on the Booster tab', $('ghBooster').classList.contains('hidden'), false);
 check('it can still be linked to', run('NAV_HASH_PAGES.indexOf("market") !== -1'), true);
 
-gb().querySelector('[data-mk-act="buy"]').click();
+gb().querySelector('[data-mk-item="mulch"]').click();
 check('the first tap only arms the purchase', run('mkState().mulch'), 0);
-check('and says so', gb().querySelector('[data-mk-act="buy"]').textContent, 'Tap again to buy');
-gb().querySelector('[data-mk-act="buy"]').click();
+check('and says so', gb().querySelector('[data-mk-item="mulch"]').textContent, 'Tap again to buy');
+check('without arming the other item', gb().querySelector('[data-mk-item="fert"]').textContent.indexOf('Buy for') === 0, true);
+gb().querySelector('[data-mk-item="mulch"]').click();
 check('the second buys it', run('mkState().mulch'), 1);
 check('for 25', run('wallet.bal'), 5);
 check('the balance above the tabs follows', $('dewBalance').querySelector('.dew-balance-amount').textContent, '5');
-gb().querySelector('[data-mk-days="3"]').click();
-gb().querySelector('[data-mk-from="tomorrow"]').click();
-gb().querySelector('[data-mk-act="startpause"]').click();
-check('the pause controls start one', run('!!mkState().pause && mkState().pause.from === shiftDate(getTodayString(), 1)'), true);
-check('for the length picked', run('mkState().pause.to === shiftDate(getTodayString(), 3)'), true);
-check('and the card says when', gb().querySelector('.bm-status').textContent.indexOf('Starts') === 0, true);
-gb().querySelector('[data-mk-act="endpause"]').click();
-check('it can be cancelled from there', run('mkState().pause'), null);
+rich(80);
+run('tasks = []; nextId = 1;');
+run(habit(1, [-2]));
+run('renderGreenhouse();');
+gb().querySelector('[data-mk-item="fert"]').click();
+gb().querySelector('[data-mk-item="fert"]').click();
+check('Fertilizer buys the same way', run('mkState().fz'), 1);
+check('the plant list offers Feed', !!gb().querySelector('[data-mk-act="feed"]'), true);
+gb().querySelector('[data-mk-act="feed"]').click();
+check('Feed feeds it', run('mkFedToday(tasks[0])'), true);
+check('the row says so, with Undo', !!gb().querySelector('.bm-row.is-fed [data-mk-act="unfeed"]'), true);
+gb().querySelector('[data-mk-act="unfeed"]').click();
+check('and Undo works from there', run('mkFedToday(tasks[0])'), false);
 $('ghTabDecor').click();
 check('and Decoration is one tap back', $('ghDecor').classList.contains('hidden'), false);
 
 console.log('\n--- export ---');
 run('mkWrapExport();');
 check('the data export carries the Market', run('typeof buildAccountExport().dew.market.mulch_held'), 'number');
+check('including Fertilizer', run('typeof buildAccountExport().dew.market.fertilizer_held'), 'number');
 
 console.log(fail.length ? `\n${fail.length} FAILURE(S):\n` + fail.join('\n') : '\nall passed');
 process.exit(fail.length ? 1 : 0);

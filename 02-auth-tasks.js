@@ -1392,17 +1392,27 @@ function saveData(rlOpensWindow, retryIndex) {
     gardenRlStartIsLocal = true;
   }
 
-  // merge:true, where this used to be a plain set(). Required, not
-  // cosmetic: on the "same window" branch the client deliberately does
-  // NOT send rlStart (it has no way to produce the server's exact
-  // value), so a full overwrite would delete the counter it is trying
-  // to increment. Merge is safe here because every field this document
-  // holds is rewritten on every save — but that is now a rule to keep:
-  // ANY field dropped from the payload above will linger in the stored
-  // document rather than disappearing, so removing one means deleting
-  // it explicitly with FieldValue.delete().
+  // mergeFields, not merge:true and not a plain set().
+  //
+  // Not a plain set(): on the "same window" branch the client
+  // deliberately does NOT send rlStart (it has no way to produce the
+  // server's exact value), so a full overwrite would delete the counter
+  // it is trying to increment.
+  //
+  // Not merge:true either, which is what this used to be. merge:true
+  // merges DEEP: inside a map like `wallet`, a key the payload leaves
+  // out is kept from the stored document instead of going away. The
+  // wallet leaves keys out on purpose when they are empty - so an
+  // ended Pause came straight back on the next snapshot and could
+  // never end, and an unticked habit's "already paid" entry lingered
+  // and could be refunded twice.
+  //
+  // mergeFields with exactly the payload's own top-level keys replaces
+  // each of those fields WHOLE, and leaves every field it does not name
+  // (rlStart on the same-window branch) exactly as stored. So the rule
+  // is now simply: what the payload says a field is, it is.
   db.collection('gardens').doc(currentUserId)
-    .set(payload, { merge: true })
+    .set(payload, { mergeFields: Object.keys(payload) })
     .catch(function (error) {
       classifyDenial(error, function (kind) { onGardenSaveDenied(kind, error); });
     });

@@ -1,5 +1,5 @@
 // ============================================
-// 18: MARKET - the Greenhouse's Booster Market: Mulch and Pause
+// 18: MARKET - the Greenhouse's Booster Market: Mulch and Fertilizer
 // Part of DISCIPLANT. Plain global script, loaded after 15 (it spends
 // through the wallet and rides on its save), 16 and 17 (it wraps the
 // yesterday fix), and before 11.
@@ -14,23 +14,31 @@
 //           "Forgot to tick yesterday?" (17), with a price on it.
 //           Yesterday only, until today ends, undoable in that window
 //           (the bag comes back). One per plant per MULCH_GAP_DAYS.
-//   Pause   Free. Up to PAUSE_MAX_DAYS for exam week, illness, a trip:
-//           no habit is due on a paused day, so nothing can be missed.
-//           Starts today or tomorrow - never in the past - and the next
-//           one can start PAUSE_COOLDOWN_DAYS after the last one ended.
+//   Fertilizer  Bought with Dew, held (at most FERT_MAX_HELD), and put on
+//           one plant you choose. For FERT_DAYS days, starting the day it
+//           goes on, every tick on that plant grows FERT_BONUS more on
+//           top of its effort: Steady x1.25, Hard x1.75, All out x2.25.
+//           A day that is not ticked gets nothing. One bag per plant at
+//           a time; undoable on the day it went on.
+//
+// (Pause, a free streak freeze, shipped and was removed on 5 October
+// 2026. Its days stop counting as due here no longer; a garden that
+// still has one stored simply drops it on load.)
 //
 // WHAT DEW CAN AND CANNOT DO TO A PLANT
-// Dew never buys growth BY ITSELF. The only growth Mulch gives is the
-// ordinary tick for a day the user says they did, logged late - the
-// same tick, at the same size, that ticking it on time would have
-// given. There is no item that adds a day nobody claims to have done,
-// and none that makes a tick worth more. See ROADMAP.md (invariants).
+// Dew never buys growth BY ITSELF. Mulch gives the ordinary tick for a
+// day the user says they did, logged late. Fertilizer makes the user's
+// own ticks worth more for a week - it does nothing on a day nobody
+// ticked. There is no item that adds a day nobody claims to have done.
+// See ROADMAP.md (invariants).
 //
-// HOW A PAUSED DAY STOPS COUNTING
-// isScheduledOn() and wasDueOn() in 01 answer "no" for a paused day.
-// Everything that decides whether a day was missed - the rollover, the
-// streak count in 17, the heatmap's denominator, the Tasks page's "due
-// today" - already asks those two, so none of it had to change.
+// HOW FERTILIZER COUNTS
+// growthBonusOn() in 01 is the one place a day's extra multiplier comes
+// from, and dayMultiplier() adds it to the effort everywhere a day turns
+// into growth - the tick, the show/hide toggle, the 7-day gain, the
+// charts, a late log. This file reassigns growthBonusOn() to answer
+// FERT_BONUS for a date inside one of the plant's fed weeks. The weeks
+// are kept (MULCH_KEEP_DAYS) so the charts can still read old ones.
 //
 // WHERE IT LIVES
 // A second tab on the Greenhouse page, beside the Decoration Market
@@ -51,10 +59,11 @@ var MULCH_HELD_CEILING = MULCH_MAX_HELD + 1;  // a hand-back can top a full sack
 var MULCH_LOG_MAX      = 6;    // recent saves shown on the page
 var MULCH_KEEP_DAYS    = 400;  // covered days older than this are dropped
 
-var PAUSE_LENGTHS       = [3, 7, 14];
-var PAUSE_MAX_DAYS      = 14;
-var PAUSE_COOLDOWN_DAYS = 7;
-
+var FERT_PRICE    = 40;
+var FERT_MAX_HELD = 2;
+var FERT_DAYS     = 7;
+var FERT_BONUS    = 0.25;
+var FERT_HELD_CEILING = FERT_MAX_HELD + 1;
 
 // ---- State ------------------------------------------------------
 
@@ -64,8 +73,9 @@ function mkEmpty() {
     cov:   {},    // taskId -> [covered dates]
     log:   [],    // [{ t: taskId, d: date, s: streak saved }], newest last
     use:   null,  // { d: today, p: { taskId: date } } - Mulch spent by hand today, so it can be undone
-    pause: null,  // { from, to } - inclusive
-    pend:  null,  // the day the last pause ended
+    fz:    0,     // Fertilizer bags held
+    fert:  {},    // taskId -> [{ f, t }] fed weeks, inclusive
+    fuse:  null,  // { d: today, p: { taskId: true } } - bags put on today, so they can be undone
   };
 }
 
@@ -101,11 +111,23 @@ function mkNormalize(raw) {
       }
     }
   }
-  if (raw.pause && mkIsDay(raw.pause.from) && mkIsDay(raw.pause.to) &&
-      raw.pause.from <= raw.pause.to && dayGap(raw.pause.from, raw.pause.to) < PAUSE_MAX_DAYS) {
-    m.pause = { from: raw.pause.from, to: raw.pause.to };
+  m.fz = Math.max(0, Math.min(FERT_HELD_CEILING, Math.round(Number(raw.fz)) || 0));
+  if (raw.fert && typeof raw.fert === 'object') {
+    for (var fid in raw.fert) {
+      if (!Object.prototype.hasOwnProperty.call(raw.fert, fid) || !/^\d+$/.test(fid)) continue;
+      if (!Array.isArray(raw.fert[fid])) continue;
+      var weeks = raw.fert[fid].filter(function (w) {
+        return w && mkIsDay(w.f) && mkIsDay(w.t) && w.f <= w.t && dayGap(w.f, w.t) < FERT_DAYS;
+      }).map(function (w) { return { f: w.f, t: w.t }; }).slice(-60);
+      if (weeks.length) m.fert[fid] = weeks;
+    }
   }
-  m.pend = mkIsDay(raw.pend) ? raw.pend : null;
+  if (raw.fuse && raw.fuse.d === getTodayString() && raw.fuse.p && typeof raw.fuse.p === 'object') {
+    m.fuse = { d: raw.fuse.d, p: {} };
+    for (var uk in raw.fuse.p) {
+      if (Object.prototype.hasOwnProperty.call(raw.fuse.p, uk) && /^\d+$/.test(uk) && raw.fuse.p[uk]) m.fuse.p[uk] = true;
+    }
+  }
   return m;
 }
 
@@ -113,12 +135,8 @@ function mkState() {
   if (typeof wallet === 'undefined') return mkEmpty();
   if (!wallet.mk) wallet.mk = mkEmpty();
   var m = wallet.mk;
-  // A pause that has run its course becomes the cooldown's start.
-  if (m.pause && m.pause.to < getTodayString()) {
-    m.pend  = m.pause.to;
-    m.pause = null;
-  }
   if (m.use && m.use.d !== getTodayString()) m.use = null;
+  if (m.fuse && m.fuse.d !== getTodayString()) m.fuse = null;
   return m;
 }
 
@@ -146,33 +164,84 @@ dewWalletPayload = function () {
   if (Object.keys(cov).length) out.mk.cov = cov;
   if (m.log.length)            out.mk.log = m.log.slice();
   if (m.use && Object.keys(m.use.p).length) out.mk.use = { d: m.use.d, p: Object.assign({}, m.use.p) };
-  if (m.pause)                 out.mk.pause = { from: m.pause.from, to: m.pause.to };
-  if (m.pend)                  out.mk.pend = m.pend;
+  out.mk.fz = m.fz;
+  var fert = {};
+  for (var fid in m.fert) {
+    if (!Object.prototype.hasOwnProperty.call(m.fert, fid) || !live[fid]) continue;
+    var weeks = m.fert[fid].filter(function (w) { return w.t >= keep; });
+    if (weeks.length) fert[fid] = weeks.map(function (w) { return { f: w.f, t: w.t }; });
+  }
+  if (Object.keys(fert).length) out.mk.fert = fert;
+  if (m.fuse && Object.keys(m.fuse.p).length) out.mk.fuse = { d: m.fuse.d, p: Object.assign({}, m.fuse.p) };
   return out;
 };
 
 
-// ---- Which days count -------------------------------------------
+// ---- Fertilizer: which days are fed -----------------------------
 
-function mkPaused(dateStr) {
-  var p = mkState().pause;
-  return !!p && dateStr >= p.from && dateStr <= p.to;
+function mkFedWeek(task, dateStr) {
+  var list = task && mkState().fert[String(task.id)];
+  if (!list) return null;
+  for (var i = 0; i < list.length; i++) {
+    if (dateStr >= list[i].f && dateStr <= list[i].t) return list[i];
+  }
+  return null;
 }
 
-var mkBaseIsScheduledOn = isScheduledOn;
-isScheduledOn = function (task, dateStr) {
-  if (!mkBaseIsScheduledOn.apply(this, arguments)) return false;
-  return !mkPaused(dateStr);
+growthBonusOn = function (task, dateStr) {
+  return mkFedWeek(task, dateStr) ? FERT_BONUS : 0;
 };
 
-// The heatmap's denominator (05) asks this one rather than
-// isScheduledOn, so it gets the same exception: a paused day was never
-// owed, so it is not a missed square.
-var mkBaseWasDueOn = wasDueOn;
-wasDueOn = function (task, dateStr) {
-  if (!mkBaseWasDueOn.apply(this, arguments)) return false;
-  return !mkPaused(dateStr);
-};
+function mkFedToday(task) { return !!mkFedWeek(task, getTodayString()); }
+
+function mkFedTodayByHand(task) {
+  var m = mkState();
+  return !!task && !!m.fuse && !!m.fuse.p[String(task.id)] && mkFedToday(task);
+}
+
+// Every plant can take a bag, as long as it is not already fed.
+function mkCanFeed(task) {
+  return !!task && !mkFedToday(task);
+}
+
+// Putting a bag on, and taking it back off the same day, both move the
+// plant through retuneAward() in 01: if today's tick is still live, the
+// plant has to carry exactly what that tick is worth NOW, fed or not.
+function mkUseFert(taskId) {
+  var task = tasks.find(function (t) { return t.id === taskId; });
+  var m = mkState();
+  if (m.fz <= 0 || !mkCanFeed(task)) return false;
+  var today = getTodayString();
+  var prevAward = taskCompletionAward(task);
+  var id = String(task.id);
+  m.fert[id] = (m.fert[id] || []).concat([{ f: today, t: shiftDate(today, FERT_DAYS - 1) }]);
+  m.fz--;
+  if (!m.fuse) m.fuse = { d: today, p: {} };
+  m.fuse.p[id] = true;
+  retuneAward(task, prevAward);
+  if (typeof dewToast === 'function') dewToast(task.text + ' is fed for ' + FERT_DAYS + ' days');
+  saveData();
+  render();
+  return true;
+}
+
+function mkUndoFert(taskId) {
+  var task = tasks.find(function (t) { return t.id === taskId; });
+  if (!mkFedTodayByHand(task)) return false;
+  var m = mkState();
+  var today = getTodayString();
+  var id = String(task.id);
+  var prevAward = taskCompletionAward(task);
+  m.fert[id] = m.fert[id].filter(function (w) { return w.f !== today; });
+  if (!m.fert[id].length) delete m.fert[id];
+  delete m.fuse.p[id];
+  m.fz = Math.min(FERT_HELD_CEILING, m.fz + 1);
+  retuneAward(task, prevAward);
+  if (typeof dewToast === 'function') dewToast('Fertilizer back in the shed');
+  saveData();
+  render();
+  return true;
+}
 
 
 // ---- Logging yesterday with Mulch (wraps 17) ---------------------
@@ -315,7 +384,7 @@ function mkMulchIcon() {
 
 
 
-// ---- Buying and pausing -----------------------------------------
+// ---- Buying ------------------------------------------------------
 
 function mkBuyMulch() {
   var m = mkState();
@@ -330,45 +399,14 @@ function mkBuyMulch() {
   return true;
 }
 
-// The first day a new pause may start, or null if one is set already.
-function mkPauseEarliest() {
+function mkBuyFert() {
   var m = mkState();
-  if (m.pause) return null;
-  var today = getTodayString();
-  if (!m.pend) return today;
-  var after = shiftDate(m.pend, PAUSE_COOLDOWN_DAYS + 1);
-  return after > today ? after : today;
-}
-
-function mkStartPause(from, days) {
-  var m = mkState();
-  var today = getTodayString();
-  var earliest = mkPauseEarliest();
-  days = Math.round(Number(days));
-  if (!earliest || !(days >= 1 && days <= PAUSE_MAX_DAYS)) return false;
-  if (from !== today && from !== shiftDate(today, 1)) return false;   // never in the past
-  if (from < earliest) return false;
-  m.pause = { from: from, to: shiftDate(from, days - 1) };
-  saveData();
-  render();
-  return true;
-}
-
-// Ending a pause keeps the days already behind it (they stay paused)
-// and gives back the rest. One that never started simply goes, with
-// no cooldown; one ended on its first day still counts as used if
-// that day has passed.
-function mkEndPause() {
-  var m = mkState();
-  if (!m.pause) return false;
-  var today = getTodayString();
-  var yesterday = shiftDate(today, -1);
-  if (m.pause.from > yesterday) {
-    m.pause = null;
-  } else {
-    m.pend  = yesterday < m.pause.to ? yesterday : m.pause.to;
-    m.pause = null;
-  }
+  if (m.fz >= FERT_MAX_HELD) return false;
+  if (wallet.bal < FERT_PRICE) return false;
+  wallet.bal   -= FERT_PRICE;
+  wallet.spent += FERT_PRICE;
+  m.fz++;
+  dewToast('Fertilizer in the shed (' + m.fz + ' of ' + FERT_MAX_HELD + ')');
   saveData();
   render();
   return true;
@@ -379,7 +417,7 @@ function mkEndPause() {
 // The Greenhouse page holds both shops, as two tabs under one Dew
 // balance: the Decoration Market (the plant cards, skins and
 // landscapes 05 already draws) and the Booster Market (Mulch and
-// Pause, drawn here). There is no separate Market page: "#market" and
+// Fertilizer, drawn here). There is no separate Market page: "#market" and
 // navigateTo('market') still work, and open the Greenhouse on the
 // Booster tab.
 //
@@ -388,9 +426,7 @@ function mkEndPause() {
 // elements into a wrapper - so removing this script tag puts the
 // Greenhouse back exactly as it was.
 
-var mkArmed = false;        // two taps to buy, the same as a shop tile
-var mkPauseFrom = 'today';  // 'today' | 'tomorrow'
-var mkPauseDays = 7;
+var mkArmed = null;         // 'mulch' | 'fert' - two taps to buy, the same as a shop tile
 var ghTab = 'decor';        // 'decor' | 'boost'
 
 function mkTaskName(id) {
@@ -416,13 +452,16 @@ function mkMulchArt() {
   '</svg>';
 }
 
-function mkPauseArt() {
+function mkFertArt() {
   return '<svg class="bm-art-svg" viewBox="0 0 64 64" aria-hidden="true">' +
     '<ellipse cx="32" cy="57" rx="22" ry="4.5" style="fill:var(--bark-deep,#5E4632);opacity:0.25"/>' +
-    '<path d="M12 34 C12 21 21 12 32 12 C43 12 52 21 52 34 Z" style="fill:var(--dusk,#9C8FB8)"/>' +
-    '<path d="M32 12 L32 53" style="fill:none;stroke:var(--bark,#7A5C42);stroke-width:3;stroke-linecap:round"/>' +
-    '<path d="M12 34 C15.5 31 19 31 22 34 C25.5 31 28.5 31 32 34 C35.5 31 38.5 31 42 34 C45 31 48.5 31 52 34" style="fill:none;stroke:var(--linen,#F8EEDC);stroke-width:2;stroke-linecap:round"/>' +
-    '<path d="M32 53 C32 57 27 57 27 53" style="fill:none;stroke:var(--bark,#7A5C42);stroke-width:3;stroke-linecap:round"/>' +
+    '<path d="M16 24 L48 24 L51 52 C51 55 49 56 46 56 L18 56 C15 56 13 55 13 52 Z" style="fill:var(--sun,#E8B75C)"/>' +
+    '<path d="M16 24 L48 24 L47 30 L17 30 Z" style="fill:var(--sun-deep,#C4913A)"/>' +
+    '<path d="M19 24 C19 18 23 15 26 18 C28 13 36 13 38 18 C41 15 45 18 45 24 Z" style="fill:var(--bark,#7A5C42)"/>' +
+    '<path d="M32 50 L32 38" style="fill:none;stroke:var(--leaf-deep,#5C8149);stroke-width:2.6;stroke-linecap:round"/>' +
+    '<path d="M32 41 C27 41 24 38 24 34 C29 34 32 37 32 41 Z" style="fill:var(--leaf,#7FA968)"/>' +
+    '<path d="M32 39 C37 39 40 36 40 32 C35 32 32 35 32 39 Z" style="fill:var(--leaf,#7FA968)"/>' +
+    '<path d="M50 10 L51.4 14 L55.5 15.4 L51.4 16.8 L50 21 L48.6 16.8 L44.5 15.4 L48.6 14 Z" style="fill:var(--sun,#E8B75C)"/>' +
   '</svg>';
 }
 
@@ -452,11 +491,8 @@ function mkMulchHtml() {
   var buy;
   if (full) {
     buy = '<span class="bm-note">Shed full</span>';
-  } else if (mkArmed && short > 0) {
-    buy = '<button type="button" class="bm-buy" disabled>Need ' + short + ' more Dew</button>';
   } else {
-    buy = '<button type="button" class="bm-buy' + (mkArmed ? ' is-armed' : '') + '" data-mk-act="buy">' +
-      (mkArmed ? 'Tap again to buy' : 'Buy for ' + dewDropIcon() + MULCH_PRICE) + '</button>';
+    buy = bmBuyButton('mulch', MULCH_PRICE);
   }
 
   var pips = '';
@@ -512,54 +548,71 @@ function mkMulchHtml() {
   '</article>';
 }
 
-function mkPauseHtml() {
-  var m = mkState();
-  var today = getTodayString();
-  var action;
+// The two-tap buy button both items share. `item` is what the first
+// tap arms, so arming Mulch never arms Fertilizer.
+function bmBuyButton(item, price) {
+  var armed = mkArmed === item;
+  var short = Math.max(0, price - wallet.bal);
+  if (armed && short > 0) {
+    return '<button type="button" class="bm-buy" disabled>Need ' + short + ' more Dew</button>';
+  }
+  return '<button type="button" class="bm-buy' + (armed ? ' is-armed' : '') + '" data-mk-act="buy" data-mk-item="' + item + '">' +
+    (armed ? 'Tap again to buy' : 'Buy for ' + dewDropIcon() + price) + '</button>';
+}
 
-  if (m.pause) {
-    var started = m.pause.from <= today;
-    action = '<p class="bm-status">' + (started
-        ? 'Paused until <b>' + mkShortDate(m.pause.to) + '</b>'
-        : 'Starts <b>' + mkShortDate(m.pause.from) + '</b>, until <b>' + mkShortDate(m.pause.to) + '</b>') +
-      '</p>' +
-      '<button type="button" class="ob-btn ob-btn-quiet" data-mk-act="endpause">' +
-        (started ? 'End pause' : 'Cancel') + '</button>';
-  } else {
-    var earliest = mkPauseEarliest();
-    var tomorrow = shiftDate(today, 1);
-    if (earliest > tomorrow) {
-      action = '<p class="bm-status">Next pause from <b>' + mkShortDate(earliest) + '</b></p>';
-    } else {
-      if (earliest === tomorrow && mkPauseFrom === 'today') mkPauseFrom = 'tomorrow';
-      var seg = function (group, value, label, on, disabled) {
-        return '<button type="button" class="tp-seg-btn' + (on ? ' active' : '') + '" ' +
-          'data-mk-' + group + '="' + value + '" aria-pressed="' + (on ? 'true' : 'false') + '"' +
-          (disabled ? ' disabled' : '') + '>' + label + '</button>';
-      };
-      action =
-        '<div class="bm-pick">' +
-          '<div class="tp-seg" role="group" aria-label="When it starts">' +
-            seg('from', 'today', 'Today', mkPauseFrom === 'today', earliest > today) +
-            seg('from', 'tomorrow', 'Tomorrow', mkPauseFrom === 'tomorrow', false) +
-          '</div>' +
-          '<div class="tp-seg" role="group" aria-label="How long">' +
-            PAUSE_LENGTHS.map(function (n) {
-              return seg('days', n, n + ' days', mkPauseDays === n, false);
-            }).join('') +
-          '</div>' +
-        '</div>' +
-        '<button type="button" class="ob-btn ob-btn-go" data-mk-act="startpause">Start pause</button>';
-    }
+function mkFertHtml() {
+  var m = mkState();
+  var buy = m.fz >= FERT_MAX_HELD ? '<span class="bm-note">Shed full</span>' : bmBuyButton('fert', FERT_PRICE);
+
+  var pips = '';
+  for (var i = 0; i < FERT_MAX_HELD; i++) {
+    pips += '<span class="mk-pip mk-pip-fert' + (i < m.fz ? ' is-full' : '') + '"></span>';
   }
 
+  // Every plant, fed ones first: what is fed and until when is the
+  // thing worth seeing at a glance.
+  var list = tasks.slice();
+  if (typeof tpSortHabits === 'function') list = tpSortHabits(list);
+  list.sort(function (a, b) { return (mkFedToday(b) ? 1 : 0) - (mkFedToday(a) ? 1 : 0); });
+  var rows = list.map(function (t) {
+    var week = mkFedWeek(t, getTodayString());
+    var ctl;
+    if (week && mkFedTodayByHand(t)) {
+      ctl = '<span class="bm-done">Fed</span>' +
+        '<button type="button" class="yd-undo" data-mk-act="unfeed" data-mk-id="' + t.id + '">Undo</button>';
+    } else if (week) {
+      ctl = '<span class="bm-done">Fed</span>';
+    } else if (m.fz > 0) {
+      ctl = '<button type="button" class="ob-btn ob-btn-go bm-use" data-mk-act="feed" data-mk-id="' +
+        t.id + '">Feed</button>';
+    } else {
+      ctl = '';
+    }
+    return '<li class="bm-row' + (week ? ' is-fed' : '') + '">' +
+      '<span class="bm-row-name">' + escapeHtml(t.text) +
+        '<small>' + (week ? 'Every tick \u00d7' + (1 + FERT_BONUS) + ' or more until ' + mkShortDate(week.t)
+                          : getCategoryById(t.categoryId).species) + '</small></span>' +
+      ctl +
+    '</li>';
+  }).join('');
+
   return '<article class="bm-card">' +
-    bmHead(mkPauseArt(), 'Pause', 'Booster',
-      '<span class="bm-price bm-free">Free</span>',
-      'Exam week, sick or away? Pause your whole garden. No habit is due while it lasts, ' +
-      'so no streak can break. You can still tick anything you do.') +
-    bmFacts(['Up to ' + PAUSE_MAX_DAYS + ' days', 'Starts today or tomorrow', 'Next one ' + PAUSE_COOLDOWN_DAYS + ' days after']) +
-    '<div class="bm-action bm-action-pause">' + action + '</div>' +
+    bmHead(mkFertArt(), 'Fertilizer', 'Booster',
+      '<span class="bm-price">' + dewDropIcon() + FERT_PRICE + '</span>',
+      'Feed one plant for a week. Every tick on it grows a quarter more: Steady \u00d71.25, ' +
+      'Hard \u00d71.75, All out \u00d72.25. A day you do not tick gets nothing.') +
+    bmFacts([FERT_DAYS + ' days', '+' + FERT_BONUS + ' on every tick', 'One bag per plant', 'Hold up to ' + FERT_MAX_HELD]) +
+    '<div class="bm-action">' +
+      '<span class="bm-held">' + pips + '<b>' + m.fz + '</b> of ' + FERT_MAX_HELD + ' in your shed</span>' +
+      buy +
+    '</div>' +
+    '<div class="bm-use-on">' +
+      '<h4>Feed a plant</h4>' +
+      (rows
+        ? '<ul class="bm-rows">' + rows + '</ul>'
+        : '<p class="bm-empty">Plant something first.</p>') +
+      (m.fz <= 0 && rows ? '<p class="bm-empty bm-hint">Buy a bag to feed one.</p>' : '') +
+    '</div>' +
   '</article>';
 }
 
@@ -570,7 +623,7 @@ function renderMarketPage() {
   el.innerHTML =
     '<p class="gh-panel-lede">Boosters help you keep showing up. Nothing here grows a plant by ' +
       'itself - only real days do that.</p>' +
-    '<div class="bm-grid">' + mkMulchHtml() + mkPauseHtml() + '</div>';
+    '<div class="bm-grid">' + mkMulchHtml() + mkFertHtml() + '</div>';
 }
 
 
@@ -596,7 +649,7 @@ function ghEnsureTabs() {
       '<span class="gh-tab-sub">Skins and landscapes</span></button>' +
     '<button type="button" class="gh-tab" role="tab" id="ghTabBoost" data-gh-tab="boost" aria-controls="ghBooster">' +
       '<span class="gh-tab-name">Booster Market</span>' +
-      '<span class="gh-tab-sub">Mulch and Pause</span></button>';
+      '<span class="gh-tab-sub">Mulch and Fertilizer</span></button>';
   if (header && header.nextSibling) content.insertBefore(tabs, header.nextSibling);
   else content.insertBefore(tabs, content.firstChild);
 
@@ -623,7 +676,7 @@ function ghEnsureTabs() {
     var btn = e.target.closest('[data-gh-tab]');
     if (!btn) return;
     ghTab = btn.getAttribute('data-gh-tab');
-    mkArmed = false;
+    mkArmed = null;
     renderGreenhouse();
   });
   return tabs;
@@ -673,27 +726,41 @@ document.addEventListener('click', function (e) {
 
   var act = btn.getAttribute('data-mk-act');
   if (act === 'buy') {
-    if (mkArmed) { mkArmed = false; mkBuyMulch(); }
-    else { mkArmed = true; renderMarketPage(); }
+    var item = btn.getAttribute('data-mk-item');
+    if (mkArmed === item) {
+      mkArmed = null;
+      if (item === 'fert') mkBuyFert(); else mkBuyMulch();
+    } else {
+      mkArmed = item;
+      renderMarketPage();
+    }
     return;
   }
-  if (act === 'startpause') {
-    var today = getTodayString();
-    mkStartPause(mkPauseFrom === 'tomorrow' ? shiftDate(today, 1) : today, mkPauseDays);
-    return;
-  }
-  if (act === 'endpause') { mkEndPause(); return; }
-  if (btn.hasAttribute('data-mk-from')) { mkPauseFrom = btn.getAttribute('data-mk-from'); renderMarketPage(); return; }
-  if (btn.hasAttribute('data-mk-days')) { mkPauseDays = parseInt(btn.getAttribute('data-mk-days'), 10); renderMarketPage(); }
+  var id = parseInt(btn.getAttribute('data-mk-id'), 10);
+  if (act === 'feed')   { mkUseFert(id); return; }
+  if (act === 'unfeed') { mkUndoFert(id); return; }
 });
 
 // A tap anywhere else disarms a half-made purchase.
 document.addEventListener('click', function (e) {
   if (!mkArmed) return;
   if (e.target.closest && e.target.closest('[data-mk-act="buy"]')) return;
-  mkArmed = false;
+  mkArmed = null;
   if (currentPage === 'greenhouse' && ghTab === 'boost' && authReady) renderMarketPage();
 });
+
+
+// ---- A fed plant says so on the Tasks page ------------------------
+
+if (typeof tpRowMeta === 'function') {
+  var mkBaseTpRowMeta = tpRowMeta;
+  tpRowMeta = function (task) {
+    var bits = mkBaseTpRowMeta.apply(this, arguments);
+    var week = mkFedWeek(task, getTodayString());
+    if (week) bits.unshift({ text: 'Fertilized until ' + mkShortDate(week.t), tone: 'fed' });
+    return bits;
+  };
+}
 
 
 // ---- Wiring: the old Market address, and every "go to the Market" --
@@ -717,7 +784,7 @@ navigateTo = function (page) {
   }
   // Arriving at the Greenhouse any other way - the menu, the home sign,
   // "Spend it in the Greenhouse" - starts on Decoration, its front page.
-  if (page === 'greenhouse' && currentPage !== 'greenhouse') { mkArmed = false; ghTab = 'decor'; }
+  if (page === 'greenhouse' && currentPage !== 'greenhouse') { mkArmed = null; ghTab = 'decor'; }
   return mkBaseNavigateTo.apply(this, arguments);
 };
 
@@ -740,8 +807,8 @@ function mkWrapExport() {
       out.dew.market = {
         mulch_held:    m.mulch,
         mulch_covered: m.cov,
-        pause:         m.pause,
-        last_pause_ended: m.pend,
+        fertilizer_held: m.fz,
+        fertilizer_weeks: m.fert,
       };
     }
     return out;

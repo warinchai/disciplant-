@@ -100,7 +100,7 @@ function ydIsFixed(task) {
 // Steps are not part of it: yesterday's checklist was cleared at
 // midnight, and saying "I did it" is saying all of it.
 function ydAward(task, level) {
-  return clampGrowthPoints(taskGrowthWeight(task) * effortMultiplier(level));
+  return clampGrowthPoints(taskGrowthWeight(task) * dayMultiplier(task, ydDay(), level));
 }
 
 

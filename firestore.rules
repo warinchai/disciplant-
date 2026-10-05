@@ -218,8 +218,8 @@ service cloud.firestore {
     // still edit earned and bal together. What they do is make the
     // one-number edit fail: the balance has to be what was earned
     // minus what was spent, a look can only join `owned` in a write
-    // that also spends, and nobody can hold more Mulch than the
-    // Market sells. The app keeps all three true itself (see
+    // that also spends, and nobody can hold more Mulch or Fertilizer
+    // than the Booster Market sells. The app keeps all three true itself (see
     // dewCredit, dewRefund and dewNormalizeWallet), so an honest save
     // never trips them. Roadmap I3.
     //
@@ -235,6 +235,7 @@ service cloud.firestore {
         && w.bal == w.earned - w.spent
         && w.bal <= 99999
         && (!('mk' in w) || !('mulch' in w.mk) || (w.mk.mulch is number && w.mk.mulch <= 3))
+        && (!('mk' in w) || !('fz' in w.mk) || (w.mk.fz is number && w.mk.fz <= 3))
         && ownedOk(w, old)
       );
     }

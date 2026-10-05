@@ -1789,7 +1789,7 @@ function buildGrowthSeries(task, windowDays) {
     // whole packing exists to keep small, and is not worth it to fix
     // a line on a chart.
     if (task && histGet(task.history, date)) {
-      days = clampGrowthPoints(days - base * effortMultiplier(histLevel(task.history, date)));
+      days = clampGrowthPoints(days - base * dayMultiplier(task, date, histLevel(task.history, date)));
     }
   }
   out.reverse();
@@ -1811,7 +1811,7 @@ function recentGrowthPoints(task, windowDays, includeToday) {
   for (var i = includeToday ? 0 : 1; i < windowDays; i++) {
     var date  = shiftDate(today, -i);
     var level = histLevel(task.history, date);
-    if (level) total += base * effortMultiplier(level);
+    if (level) total += base * dayMultiplier(task, date, level);
   }
   return clampGrowthPoints(total);
 }
@@ -2234,7 +2234,20 @@ function taskEffortToday(task) {
 // Before the box is ticked there is no slot yet, so it reads Steady -
 // which is exactly what the first tick of the day is worth.
 function taskCompletionAward(task) {
-  return clampGrowthPoints(taskBaseAward(task) * effortMultiplier(taskEffortToday(task)));
+  return clampGrowthPoints(taskBaseAward(task) *
+    dayMultiplier(task, getTodayString(), taskEffortToday(task)));
+}
+
+// What one completed day is multiplied by: its effort, plus any bonus
+// the task had on that DATE. The bonus is 0 here; 18-market.js
+// reassigns growthBonusOn() for Fertilizer. Every place that turns a
+// day into growth - the tick itself, the show/hide toggle, the 7-day
+// gain, the growth charts, a late log - goes through this one sum, so
+// they can never disagree about what a fertilized day was worth.
+function growthBonusOn(task, dateStr) { return 0; }
+
+function dayMultiplier(task, dateStr, level) {
+  return effortMultiplier(level) + growthBonusOn(task, dateStr);
 }
 
 // Logging how hard today was, after the fact.
