@@ -1268,6 +1268,16 @@ check('and the garden picks the walkthrough up', run('onboardStage()'), 'tick');
 check('a garden with plants in it never shows the picker',
   run('onboardPlantedId = null; onboardStage()'), 'none');
 
+// The Today / Everything switch lights the one that is chosen.
+run("tasks = []; nextId = 1; tpScope = 'today'; renderTaskList();");
+const scopeOn = () => Array.from($('tpScope').querySelectorAll('.tp-seg-btn.active')).map(b => b.getAttribute('data-scope'));
+check('Today is lit to begin with', scopeOn(), ['today']);
+$('tpScope').querySelector('[data-scope="all"]').click();
+check('choosing Everything lights Everything, and only it', scopeOn(), ['all']);
+check('and tells a screen reader', $('tpScope').querySelector('[data-scope="all"]').getAttribute('aria-pressed'), 'true');
+$('tpScope').querySelector('[data-scope="today"]').click();
+check('choosing Today moves it back', scopeOn(), ['today']);
+
 // =====================================================================
 console.log('\n--- guides ---');
 

@@ -146,7 +146,7 @@ if (tpAddCatEl) {
 // Scope switch: what the sections below are showing.
 if (tpScopeEl) {
   tpScopeEl.innerHTML =
-    '<button type="button" class="tp-seg-btn active" data-scope="today">Today</button>' +
+    '<button type="button" class="tp-seg-btn" data-scope="today">Today</button>' +
     '<button type="button" class="tp-seg-btn" data-scope="all">Everything</button>';
   tpScopeEl.addEventListener('click', function (e) {
     var btn = e.target.closest('[data-scope]');
@@ -606,6 +606,7 @@ function tpRowHtml(task) {
 // hidden costs little enough not to need a dirty flag.
 // ============================================
 function renderTaskList() {
+  tpRenderScope();
   tpRenderHeader();
   tpRenderPlot();
   // 14 loads after this file.
@@ -613,6 +614,18 @@ function renderTaskList() {
   tpRenderSections();
   tpRenderSheet();
   tpRenderAsk();
+}
+
+// The highlight on the Today / Everything switch follows tpScope on
+// every render. It used to be set once at parse time and never again,
+// so choosing Everything left Today lit.
+function tpRenderScope() {
+  if (!tpScopeEl) return;
+  tpScopeEl.querySelectorAll('[data-scope]').forEach(function (b) {
+    var on = b.getAttribute('data-scope') === tpScope;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
 }
 
 function tpRenderHeader() {

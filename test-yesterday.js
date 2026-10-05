@@ -206,7 +206,7 @@ run(habit(1, [-3, -2]));
 run(habit(2, [-1]));
 run('render();');
 check('it shows on the Tasks page', !!card().querySelector('.yd-card'), true);
-check('above the sections', card().nextElementSibling === $('tpSections'), true);
+check('below the sections, so today comes first', card().previousElementSibling === $('tpSections'), true);
 check('listing only the habit that missed yesterday', card().querySelectorAll('.yd-row').length, 1);
 check('with what it brings the streak back to',
   card().querySelector('.yd-row-meta').textContent, 'Brings your streak back to 3 days');

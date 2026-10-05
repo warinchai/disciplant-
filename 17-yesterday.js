@@ -17,7 +17,7 @@
 // ordinary tick would have, and rebuilds the streak from the history,
 // so it reads as if the day had never been missed.
 //
-// Two places offer it: a card at the top of the Tasks page listing
+// Two places offer it: a card under the Tasks page's list naming
 // every habit it applies to, and a "Yesterday" row in each habit's
 // detail sheet. The card can be hidden for the day; the sheet always
 // has it.
@@ -327,7 +327,9 @@ function ydCardEl() {
   if (el || !tpSectionsEl || !tpSectionsEl.parentNode) return el;
   el = document.createElement('div');
   el.id = 'ydCard';
-  tpSectionsEl.parentNode.insertBefore(el, tpSectionsEl);
+  // Below today's list, not above it: today's tasks come first, and
+  // yesterday is a catch-up for once those are in view.
+  tpSectionsEl.parentNode.insertBefore(el, tpSectionsEl.nextSibling);
   return el;
 }
 

@@ -22,7 +22,7 @@ Legend: ✅ done · ⬜ open · 🔜 next up · ❌ dropped
 * ✅ **B1** — Custom schedule (7-bit weekday mask); streaks only break on scheduled days
 * ⬜ **B2** — Streak insurance
 * ⬜ **B3** — Pause / vacation mode
-* ✅ **B4** — Retroactive ticking (`17-yesterday.js`). Yesterday only, habits only, only a day the habit was scheduled for and not before it existed. Offered from a "Forgot to tick yesterday?" card on the Tasks page (hideable for the day) and a Yesterday row in the detail sheet. Logs yesterday with an effort level, grows the plant by an ordinary tick, rebuilds the streak from history, and pays the habit-tick Dew plus any milestone crossed. Re-ratable and undoable until today ends, then banked. One optional task field, `lateOn` (the day the fix was made), written only while it is today's; the Dew paid sits in `wallet.ly` for the same day
+* ✅ **B4** — Retroactive ticking (`17-yesterday.js`). Yesterday only, habits only, only a day the habit was scheduled for and not before it existed. Offered from a "Forgot to tick yesterday?" card under the Tasks page list (hideable for the day) and a Yesterday row in the detail sheet. Logs yesterday with an effort level, grows the plant by an ordinary tick, rebuilds the streak from history, and pays the habit-tick Dew plus any milestone crossed. Re-ratable and undoable until today ends, then banked. One optional task field, `lateOn` (the day the fix was made), written only while it is today's; the Dew paid sits in `wallet.ly` for the same day
 * ✅ **B5** — Heatmap denominator rebuilt on B1 + A7
 
 ## C. Growth & visibility
@@ -119,7 +119,7 @@ Tests are additive — none should be lost between sessions.
 
 | File | Coverage | Runner |
 | --- | --- | --- |
-| `test-app.js` | 294 checks (incl. manual ordering, onboarding, guides) | jsdom |
+| `test-app.js` | 298 checks (incl. manual ordering, onboarding, guides, scope switch) | jsdom |
 | `test-impact.js` | 62 checks, impact picker / effort dialog smoke test | jsdom |
 | `test-appcheck.js` | 29 checks, App Check vs rate-limit denial | jsdom |
 | `test-wallet.js` | 82 checks, Dew earning, refunds, caps, shop, pill | jsdom |
