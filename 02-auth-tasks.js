@@ -912,12 +912,17 @@ auth.onIdTokenChanged(function (user) {
         if (assignPermanentPositions()) anyChanged = true;
         if (anyChanged) saveData();
 
-        render();
-
-        // First snapshot: mark auth ready and reveal appropriate UI
+        // First snapshot: mark auth ready BEFORE rendering. Stats, the
+        // Greenhouse and Rewards only draw themselves once authReady is
+        // true, so marking it after render() left a page that was
+        // reloaded (#stats, #greenhouse) empty: its loading text was
+        // hidden below and nothing had ever been drawn in its place,
+        // until navigating away and back drew it.
         if (!authReady) {
           authReady = true;
         }
+
+        render();
 
         // Covers the case where the friends list arrived before the
         // garden did - see ensureGardenSummaryPublished(). Whichever of

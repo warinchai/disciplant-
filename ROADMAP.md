@@ -129,6 +129,7 @@ Tests are additive — none should be lost between sessions.
 | `test-appcheck.js` | 29 checks, App Check vs rate-limit denial | jsdom |
 | `test-wallet.js` | 86 checks, Dew earning, refunds, caps, shop, pill | jsdom |
 | `test-rewards.js` | 50 checks, Morning dew, quests, badges, navigation | jsdom |
+| `test-reload.js` | 13 checks, a refresh on #greenhouse / #stats / #rewards / #tasks draws the page without leaving it | jsdom |
 | `test-market.js` | 133 checks, Mulch buying / logging yesterday with it / weekly limit / Tasks card, Fertilizer (growth, charts, retune, undo, late logs), Pause removed, wallet invariant, saving incl. `mergeFields`, the Greenhouse's two tabs | jsdom |
 | `test-timezone.js` | 25 checks, flying west / east, corrected clocks, heatmap's today | jsdom |
 | `test-yesterday.js` | 70 checks, the B4 engine without the Market loaded (so free): eligibility, growth, streak, Dew, undo, card, sheet | jsdom |
