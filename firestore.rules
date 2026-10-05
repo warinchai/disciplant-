@@ -227,30 +227,46 @@ service cloud.firestore {
     // coalesced (SAVE_MIN_INTERVAL_MS in 02), so a first visit to
     // Rewards can legitimately collect several hundred Dew in one
     // write. Costs nothing - only `request.resource` and `resource`.
-    function walletOk(old) {
-      let w = request.resource.data.get('wallet', null);
-      return w == null || (
-        w.bal is number && w.earned is number && w.spent is number
+    // Written without null anywhere: the Console's rule checker types
+    // every argument, and a function called with null on create but a
+    // map on update ("walletOk(null)") is refused with "Invalid type.
+    // Received one of [null]. Expected one of [map]" even though it
+    // runs fine. So "no wallet" is tested with `in`, and the stored
+    // wallet defaults to an empty map.
+    function walletShapeOk(w) {
+      return w.bal is number && w.earned is number && w.spent is number
         && w.earned >= 0 && w.spent >= 0
         && w.bal == w.earned - w.spent
         && w.bal <= 99999
         && (!('mk' in w) || !('mulch' in w.mk) || (w.mk.mulch is number && w.mk.mulch <= 11))
-        && (!('mk' in w) || !('fz' in w.mk) || (w.mk.fz is number && w.mk.fz <= 11))
-        && ownedOk(w, old)
-      );
+        && (!('mk' in w) || !('fz' in w.mk) || (w.mk.fz is number && w.mk.fz <= 11));
     }
 
+    function walletOkCreate() {
+      return !('wallet' in request.resource.data)
+        || walletShapeOk(request.resource.data.wallet);
+    }
+
+    function walletOkUpdate() {
+      return !('wallet' in request.resource.data)
+        || ( walletShapeOk(request.resource.data.wallet)
+             && ownedOk(request.resource.data.wallet, resource.data.get('wallet', {})) );
+    }
+
+    // A look joins `owned` only in a write that also spends. A stored
+    // wallet with no `owned` yet (the first load after Dew shipped
+    // grandfathers a landscape in) is exempt.
     function ownedOk(w, old) {
-      return old == null || !('owned' in old) || !('owned' in w)
+      return !('owned' in old) || !('owned' in w)
         || w.owned.size() <= old.owned.size()
-        || w.spent > old.spent;
+        || w.spent > old.get('spent', 0);
     }
 
     match /gardens/{uid} {
       allow read:   if isSignedIn() && me() == uid;
-      allow create: if isSignedIn() && me() == uid && rlOkCreate() && walletOk(null);
+      allow create: if isSignedIn() && me() == uid && rlOkCreate() && walletOkCreate();
       allow update: if isSignedIn() && me() == uid && rlOkUpdate(rlGardenMax(), rlWindow())
-        && walletOk(resource.data.get('wallet', null));
+        && walletOkUpdate();
       allow delete: if isSignedIn() && me() == uid
         && gone(/databases/$(database)/documents/users/$(uid));
     }
