@@ -20,9 +20,9 @@ Legend: ✅ done · ⬜ open · 🔜 next up · ❌ dropped
 ## B. Scheduling & fairness
 
 * ✅ **B1** — Custom schedule (7-bit weekday mask); streaks only break on scheduled days
-* ✅ **B2** — Streak insurance: **Mulch** (`18-market.js`). 25 Dew, hold at most 2. **Used by hand** on the plant you choose, the day after it missed a day it was due: from the "Forgot to tick yesterday?" card (beside "Yes, I did it"), the habit's sheet, or the Market page's "Missed yesterday" list. Yesterday only; undoable until today ends; one per plant per 7 days, so never two days in a row. The covered day stops counting as due (via `isScheduledOn` / `wasDueOn`), so the streak, the heatmap and B4 all agree. Never grows the plant or writes history. Logging a Mulched day through B4 hands the bag back. (First shipped as automatic at midnight; changed to manual on 5 October 2026 so a bag is never spent on a day someone only forgot to log, and so the user picks the plant.)
+* ✅ **B2** — Streak insurance: **Mulch** (`18-market.js`). 25 Dew, hold at most 2. Since 5 October 2026 it is the **only way to log a missed day**: a habit due yesterday and not ticked can be logged late by spending one bag, which brings back the day, its growth, its streak and its tick Dew exactly as an on-time tick would (it is B4 with a price). Chosen per plant, from the "Forgot to tick yesterday?" card, the habit's sheet, or the Market's "Not ticked yesterday" list. Yesterday only; re-ratable and undoable until today ends (undo returns the bag); one per plant per 7 days. History of the design: first automatic at midnight and streak-only, then manual and streak-only, then merged with B4 so there is one button, not two.
 * ✅ **B3** — Pause / vacation mode (`18-market.js`). Free. 3, 7 or 14 days, starting today or tomorrow, never backdated; the next can start 7 days after the last one ended. Paused days are not due, so nothing can be missed; ticking still works. Can be ended early, keeping the days already behind it
-* ✅ **B4** — Retroactive ticking (`17-yesterday.js`). Yesterday only, habits only, only a day the habit was scheduled for and not before it existed. Offered from a "Forgot to tick yesterday?" card under the Tasks page list (hideable for the day) and a Yesterday row in the detail sheet. Logs yesterday with an effort level, grows the plant by an ordinary tick, rebuilds the streak from history, and pays the habit-tick Dew plus any milestone crossed. Re-ratable and undoable until today ends, then banked. One optional task field, `lateOn` (the day the fix was made), written only while it is today's; the Dew paid sits in `wallet.ly` for the same day
+* ✅ **B4** — Retroactive ticking (`17-yesterday.js`), **now paid for with Mulch** (B2): 18 wraps `ydFix` / `ydUndo` so every late log spends a bag and every undo returns it; there is no free path on the live site. 17 is still the engine: yesterday only, habits only, only a day the habit was scheduled for and not before it existed; logs yesterday with an effort level, grows the plant by an ordinary tick, rebuilds the streak from history, pays the habit-tick Dew plus any milestone. One optional task field, `lateOn`, written only while it is today's. The card sits under the Tasks page list (hideable for the day)
 * ✅ **B5** — Heatmap denominator rebuilt on B1 + A7
 
 ## C. Growth & visibility
@@ -106,7 +106,7 @@ IDs are provisional; nothing here is committed.
 * **Migrations should be no-ops where possible.** C1 and C3 both shipped as genuine no-ops on existing data. Aim for that.
 * **Denominators err toward flattering the past.** The `firstSeen` approximation is deliberate — using current task count for historical heatmap cells produces misleading shading.
 * **SVG colours use `style="fill:var(--c-leaf,…)"`,** never `fill="var(…)"` — CSS custom properties in SVG presentation attributes are unreliable cross-browser.
-* **Dew never buys growth.** It buys looks and streak protection (Mulch); nothing it buys adds a day to a plant, writes history or changes height. Mulch does change streaks, which friends can see, which is why I3 shipped with it. Anything that buys growth itself needs a server first.
+* **Dew never buys growth by itself.** The one place Dew touches growth is Mulch logging a missed day, and that is the ordinary tick for a day the user says they did, at its ordinary size. Nothing adds a day nobody claims, and nothing makes a tick worth more (that rules out fertilizer as a multiplier on anything but real ticks). Because Dew now reaches growth and streaks, which friends see, I3 must be published.
 * **`bal == earned - spent`** on the wallet, through every credit, refund and purchase. I3 relies on it.
 * **Rewards are derived, not counted.** Quest and badge progress is read off history; only collected IDs are stored. Don't add a tick counter alongside toggleTask().
 * **A past day is banked unless it was back-filled today.** `lateOn === today` is the only thing that makes yesterday changeable; never widen B4 past yesterday without rethinking that.
@@ -125,9 +125,9 @@ Tests are additive — none should be lost between sessions.
 | `test-appcheck.js` | 29 checks, App Check vs rate-limit denial | jsdom |
 | `test-wallet.js` | 82 checks, Dew earning, refunds, caps, shop, pill | jsdom |
 | `test-rewards.js` | 50 checks, Morning dew, quests, badges, navigation | jsdom |
-| `test-market.js` | 97 checks, Mulch buying / using by hand / B4 hand-back / Tasks card, Pause, wallet invariant, saving, page | jsdom |
+| `test-market.js` | 101 checks, Mulch buying / logging yesterday with it / weekly limit / Tasks card, Pause, wallet invariant, saving, page | jsdom |
 | `test-timezone.js` | 25 checks, flying west / east, corrected clocks, heatmap's today | jsdom |
-| `test-yesterday.js` | 70 checks, logging yesterday: eligibility, growth, streak, Dew, undo, card, sheet | jsdom |
+| `test-yesterday.js` | 70 checks, the B4 engine without the Market loaded (so free): eligibility, growth, streak, Dew, undo, card, sheet | jsdom |
 | `verify-history.js` | 77 assertions, round-trip losslessness | node |
 
 Every suite exits on its own with 0 on success, 1 on failure (`test-app.js` used to hang after passing; fixed 4 October 2026).

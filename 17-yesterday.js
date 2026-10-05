@@ -12,7 +12,10 @@
 //
 // WHAT THIS DOES
 // For one day - today - any habit that was DUE yesterday and not
-// ticked can be logged for yesterday. Doing so writes yesterday into
+// ticked can be logged for yesterday. On the live site that costs a
+// bag of Mulch: 18-market.js wraps ydFix / ydUndo so every late log
+// spends one and every undo gives it back. This file is the engine and
+// knows nothing about the price. Doing so writes yesterday into
 // the history with an effort level, grows the plant by what an
 // ordinary tick would have, and rebuilds the streak from the history,
 // so it reads as if the day had never been missed.
@@ -316,8 +319,11 @@ function ydCardHtml() {
       '<h3 class="yd-title">Forgot to tick yesterday?</h3>' +
       (anyFixed ? '' : '<button type="button" class="yd-hide" data-yd-act="hide">Hide</button>') +
     '</div>' +
-    '<p class="yd-sub">If you did it and just forgot to tick it, log it here and your streak ' +
-      'comes back as if you never missed. Only for yesterday, and only until today ends.</p>' +
+    '<p class="yd-sub">' + (typeof mkUseMulch === 'function'
+      ? 'Did it but forgot to tick it? A bag of Mulch logs it late: the day, its growth and your ' +
+        'streak come back. Only for yesterday, and only until today ends.'
+      : 'If you did it and just forgot to tick it, log it here and your streak comes back as if ' +
+        'you never missed. Only for yesterday, and only until today ends.') + '</p>' +
     '<ul class="yd-list">' + list.map(ydRowHtml).join('') + '</ul>' +
   '</section>';
 }

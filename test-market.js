@@ -1,5 +1,5 @@
-// Market (18-market.js): buying Mulch, using it by hand, how it meets
-// the yesterday fix (17), Pause, the wallet invariant the security rules
+// Market (18-market.js): buying Mulch, logging yesterday with it (the
+// only way now - it wraps 17), Pause, the wallet invariant the security rules
 // rely on, saving, and the page itself.
 // Same jsdom + Firebase-stub harness as test-yesterday.js.
 const fs = require('fs');
@@ -110,30 +110,50 @@ run(`wallet.mk = mkEmpty(); wallet.mk.mulch = 2; lastResetDate = ${YY}; applyDay
 check('the rollover breaks the streak as it always did', run('tasks[0].streak'), 0);
 check('and spends no Mulch by itself', run('mkState().mulch'), 2);
 
-console.log('\n--- using Mulch by hand ---');
-check('the missed habit can take a bag', run('mkCanMulch(tasks[0])'), true);
-run('mkUseMulch(1);');
-check('using it brings the streak back', run('tasks[0].streak'), 4);
+console.log('\n--- logging yesterday costs a bag ---');
+reset();
+run(habit(1, [-5, -4, -3, -2]));
+run(`wallet.mk = mkEmpty(); lastResetDate = getTodayString();`);
+check('with no Mulch, yesterday cannot be logged', run('ydFix(1, EFFORT_DEFAULT)'), false);
+check('nothing changed', run(`histGet(tasks[0].history, ${YY})`), false);
+check('but the plant is still offered, so the card can point at the Market', run('mkCanMulch(tasks[0])'), true);
+
+run('wallet.mk.mulch = 2;');
+run('ydFix(1, EFFORT_DEFAULT);');
+check('with a bag it logs the day', run(`histGet(tasks[0].history, ${YY})`), true);
+check('the plant grows by an ordinary day', run('tasks[0].totalGrowthDays'), 5);
+check('the streak comes back', run('tasks[0].streak'), 5);
+check('the tick Dew is paid as usual', run('wallet.bal'), 1);
 check('one bag is spent', run('mkState().mulch'), 1);
-check('yesterday is marked as covered', run(`mkCovered(tasks[0], ${YY})`), true);
-check('the plant does not grow from it', run('tasks[0].totalGrowthDays'), 4);
-check('and the history does not claim the day was done', run(`histGet(tasks[0].history, ${YY})`), false);
-check('the save is logged for the page', run('mkState().log.length && mkState().log[0].s'), 4);
-check('the heatmap does not count it as missed', run(`dayTally(tasks[0], ${YY}).counted`), false);
-check('it cannot take a second bag', run('mkUseMulch(1)'), false);
-check('ticking today carries the saved streak on', run('toggleTask(1, true); tasks[0].streak'), 5);
-run('toggleTask(1, false);');
-run('mkUndoMulch(1);');
-check('undo puts the bag back', run('mkState().mulch'), 2);
-check('and the day is missed again', run(`mkCovered(tasks[0], ${YY})`), false);
-check('so the streak is broken again', run('tasks[0].streak'), 0);
-check('and the save is gone from the list', run('mkState().log.length'), 0);
+check('the day is recorded against the weekly limit', run(`mkMulched(tasks[0], ${YY})`), true);
+check('the log is kept for the page', run('mkState().log.length && mkState().log[0].s'), 5);
+check('it cannot be logged twice', run('ydFix(1, EFFORT_DEFAULT)'), false);
+check('effort can still be changed', run('ydSetEffort(1, 3) && tasks[0].totalGrowthDays'), 6);
+run('ydUndo(1);');
+check('undo takes the day back', run(`histGet(tasks[0].history, ${YY})`), false);
+check('and the growth', run('tasks[0].totalGrowthDays'), 4);
+check('and the streak', run('tasks[0].streak'), 0);
+check('and refunds the tick Dew', run('wallet.bal'), 0);
+check('and puts the bag back', run('mkState().mulch'), 2);
+check('and forgets the record', run(`mkMulched(tasks[0], ${YY})`), false);
+check('so it can be logged again', run('mkCanMulch(tasks[0])'), true);
 
 reset();
-run(habit(1, [-5, -4, -3, -2], { streak: 0, maxStreak: 4 }));
-run(`wallet.mk = mkEmpty(); lastResetDate = getTodayString();`);
-check('with no bag it cannot be used', run('mkUseMulch(1)'), false);
-check('but the plant is still offered', run('mkCanMulch(tasks[0])'), true);
+run(habit(1, [-3, -2]));
+run(habit(2, [-6, -5, -4, -3, -2]));
+run(`wallet.mk = mkEmpty(); wallet.mk.mulch = 1; lastResetDate = getTodayString();`);
+run('ydFix(1, EFFORT_DEFAULT);');
+check('you choose which plant gets it', run('[tasks[0].streak, tasks[1].streak]'), [3, 0]);
+check('and the other then has none to take', run('ydFix(2, EFFORT_DEFAULT)'), false);
+
+reset();
+run(habit(1, [-9, -8, -7, -6, -5, -3, -2]));
+run(`wallet.mk = mkEmpty(); wallet.mk.mulch = 1; wallet.mk.cov["1"] = [shiftDate(getTodayString(), -4)];
+     lastResetDate = getTodayString();`);
+check('not twice for one plant in a week', run('mkCanMulch(tasks[0])'), false);
+check('so the card does not offer it either', run('ydCanFix(tasks[0])'), false);
+run(`wallet.mk.cov["1"] = [shiftDate(getTodayString(), -9)];`);
+check('but again once a week has passed', run('mkCanMulch(tasks[0])'), true);
 
 reset();
 run(habit(1, [-1]));
@@ -141,78 +161,51 @@ run(`wallet.mk = mkEmpty(); wallet.mk.mulch = 1; lastResetDate = getTodayString(
 check('not on a habit that was ticked yesterday', run('mkCanMulch(tasks[0])'), false);
 
 reset();
-run(habit(1, [-4, -3]));
-run(`wallet.mk = mkEmpty(); wallet.mk.mulch = 1; lastResetDate = getTodayString();`);
-run('mkUseMulch(1);');
-check('two missed days: it covers yesterday only, so the streak stays broken', run('tasks[0].streak'), 0);
-
-reset();
-run(habit(1, [-9, -8, -7, -6, -5, -3, -2]));
-run(`wallet.mk = mkEmpty(); wallet.mk.mulch = 1; wallet.mk.cov["1"] = [shiftDate(getTodayString(), -4)];
-     lastResetDate = getTodayString();`);
-check('not twice for one plant in a week', run('mkCanMulch(tasks[0])'), false);
-run(`wallet.mk.cov["1"] = [shiftDate(getTodayString(), -9)];`);
-check('but again once a week has passed', run('mkCanMulch(tasks[0])'), true);
-
-reset();
-run(habit(1, [-3, -2]));
-run(habit(2, [-6, -5, -4, -3, -2]));
-run(`wallet.mk = mkEmpty(); wallet.mk.mulch = 1; lastResetDate = getTodayString();`);
-run('mkUseMulch(1);');
-check('you choose which plant gets it', run('[tasks[0].streak, tasks[1].streak]'), [2, 0]);
-check('and the other then has none to take', run('mkUseMulch(2)'), false);
-
-reset();
 run(habit(1, [-3, -2]));
 run(`wallet.mk = mkEmpty(); wallet.mk.mulch = 1; lastResetDate = getTodayString();`);
-run('mkUseMulch(1);');
-run(`wallet.mk.use.d = shiftDate(getTodayString(), -1);`);
-check('a bag used on an earlier day cannot be undone', run('mkUndoMulch(1)'), false);
-
-console.log('\n--- Mulch and the yesterday fix ---');
-reset();
-run(habit(1, [-5, -4, -3, -2]));
-run(`wallet.mk = mkEmpty(); wallet.mk.mulch = 1; lastResetDate = getTodayString();`);
-run('mkUseMulch(1);');
-check('a Mulched yesterday can still be logged as done', run('ydCanFix(tasks[0])'), true);
 run('ydFix(1, EFFORT_DEFAULT);');
-check('logging it counts the day', run(`histGet(tasks[0].history, ${YY})`), true);
-check('the streak grows by it', run('tasks[0].streak'), 5);
-check('and the bag is handed back', run('mkState().mulch'), 1);
-check('the day is no longer covered', run(`mkCovered(tasks[0], ${YY})`), false);
+run(`wallet.mk.use.d = shiftDate(getTodayString(), -1);`);
+check('a bag used on an earlier day cannot be undone', run('ydUndo(1)'), false);
+check('and the day it logged stays', run(`histGet(tasks[0].history, ${YY})`), true);
 
-console.log('\n--- the choice under the Tasks page ---');
+console.log('\n--- the card under the Tasks page ---');
 reset();
 run(habit(1, [-3, -2]));
 run(`wallet.mk = mkEmpty(); wallet.mk.mulch = 2; lastResetDate = getTodayString(); currentPage = 'tasks'; render();`);
 const ydc = () => $('ydCard');
-check('the card offers both choices', !!ydc().querySelector('[data-yd-act="fix"]') && !!ydc().querySelector('[data-mk-act="usemulch"]'), true);
-check('saying how many bags are left', ydc().querySelector('[data-mk-act="usemulch"]').textContent, 'Missed it? Use Mulch (2 left)');
-ydc().querySelector('[data-mk-act="usemulch"]').click();
-check('tapping it saves the streak', run('tasks[0].streak'), 2);
-check('the row says so', ydc().querySelector('.yd-done-label').textContent, 'Streak kept with Mulch.');
-ydc().querySelector('[data-mk-act="undomulch"]').click();
-check('and its Undo works', run('mkState().mulch'), 2);
+check('there is one button, not two', ydc().querySelectorAll('.yd-row button').length, 1);
+check('and it spends Mulch', ydc().querySelector('[data-yd-act="fix"]').textContent.trim(), 'Use Mulch to log it (2 left)');
+check('the card says what it costs', ydc().querySelector('.yd-row-meta').textContent.indexOf('costs 1 Mulch') !== -1, true);
+check('and what Mulch does', ydc().querySelector('.yd-sub').textContent.indexOf('A bag of Mulch logs it late') !== -1, true);
+ydc().querySelector('[data-yd-act="fix"]').click();
+check('tapping it logs the day', run(`histGet(tasks[0].history, ${YY})`), true);
+check('and spends the bag', run('mkState().mulch'), 1);
+check('the row asks how it was, as before', !!ydc().querySelector('[data-yd-act="effort"]'), true);
+ydc().querySelector('[data-yd-act="undo"]').click();
+check('and its Undo gives the bag back', run('mkState().mulch'), 2);
 run('tpOpenSheet(1);');
-check('the habit sheet offers Mulch too', !!$('taskSheetBody').querySelector('[data-mk-act="usemulch"]'), true);
+check('the habit sheet spends Mulch too', $('taskSheetBody').querySelector('[data-yd-act="fix"]').textContent.indexOf('Use Mulch') !== -1, true);
 run('tpCloseSheet();');
 run('wallet.mk.mulch = 0; render();');
-check('with none in the shed it points to the Market', !!ydc().querySelector('.mk-yd-buy'), true);
+check('with none in the shed it offers to get some', ydc().querySelector('.mk-yd-buy').textContent, 'Get Mulch to log it');
+check('which is not a free log', ydc().querySelector('[data-yd-act="fix"]'), null);
 ydc().querySelector('.mk-yd-buy').click();
-check('and that link goes there', run('currentPage'), 'market');
+check('it goes to the Market', run('currentPage'), 'market');
 
 console.log('\n--- the Market page lists the plants ---');
 reset();
 run(habit(1, [-3, -2]));
 run(habit(2, [-1]));
 run(`wallet.mk = mkEmpty(); wallet.mk.mulch = 1; lastResetDate = getTodayString(); navigateTo('market');`);
-check('only the habit that missed yesterday is listed', $('marketContent').querySelectorAll('.mk-pick').length, 1);
-$('marketContent').querySelector('[data-mk-act="usemulch"]').click();
-check('Use Mulch there saves it', run('tasks[0].streak'), 2);
-check('and it stays listed with Undo', !!$('marketContent').querySelector('[data-mk-act="undomulch"]'), true);
+check('only the habit not ticked yesterday is listed', $('marketContent').querySelectorAll('.mk-pick').length, 1);
+$('marketContent').querySelector('.mk-pick [data-yd-act="fix"]').click();
+check('Use Mulch there logs it', run(`histGet(tasks[0].history, ${YY})`), true);
+check('and it stays listed with Undo', !!$('marketContent').querySelector('.mk-pick [data-yd-act="undo"]'), true);
+$('marketContent').querySelector('.mk-pick [data-yd-act="undo"]').click();
+check('which works from there', run('mkState().mulch'), 1);
 reset();
 run(`navigateTo('market');`);
-check('with nothing missed it says so', !!$('marketContent').querySelector('.mk-none'), true);
+check('with nothing to log it says so', !!$('marketContent').querySelector('.mk-none'), true);
 
 console.log('\n--- Pause ---');
 reset();

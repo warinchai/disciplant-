@@ -6,37 +6,31 @@
 // ============================================
 //
 // WHAT IS HERE
-//   Mulch   Bought with Dew, held (at most MULCH_MAX_HELD), and spent BY
-//           HAND, on the plant you choose: the morning after a habit
-//           missed a day it was due, using a bag on it marks yesterday
-//           as covered and the streak carries on as if it had not been
-//           missed. Yesterday only, until today ends, and undoable in
-//           that window. One per plant per MULCH_GAP_DAYS, so never two
-//           days in a row.
+//   Mulch   Bought with Dew, held (at most MULCH_MAX_HELD), and the only
+//           way to log a day after it has gone: a habit that was due
+//           yesterday and not ticked can be logged late by spending one
+//           bag. The day, its growth, its streak and its tick Dew all
+//           come back, exactly as if it had been ticked on time - this is
+//           "Forgot to tick yesterday?" (17), with a price on it.
+//           Yesterday only, until today ends, undoable in that window
+//           (the bag comes back). One per plant per MULCH_GAP_DAYS.
 //   Pause   Free. Up to PAUSE_MAX_DAYS for exam week, illness, a trip:
 //           no habit is due on a paused day, so nothing can be missed.
 //           Starts today or tomorrow - never in the past - and the next
 //           one can start PAUSE_COOLDOWN_DAYS after the last one ended.
 //
-// THE RULE THIS FILE KEEPS: DEW NEVER BUYS GROWTH
-// Mulch saves a streak; it never adds a day to the plant, never writes
-// the history, never touches height. A covered day is a day that was
-// forgiven, not one that was done. See the invariants in ROADMAP.md.
+// WHAT DEW CAN AND CANNOT DO TO A PLANT
+// Dew never buys growth BY ITSELF. The only growth Mulch gives is the
+// ordinary tick for a day the user says they did, logged late - the
+// same tick, at the same size, that ticking it on time would have
+// given. There is no item that adds a day nobody claims to have done,
+// and none that makes a tick worth more. See ROADMAP.md (invariants).
 //
-// HOW A DAY STOPS COUNTING
-// Both items work the same way underneath: isScheduledOn() and
-// wasDueOn() in 01 answer "no" for a paused day, and for a day a
-// plant's Mulch covered. Everything that decides whether a day was
-// missed - the rollover, the streak count in 17, the heatmap's
-// denominator, the Tasks page's "due today" - already asks those two,
-// so none of it had to change.
-//
-// MULCH AND "FORGOT TO TICK YESTERDAY?"
-// They are offered side by side, on the same missed habits: "Yes, I did
-// it" is free and counts the day; "Use Mulch" costs a bag and only
-// keeps the streak. Mulch is spent after the fact rather than at
-// midnight so it is never spent on a day someone simply forgot to log,
-// and if they Mulch a day and then log it anyway, the bag comes back.
+// HOW A PAUSED DAY STOPS COUNTING
+// isScheduledOn() and wasDueOn() in 01 answer "no" for a paused day.
+// Everything that decides whether a day was missed - the rollover, the
+// streak count in 17, the heatmap's denominator, the Tasks page's "due
+// today" - already asks those two, so none of it had to change.
 //
 // STORAGE
 // `wallet.mk` on gardens/{uid}, written by the save that writes the
@@ -161,38 +155,33 @@ function mkPaused(dateStr) {
   return !!p && dateStr >= p.from && dateStr <= p.to;
 }
 
-function mkCovered(task, dateStr) {
+var mkBaseIsScheduledOn = isScheduledOn;
+isScheduledOn = function (task, dateStr) {
+  if (!mkBaseIsScheduledOn.apply(this, arguments)) return false;
+  return !mkPaused(dateStr);
+};
+
+// The heatmap's denominator (05) asks this one rather than
+// isScheduledOn, so it gets the same exception: a paused day was never
+// owed, so it is not a missed square.
+var mkBaseWasDueOn = wasDueOn;
+wasDueOn = function (task, dateStr) {
+  if (!mkBaseWasDueOn.apply(this, arguments)) return false;
+  return !mkPaused(dateStr);
+};
+
+
+// ---- Logging yesterday with Mulch (wraps 17) ---------------------
+//
+// `cov` holds, per plant, the days that were logged with a bag - what
+// the weekly limit is counted from, and what the page lists.
+
+function mkMulched(task, dateStr) {
   var list = task && mkState().cov[String(task.id)];
   return !!list && list.indexOf(dateStr) !== -1;
 }
 
-// While set, a Mulched day counts as scheduled again. Only ever on for
-// the length of one call, below, to ask 17 "could this be logged if
-// the Mulch were not there?".
-var mkIgnoreCover = false;
-
-var mkBaseIsScheduledOn = isScheduledOn;
-isScheduledOn = function (task, dateStr) {
-  if (!mkBaseIsScheduledOn.apply(this, arguments)) return false;
-  if (mkPaused(dateStr)) return false;
-  if (!mkIgnoreCover && mkCovered(task, dateStr)) return false;
-  return true;
-};
-
-// The heatmap's denominator (05) asks this one rather than
-// isScheduledOn, so it gets the same two exceptions: a paused or
-// covered day was never owed, so it is not a missed square.
-var mkBaseWasDueOn = wasDueOn;
-wasDueOn = function (task, dateStr) {
-  if (!mkBaseWasDueOn.apply(this, arguments)) return false;
-  if (mkPaused(dateStr) || mkCovered(task, dateStr)) return false;
-  return true;
-};
-
-
-// ---- Using Mulch, by hand ---------------------------------------
-
-// No cover for this plant in the MULCH_GAP_DAYS before `day` - which
+// No bag used on this plant in the MULCH_GAP_DAYS before `day` - which
 // is also what rules out two days in a row.
 function mkMayCover(task, day) {
   var list = mkState().cov[String(task.id)] || [];
@@ -200,13 +189,13 @@ function mkMayCover(task, day) {
   return !list.some(function (d) { return d > since && d < day; }) && list.indexOf(day) === -1;
 }
 
-function mkCover(task, day) {
+function mkRecord(task, day) {
   var m = mkState();
   var id = String(task.id);
   m.cov[id] = (m.cov[id] || []).concat([day]).sort();
 }
 
-function mkUncover(task, day) {
+function mkUnrecord(task, day) {
   var m = mkState();
   var id = String(task.id);
   if (!m.cov[id]) return;
@@ -214,40 +203,40 @@ function mkUncover(task, day) {
   if (!m.cov[id].length) delete m.cov[id];
 }
 
-// Was Mulch put on this plant's yesterday today, so it can be undone?
+// Yesterday was logged with a bag today, so it can still be undone.
 function mkUsedToday(task) {
   var m = mkState();
-  return !!task && !!m.use && m.use.p[String(task.id)] === ydDay() && mkCovered(task, ydDay());
+  return !!task && !!m.use && m.use.p[String(task.id)] === ydDay() && mkMulched(task, ydDay());
 }
 
-// Could a bag go on this plant's yesterday? The same days "Forgot to
-// tick yesterday?" (17) offers - due, not ticked, the plant already
-// planted, today's rollover done - minus any the weekly limit rules
-// out. Whether a bag is in the shed is asked separately, so the offer
-// can say where to get one rather than vanish.
+// A missed yesterday the card should OFFER to log: everything 17 asks,
+// plus the weekly limit. Whether a bag is in the shed is asked
+// separately, so the offer can point at the Market rather than vanish.
 function mkCanMulch(task) {
   if (!task || task.kind === 'once' || typeof ydCanFix !== 'function') return false;
-  var y = ydDay();
-  if (mkCovered(task, y)) return false;
-  return ydCanFix(task) && mkMayCover(task, y);
+  return ydCanFix(task) && mkMayCover(task, ydDay());
 }
 
-function mkUseMulch(taskId) {
+// The one way in. Spends a bag, then hands over to 17's fix, which
+// writes the day, grows the plant, rebuilds the streak and pays the
+// tick Dew - all exactly as a tick on time would have.
+function mkUseMulch(taskId, level) {
   var task = tasks.find(function (t) { return t.id === taskId; });
   var m = mkState();
   if (m.mulch <= 0 || !mkCanMulch(task)) return false;
   var y = ydDay();
-  mkCover(task, y);
+  // The bag is taken before 17 saves, so that save carries it - and the
+  // day is recorded only after, because a recorded day is one the
+  // weekly limit (and so ydCanFix) refuses.
   m.mulch--;
+  var ok = mkBaseYdFix(taskId, level || EFFORT_DEFAULT);
+  if (!ok) { m.mulch++; return false; }
+  mkRecord(task, y);
   if (!m.use) m.use = { d: getTodayString(), p: {} };
   m.use.p[String(task.id)] = y;
-  // Counted again from the history, which now steps over the covered
-  // day - the midnight rollover had already broken the streak there.
-  task.streak    = clampStreak(Math.max(ydStreakFromHistory(task), task.streak || 0));
-  task.maxStreak = Math.max(task.maxStreak || 0, task.streak);
+  if (typeof dewToast === 'function') dewToast('1 Mulch used · ' + m.mulch + ' left');
   m.log.push({ t: task.id, d: y, s: task.streak });
   m.log = m.log.slice(-MULCH_LOG_MAX);
-  if (typeof dewToast === 'function') dewToast('Mulch kept your ' + task.streak + '-day streak');
   saveData();
   render();
   return true;
@@ -258,96 +247,71 @@ function mkUndoMulch(taskId) {
   if (!mkUsedToday(task)) return false;
   var m = mkState();
   var y = ydDay();
-  mkUncover(task, y);
+  if (!mkBaseYdUndo(taskId)) return false;
+  mkUnrecord(task, y);
   delete m.use.p[String(task.id)];
   m.mulch = Math.min(MULCH_HELD_CEILING, m.mulch + 1);
   m.log = m.log.filter(function (e) { return !(e.t === task.id && e.d === y); });
-  // maxStreak stays where it got to, as it does for an unticked tick.
-  task.streak = clampStreak(ydStreakFromHistory(task));
   if (typeof dewToast === 'function') dewToast('Mulch back in the shed');
   saveData();
   render();
   return true;
 }
 
+// 17 stays the engine; these make its own entry points go through a
+// bag. A free fix is no longer something the app offers - ydFix and
+// ydUndo now mean "with Mulch".
+var mkBaseYdFix  = ydFix;
+var mkBaseYdUndo = ydUndo;
+ydFix  = function (taskId, level) { return mkUseMulch(taskId, level); };
+ydUndo = function (taskId) { return mkUndoMulch(taskId); };
 
-// ---- Mulch and "Forgot to tick yesterday?" (17) ------------------
+// A late log with no bag behind it is not undoable through Mulch, and
+// is not "fixed" for the card either - only today's bags are.
+var mkBaseYdIsFixed = ydIsFixed;
+ydIsFixed = function (task) {
+  return mkBaseYdIsFixed.apply(this, arguments) && mkUsedToday(task);
+};
 
-if (typeof ydCanFix === 'function') {
-  // A Mulched yesterday can still be logged as done - the bag only
-  // saved the streak, and the free fix should always stay open.
-  var mkBaseYdCanFix = ydCanFix;
-  ydCanFix = function (task) {
-    if (mkBaseYdCanFix.apply(this, arguments)) return true;
-    if (!task || !mkCovered(task, ydDay())) return false;
-    mkIgnoreCover = true;
-    try { return mkBaseYdCanFix.apply(this, arguments); }
-    finally { mkIgnoreCover = false; }
-  };
+// The weekly limit hides a plant from the card altogether: offering a
+// button that cannot work is worse than not offering it.
+var mkBaseYdCanFix = ydCanFix;
+ydCanFix = function (task) {
+  if (!mkBaseYdCanFix.apply(this, arguments)) return false;
+  return mkMayCover(task, ydDay());
+};
 
-  // ...and logging it hands the bag back.
-  var mkBaseYdFix = ydFix;
-  ydFix = function (taskId) {
-    var task = tasks.find(function (t) { return t.id === taskId; });
-    var y = ydDay();
-    var handBack = !!task && mkCovered(task, y) && ydCanFix(task);
-    var m = mkState();
-    if (handBack) mkUncover(task, y);
-    var ok = mkBaseYdFix.apply(this, arguments);
-    if (handBack && !ok) { mkCover(task, y); return ok; }
-    if (handBack) {
-      m.mulch = Math.min(MULCH_HELD_CEILING, m.mulch + 1);
-      if (m.use) delete m.use.p[String(task.id)];
-      m.log = m.log.filter(function (e) { return !(e.t === task.id && e.d === y); });
-      if (typeof dewToast === 'function') dewToast('Mulch back in the shed - you did it after all');
-      saveData();
-      render();
-    }
-    return ok;
-  };
+// The card and the sheet in 17 draw their controls through
+// ydControlsHtml. With a bag in the shed the button spends one; with
+// none it points at the Market instead. Once used, 17's own
+// effort-and-Undo controls take over.
+var mkBaseYdControlsHtml = ydControlsHtml;
+ydControlsHtml = function (task) {
+  if (ydIsFixed(task)) return mkBaseYdControlsHtml.apply(this, arguments);
+  var held = mkState().mulch;
+  if (held > 0) {
+    return '<button type="button" class="ob-btn ob-btn-go yd-fix" data-yd-act="fix" data-yd-id="' +
+      task.id + '">' + mkMulchIcon() + ' Use Mulch to log it <span class="mk-left">(' + held + ' left)</span></button>';
+  }
+  return '<button type="button" class="ob-btn ob-btn-quiet yd-fix mk-yd-buy">Get Mulch to log it</button>';
+};
 
-  // The card and the sheet in 17 both draw their controls through
-  // ydControlsHtml, so this is where Mulch joins them: a second
-  // button beside "Yes, I did it", or Undo once a bag is on.
-  var mkBaseYdControlsHtml = ydControlsHtml;
-  ydControlsHtml = function (task) {
-    if (mkUsedToday(task)) {
-      return '<div class="yd-done">' +
-        '<span class="yd-done-label">Streak kept with Mulch.</span>' +
-        '<button type="button" class="yd-undo" data-mk-act="undomulch" data-mk-id="' + task.id + '">Undo</button>' +
-      '</div>';
-    }
-    var base = mkBaseYdControlsHtml.apply(this, arguments);
-    if (!mkCanMulch(task)) return base;
-    var held = mkState().mulch;
-    return '<div class="mk-yd-choice">' + base +
-      (held > 0
-        ? '<button type="button" class="ob-btn ob-btn-quiet mk-yd-mulch" data-mk-act="usemulch" data-mk-id="' +
-            task.id + '">Missed it? Use Mulch (' + held + ' left)</button>'
-        : '<button type="button" class="mk-yd-buy" data-mk-go="market">Missed it? Mulch can save the streak</button>') +
-    '</div>';
-  };
+var mkBaseYdPromiseText = ydPromiseText;
+ydPromiseText = function (task) {
+  var base = mkBaseYdPromiseText.apply(this, arguments);
+  return base + ' \u00b7 costs 1 Mulch';
+};
 
-  var mkBaseYdPromiseText = ydPromiseText;
-  ydPromiseText = function (task) {
-    if (mkUsedToday(task)) return 'Streak kept at ' + task.streak + ' days';
-    return mkBaseYdPromiseText.apply(this, arguments);
-  };
+function mkMulchIcon() {
+  return '<svg class="mk-mini" viewBox="0 0 16 16" aria-hidden="true">' +
+    '<path d="M3 5 C3 4 4 3.5 5 3.5 L11 3.5 C12 3.5 13 4 13 5 L13.7 12.5 C13.7 13.4 13 14 12 14 L4 14 C3 14 2.3 13.4 2.3 12.5 Z" style="fill:var(--clay,#E7CDA6)"/>' +
+    '<path d="M6 11 C6 9.4 7 8.4 8.5 8.4 C8.5 10 7.5 11 6 11 Z" style="fill:var(--leaf-dark,#47673A)"/>' +
+  '</svg>';
 }
 
-// Delegated from the document: these buttons live in 17's card and
-// sheet as well as on the Market page.
+// "Get Mulch" goes to the Market.
 document.addEventListener('click', function (e) {
-  if (!e.target.closest) return;
-  var btn = e.target.closest('[data-mk-act="usemulch"], [data-mk-act="undomulch"]');
-  if (btn) {
-    var id = parseInt(btn.getAttribute('data-mk-id'), 10);
-    if (btn.getAttribute('data-mk-act') === 'usemulch') mkUseMulch(id);
-    else mkUndoMulch(id);
-    return;
-  }
-  // "Mulch can save the streak" on the Tasks page goes to the Market.
-  var go = e.target.closest('.mk-yd-buy');
+  var go = e.target.closest && e.target.closest('.mk-yd-buy');
   if (go) navigateTo('market');
 });
 
@@ -475,30 +439,29 @@ function mkMulchHtml() {
   }
 
   var log = m.log.slice().reverse().map(function (e) {
-    return '<li>' + mkShortDate(e.d) + ': saved ' + escapeHtml(mkTaskName(e.t)) +
+    return '<li>' + mkShortDate(e.d) + ': logged ' + escapeHtml(mkTaskName(e.t)) +
       (e.s ? ' (' + e.s + '-day streak)' : '') + '</li>';
   }).join('');
 
-  // The plants a bag could go on right now - and any already Mulched
-  // today, so Undo is reachable from here too. Same controls as the
-  // Tasks page card, without the "Yes, I did it" half.
+  // The plants a bag could log right now - and any logged today, so
+  // Undo is reachable from here too.
   var targets = tasks.filter(function (t) { return mkCanMulch(t) || mkUsedToday(t); });
   if (typeof tpSortHabits === 'function') targets = tpSortHabits(targets);
   var pick = targets.map(function (t) {
     var ctl;
     if (mkUsedToday(t)) {
-      ctl = '<span class="mk-pick-done">Saved</span>' +
-        '<button type="button" class="yd-undo mk-pick-undo" data-mk-act="undomulch" data-mk-id="' + t.id + '">Undo</button>';
+      ctl = '<span class="mk-pick-done">Logged</span>' +
+        '<button type="button" class="yd-undo mk-pick-undo" data-yd-act="undo" data-yd-id="' + t.id + '">Undo</button>';
     } else if (m.mulch > 0) {
-      ctl = '<button type="button" class="ob-btn ob-btn-go mk-pick-use" data-mk-act="usemulch" data-mk-id="' +
+      ctl = '<button type="button" class="ob-btn ob-btn-go mk-pick-use" data-yd-act="fix" data-yd-id="' +
         t.id + '">Use Mulch</button>';
     } else {
       ctl = '<span class="mk-pick-done">Buy a bag first</span>';
     }
     return '<li class="mk-pick">' +
       '<span class="mk-pick-name">' + escapeHtml(t.text) +
-        '<span>' + (mkUsedToday(t) ? 'Streak kept at ' + t.streak + ' days'
-          : 'Missed yesterday \u00b7 keeps a ' + ydStreakFromHistory(t, ydDay()) + '-day streak') + '</span></span>' +
+        '<span>' + (mkUsedToday(t) ? 'Logged for yesterday \u00b7 ' + t.streak + '-day streak'
+          : 'Not ticked yesterday \u00b7 back to a ' + ydStreakFromHistory(t, ydDay()) + '-day streak') + '</span></span>' +
       ctl +
     '</li>';
   }).join('');
@@ -507,9 +470,8 @@ function mkMulchHtml() {
     '<div class="mk-item-head">' + mkMulchArt() +
       '<div class="mk-item-text">' +
         '<h3 class="rw-h">Mulch</h3>' +
-        '<p class="rw-sub">Keeps a streak alive through one missed day. You choose when and where: ' +
-          'the day after a habit missed a day it was due, put a bag on it and the streak carries on. ' +
-          'It never grows the plant - only real days do that.</p>' +
+        '<p class="rw-sub">Did a habit yesterday but forgot to tick it? A bag of Mulch logs it late: ' +
+          'the day, its growth and its streak all come back, as if you had ticked it on time.</p>' +
       '</div>' +
     '</div>' +
     '<div class="mk-item-foot">' +
@@ -518,12 +480,12 @@ function mkMulchHtml() {
       btn +
     '</div>' +
     (pick
-      ? '<h4 class="mk-pick-title">Missed yesterday</h4><ul class="mk-picks">' + pick + '</ul>'
-      : '<p class="mk-fine mk-none">No streak needs saving today. When a habit misses a day, it shows up here ' +
-        'and under your tasks the next day.</p>') +
-    '<p class="mk-fine">Hold up to ' + MULCH_MAX_HELD + '. Only for yesterday, and you can undo it until today ends. ' +
-      'One per plant per week, so it never covers two days in a row. If you actually did it, ' +
-      '"Yes, I did it" under your tasks is free - and gives a used bag back.</p>' +
+      ? '<h4 class="mk-pick-title">Not ticked yesterday</h4><ul class="mk-picks">' + pick + '</ul>'
+      : '<p class="mk-fine mk-none">Nothing to log today. When a habit goes unticked on a day it was due, ' +
+        'it shows up here and under your tasks the next day.</p>') +
+    '<p class="mk-fine">Hold up to ' + MULCH_MAX_HELD + '. Only for yesterday, and you can undo it until ' +
+      'today ends - the bag comes back. One per plant per week. Only use it for something you really did: ' +
+      'the plant is meant to show real days.</p>' +
     (log ? '<ul class="mk-log">' + log + '</ul>' : '') +
   '</section>';
 }
@@ -591,7 +553,7 @@ function renderMarketPage() {
       '<div class="rw-header-text">' +
         '<h2 class="rw-title">Market</h2>' +
         '<p class="rw-subtitle">Dew you earn by showing up, spent on things that help you keep ' +
-          'showing up. Nothing here makes a plant grow - only real days do that.</p>' +
+          'showing up. Nothing here grows a plant by itself - only real days do that.</p>' +
         '<div class="rw-balance">' + dewDropIcon() + '<strong>' + wallet.bal + '</strong> Dew' +
           '<button type="button" class="rw-link" data-mk-go="rewards">More ways to earn</button></div>' +
       '</div>' +
