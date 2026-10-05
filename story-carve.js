@@ -123,7 +123,6 @@ var STORY_WOOD_PLATE = { lit: '#F0D9B0', shadow: '#3A2712', floor: '#7A5330' };
 var STORY_CARVED_SIGNS = [
   { hostId: 'storyCutMission', text: 'THE MISSION' },
   { hostId: 'storyCutOrigin',  text: 'HOW IT STARTED' },
-  { hostId: 'storyCutPeople',  text: 'WHO WE ARE' },
   // Home page only (index.html) - the mission plaque's heading. Runs
   // here too (this script is now also loaded by index.html) since
   // .getElementById just no-ops for hosts that don't exist on
