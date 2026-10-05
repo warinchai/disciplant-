@@ -1394,6 +1394,17 @@ check('Our Mission links to the story page',
   win.document.querySelector('#navDrawer a.nav-plank').getAttribute('href'), '/story');
 run('setHomeAboutOpen(false);');
 
+// Closing the sheet from its own button must not leave focus inside a
+// panel that is about to be aria-hidden (the browser warns, and a
+// screen reader is left on a control that has gone).
+run(`tasks = [makeTask(1, 'Read', 'education')]; nextId = 2; currentPage = 'tasks'; render(); tpOpenSheet(1);`);
+$('taskSheetBody').querySelector('[data-act="delete"]').click();
+$('taskSheetBody').querySelector('[data-act="delete"]').focus();
+check('the dig button has focus before the sheet closes', $('taskSheet').contains(win.document.activeElement), true);
+$('taskSheetBody').querySelector('[data-act="delete"]').click();
+check('the plant is dug up', run('tasks.length'), 0);
+check('and focus is not left inside the hidden sheet', $('taskSheet').contains(win.document.activeElement), false);
+
 console.log('');
 if (fail.length) {
   console.log(fail.length + ' FAILURE(S):\n');

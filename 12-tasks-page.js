@@ -491,6 +491,7 @@ function tpRenderAsk() {
 
   if (!task) {
     tpAskId = null;
+    tpReleaseFocus(tpAskEl);
     tpAskEl.classList.add('hidden');
     tpAskEl.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('tp-ask-open');
@@ -911,10 +912,22 @@ function tpOpenSheet(taskId) {
   document.body.classList.add('tp-sheet-open');
 }
 
+// Hiding something that still holds keyboard focus is what the browser
+// warns about ("Blocked aria-hidden on an element because its descendant
+// retained focus") - and it strands a screen reader on a control that
+// is no longer there. Called before every aria-hidden="true" below.
+function tpReleaseFocus(el) {
+  if (el && document.activeElement && el.contains(document.activeElement) &&
+      typeof document.activeElement.blur === 'function') {
+    document.activeElement.blur();
+  }
+}
+
 function tpCloseSheet() {
   tpOpenTaskId    = null;
   tpConfirmDelete = false;
   if (tpSheetEl) {
+    tpReleaseFocus(tpSheetEl);
     tpSheetEl.classList.add('hidden');
     tpSheetEl.setAttribute('aria-hidden', 'true');
   }

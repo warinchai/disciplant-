@@ -628,12 +628,16 @@ function closeAccountModal() {
   if (accountModalBusy) return;   // nothing to cancel back to mid-flight
 
   accountModalOpen = false;
-  accountModalEl.classList.add('hidden');
-  accountModalEl.setAttribute('aria-hidden', 'true');
 
+  // Focus leaves BEFORE the modal is hidden: hiding an element that
+  // still holds focus is what the browser's aria-hidden warning is about.
   if (accountReturnFocus && typeof accountReturnFocus.focus === 'function') {
     accountReturnFocus.focus();
+  } else if (accountModalEl.contains(document.activeElement) && document.activeElement.blur) {
+    document.activeElement.blur();
   }
+  accountModalEl.classList.add('hidden');
+  accountModalEl.setAttribute('aria-hidden', 'true');
   accountReturnFocus = null;
 }
 

@@ -185,16 +185,6 @@
 
 .bm-held b { font-family: var(--font-display); font-size: var(--fs-lg); margin-left: 4px; }
 
-.mk-pip {
-  width: 14px;
-  height: 14px;
-  border-radius: 52% 48% 58% 42% / 55% 62% 40% 50%;
-  border: 2px solid var(--bark);
-  background: transparent;
-}
-
-.mk-pip.is-full { background: var(--bark); }
-
 .bm-buy {
   display: inline-flex;
   align-items: center;
@@ -227,17 +217,6 @@
 }
 
 .bm-done { color: var(--leaf-dark); }
-
-.bm-status {
-  flex: 1 1 200px;
-  margin: 0;
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  color: var(--ink);
-}
-
-.bm-pick { display: flex; flex-wrap: wrap; gap: 8px; }
-.bm-pick .tp-seg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* "Use it on" - the plants a bag can log right now. */
 .bm-use-on { margin-top: 14px; }
@@ -308,9 +287,6 @@
 
 
 /* ---------- Fertilizer ---------- */
-
-.mk-pip-fert { border-color: var(--sun-deep); }
-.mk-pip-fert.is-full { background: var(--sun); }
 
 .bm-row.is-fed { border-color: var(--sun); background: #FFF6DF; }
 .bm-hint { margin-top: 8px; font-size: var(--fs-xs); }
