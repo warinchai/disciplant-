@@ -52,14 +52,14 @@
 
 // ---- The numbers ------------------------------------------------
 
-var MULCH_PRICE        = 25;
+var MULCH_PRICE        = 15;   // was 25 until 6 Oct 2026: one use, so cheap
 var MULCH_MAX_HELD     = 10;
 var MULCH_GAP_DAYS     = 7;    // one per plant per week
 var MULCH_HELD_CEILING = MULCH_MAX_HELD + 1;  // a hand-back can top a full sack up by one
 var MULCH_LOG_MAX      = 6;    // recent saves shown on the page
 var MULCH_KEEP_DAYS    = 400;  // covered days older than this are dropped
 
-var FERT_PRICE    = 40;
+var FERT_PRICE    = 20;   // was 40 until 6 Oct 2026: one use, so cheap
 var FERT_MAX_HELD = 10;
 var FERT_DAYS     = 7;
 var FERT_BONUS    = 0.25;

@@ -87,17 +87,20 @@ var DEW_STREAK_MILESTONES = [
 // By slot, the same five-slot ladder 03 documents above PLANT_SKINS:
 // classic, gold, rainbow, themed, showcase. Anything past slot 4 (a
 // sixth skin appended later) gets the last price rather than free.
-var DEW_PLANT_PRICES = [0, 30, 40, 50, 80];
+// Raised 6 Oct 2026 (was 30/40/50/80): a bought skin is permanent and
+// unlocks for every plant of the species, so it is priced as an
+// investment. Boosters, which are used once, went the other way.
+var DEW_PLANT_PRICES = [0, 50, 75, 100, 150];
 
 // By landscape id. A new landscape not listed here costs the default.
 var DEW_GARDEN_PRICES = {
   meadow:   0,
-  candy:    100,
-  beach:    100,
-  volcanic: 150,
-  mars:     150,
+  candy:    150,
+  beach:    150,
+  volcanic: 250,
+  mars:     250,
 };
-var DEW_GARDEN_PRICE_DEFAULT = 120;
+var DEW_GARDEN_PRICE_DEFAULT = 200;
 
 
 // ---- State ------------------------------------------------------

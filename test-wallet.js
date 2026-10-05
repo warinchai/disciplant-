@@ -163,16 +163,23 @@ run('tasks[0].streak = 29; tasks[0].maxStreak = 29; tasks[0].completed = false; 
 check('30 days pays 10', run('wallet.bal'), TICK + 3 + 10);
 
 console.log('\n--- buying plant skins ---');
+// Prices read from 15, so retuning them changes no check below. The
+// numbers themselves are pinned once, here.
+const SKIN1 = run('DEW_PLANT_PRICES[1]');
+const SKIN4 = run('DEW_PLANT_PRICES[4]');
+const CANDY = run('DEW_GARDEN_PRICES.candy');
+check('skins cost 50 / 75 / 100 / 150 by slot', run('DEW_PLANT_PRICES.slice(1)'), [50, 75, 100, 150]);
+check('landscapes cost 150 and 250', run('[DEW_GARDEN_PRICES.candy, DEW_GARDEN_PRICES.beach, DEW_GARDEN_PRICES.volcanic, DEW_GARDEN_PRICES.mars]'), [150, 150, 250, 250]);
 reset();
 run(`tasks = [makeTask(1, 'Read', 'education'), makeTask(2, 'Study', 'education')];`);
 check('gold oak is locked with no friends', run('isSkinUnlocked(tasks[0], "education", "aurelian")'), false);
-check('and priced at 30', run('getSkinUnlockState(tasks[0], "education", "aurelian").price'), 30);
+check('and priced at slot 1', run('getSkinUnlockState(tasks[0], "education", "aurelian").price'), SKIN1);
 check('the requirement mentions both routes',
-  run('skinUnlockRequirement(getSkinUnlockState(tasks[0], "education", "aurelian"))').endsWith('or 30 Dew'), true);
+  run('skinUnlockRequirement(getSkinUnlockState(tasks[0], "education", "aurelian"))').endsWith('or ' + SKIN1 + ' Dew'), true);
 check('cannot buy without the Dew', run('dewBuyPlantSkin(tasks[0], "aurelian")'), false);
-run('wallet.bal = 100;');
+run('wallet.bal = ' + (SKIN1 + 70) + ';');
 check('can buy with it', run('dewBuyPlantSkin(tasks[0], "aurelian")'), true);
-check('it costs 30', run('wallet.bal'), 70);
+check('it costs its price', run('wallet.bal'), 70);
 check('and is worn straight away', run('getTaskSkinId(tasks[0])'), 'aurelian');
 check('it unlocks for every oak', run('isSkinUnlocked(tasks[1], "education", "aurelian")'), true);
 check('buying it twice is refused', run('dewBuyPlantSkin(tasks[1], "aurelian")'), false);
@@ -186,12 +193,12 @@ reset();
 run('gardenSkinId = null;');
 check('meadow stays free', run('isGardenSkinUnlocked("meadow")'), true);
 check('candy is now locked', run('isGardenSkinUnlocked("candy")'), false);
-check('it says what it costs', run('gardenSkinUnlockRequirement(getGardenSkinUnlockState("candy"))'), '100 Dew');
+check('it says what it costs', run('gardenSkinUnlockRequirement(getGardenSkinUnlockState("candy"))'), CANDY + ' Dew');
 run('gardenSkinId = "candy";');
 check('a locked landscape is never worn', run('getActiveGardenSkinId()'), 'meadow');
-run('wallet.bal = 120; dewBuyGardenSkin("candy");');
+run('wallet.bal = ' + (CANDY + 20) + '; dewBuyGardenSkin("candy");');
 check('buying it equips it', run('getActiveGardenSkinId()'), 'candy');
-check('and costs 100', run('wallet.bal'), 20);
+check('and costs its price', run('wallet.bal'), 20);
 
 console.log('\n--- loading and saving ---');
 run('dewLoadFromDoc({ gardenSkinId: "beach" });');
@@ -229,13 +236,13 @@ check('switching kind restarts the ten-minute clock', run('wallet.bal'), 0);
 
 console.log('\n--- the shop tile ---');
 reset();
-run(`tasks = [makeTask(1, 'Read', 'education')]; wallet.bal = 50; currentPage = 'greenhouse'; greenhouseOpenTaskId = 1; renderGreenhouse();`);
+run(`tasks = [makeTask(1, 'Read', 'education')]; wallet.bal = ${SKIN1 + 20}; currentPage = 'greenhouse'; greenhouseOpenTaskId = 1; renderGreenhouse();`);
 const tileSel = '#skin-drawer-1 .skin-tile[data-skin-id="aurelian"]';
 check('a locked tile becomes a shop tile', run(`document.querySelector('${tileSel}').classList.contains('dew-shop')`), true);
 check('and is clickable', run(`document.querySelector('${tileSel}').disabled`), false);
-check('showing its price', run(`document.querySelector('${tileSel} .dew-price').textContent`), '30');
+check('showing its price', run(`document.querySelector('${tileSel} .dew-price').textContent`), String(SKIN1));
 run(`document.querySelector('${tileSel}').click();`);
-check('the first tap only arms it', run('wallet.bal'), 50);
+check('the first tap only arms it', run('wallet.bal'), SKIN1 + 20);
 check('and says so', run(`document.querySelector('${tileSel}').classList.contains('dew-armed')`), true);
 run(`document.querySelector('${tileSel}').click();`);
 check('the second tap buys it', run('wallet.bal'), 20);
@@ -243,7 +250,7 @@ check('and puts it on', run('getTaskSkinId(tasks[0])'), 'aurelian');
 check('the Greenhouse shows the balance', run(`document.querySelector('#dewBalance .dew-balance-amount').textContent`), '20');
 run(`document.querySelector('${'#skin-drawer-1 .skin-tile[data-skin-id="nebulark"]'}').click();`);
 check('arming one you cannot afford says how short you are',
-  run(`document.querySelector('#skin-drawer-1 .skin-tile[data-skin-id="nebulark"] .dew-price-note').textContent`), 'Need 60 more Dew');
+  run(`document.querySelector('#skin-drawer-1 .skin-tile[data-skin-id="nebulark"] .dew-price-note').textContent`), 'Need ' + (SKIN4 - 20) + ' more Dew');
 run(`document.querySelector('#skin-drawer-1 .skin-tile[data-skin-id="nebulark"]').click();`);
 check('and a second tap still spends nothing', run('wallet.bal'), 20);
 run(`document.querySelector('#landscapePicker .skin-tile[data-garden-skin-id="candy"]').click();`);
