@@ -6,11 +6,13 @@
 // ============================================
 //
 // WHAT IS HERE
-//   Mulch   Bought with Dew, held (at most MULCH_MAX_HELD), and spent
-//           automatically at the midnight rollover: a habit that missed
-//           exactly one scheduled day keeps its streak, and that day is
-//           marked as covered. Longest streak first if several missed.
-//           One per plant per MULCH_GAP_DAYS, so never two days in a row.
+//   Mulch   Bought with Dew, held (at most MULCH_MAX_HELD), and spent BY
+//           HAND, on the plant you choose: the morning after a habit
+//           missed a day it was due, using a bag on it marks yesterday
+//           as covered and the streak carries on as if it had not been
+//           missed. Yesterday only, until today ends, and undoable in
+//           that window. One per plant per MULCH_GAP_DAYS, so never two
+//           days in a row.
 //   Pause   Free. Up to PAUSE_MAX_DAYS for exam week, illness, a trip:
 //           no habit is due on a paused day, so nothing can be missed.
 //           Starts today or tomorrow - never in the past - and the next
@@ -30,9 +32,11 @@
 // so none of it had to change.
 //
 // MULCH AND "FORGOT TO TICK YESTERDAY?"
-// Mulch is spent at midnight, before anyone could say they just forgot.
-// So logging yesterday through 17 hands the Mulch back, and undoing
-// that log puts it back on - the free fix always wins over the paid one.
+// They are offered side by side, on the same missed habits: "Yes, I did
+// it" is free and counts the day; "Use Mulch" costs a bag and only
+// keeps the streak. Mulch is spent after the fact rather than at
+// midnight so it is never spent on a day someone simply forgot to log,
+// and if they Mulch a day and then log it anyway, the bag comes back.
 //
 // STORAGE
 // `wallet.mk` on gardens/{uid}, written by the save that writes the
@@ -61,7 +65,7 @@ function mkEmpty() {
     mulch: 0,     // held
     cov:   {},    // taskId -> [covered dates]
     log:   [],    // [{ t: taskId, d: date, s: streak saved }], newest last
-    unc:   null,  // { d: today, p: { taskId: date } } - Mulch handed back by 17 today
+    use:   null,  // { d: today, p: { taskId: date } } - Mulch spent by hand today, so it can be undone
     pause: null,  // { from, to } - inclusive
     pend:  null,  // the day the last pause ended
   };
@@ -91,11 +95,11 @@ function mkNormalize(raw) {
       return { t: Number(e.t), d: e.d, s: Math.max(0, Math.round(Number(e.s)) || 0) };
     });
   }
-  if (raw.unc && raw.unc.d === getTodayString() && raw.unc.p && typeof raw.unc.p === 'object') {
-    m.unc = { d: raw.unc.d, p: {} };
-    for (var k in raw.unc.p) {
-      if (Object.prototype.hasOwnProperty.call(raw.unc.p, k) && /^\d+$/.test(k) && mkIsDay(raw.unc.p[k])) {
-        m.unc.p[k] = raw.unc.p[k];
+  if (raw.use && raw.use.d === getTodayString() && raw.use.p && typeof raw.use.p === 'object') {
+    m.use = { d: raw.use.d, p: {} };
+    for (var k in raw.use.p) {
+      if (Object.prototype.hasOwnProperty.call(raw.use.p, k) && /^\d+$/.test(k) && mkIsDay(raw.use.p[k])) {
+        m.use.p[k] = raw.use.p[k];
       }
     }
   }
@@ -116,7 +120,7 @@ function mkState() {
     m.pend  = m.pause.to;
     m.pause = null;
   }
-  if (m.unc && m.unc.d !== getTodayString()) m.unc = null;
+  if (m.use && m.use.d !== getTodayString()) m.use = null;
   return m;
 }
 
@@ -143,7 +147,7 @@ dewWalletPayload = function () {
   out.mk = { mulch: m.mulch };
   if (Object.keys(cov).length) out.mk.cov = cov;
   if (m.log.length)            out.mk.log = m.log.slice();
-  if (m.unc && Object.keys(m.unc.p).length) out.mk.unc = { d: m.unc.d, p: Object.assign({}, m.unc.p) };
+  if (m.use && Object.keys(m.use.p).length) out.mk.use = { d: m.use.d, p: Object.assign({}, m.use.p) };
   if (m.pause)                 out.mk.pause = { from: m.pause.from, to: m.pause.to };
   if (m.pend)                  out.mk.pend = m.pend;
   return out;
@@ -186,7 +190,7 @@ wasDueOn = function (task, dateStr) {
 };
 
 
-// ---- Mulch at midnight ------------------------------------------
+// ---- Using Mulch, by hand ---------------------------------------
 
 // No cover for this plant in the MULCH_GAP_DAYS before `day` - which
 // is also what rules out two days in a row.
@@ -210,62 +214,68 @@ function mkUncover(task, day) {
   if (!m.cov[id].length) delete m.cov[id];
 }
 
-// The scheduled days in [from, to) this habit did not do. The same walk
-// missedAScheduledDay() in 01 makes, returning the days instead of a
-// yes/no - including its rule that the first day's answer may still be
-// sitting in task.completed.
-function mkMissedDays(task, from, to) {
-  var out = [];
-  var gap = dayGap(from, to);
-  if (!(gap > 0) || gap > MAX_STREAK_LOOKBACK_DAYS) return out;
-  for (var i = 0; i < gap; i++) {
-    var day = shiftDate(from, i);
-    if (!isScheduledOn(task, day)) continue;
-    var done = (i === 0) ? (task.completed || histGet(task.history, day)) : histGet(task.history, day);
-    if (!done) out.push(day);
-  }
-  return out;
-}
-
-var mkSavedToday = [];
-
-function mkAutoMulch(from, to) {
+// Was Mulch put on this plant's yesterday today, so it can be undone?
+function mkUsedToday(task) {
   var m = mkState();
-  if (m.mulch <= 0 || !from || from >= to) return;
-  var habits = tasks.filter(function (t) { return t.kind !== 'once' && t.streak > 0; })
-                    .sort(function (a, b) { return (b.streak || 0) - (a.streak || 0); });
-  habits.forEach(function (task) {
-    if (m.mulch <= 0) return;
-    var missed = mkMissedDays(task, from, to);
-    if (missed.length !== 1) return;          // more than one day is a real break
-    var day = missed[0];
-    if (!mkMayCover(task, day)) return;
-    mkCover(task, day);
-    m.mulch--;
-    m.log.push({ t: task.id, d: day, s: task.streak });
-    m.log = m.log.slice(-MULCH_LOG_MAX);
-    mkSavedToday.push(task);
-  });
+  return !!task && !!m.use && m.use.p[String(task.id)] === ydDay() && mkCovered(task, ydDay());
 }
 
-var mkBaseApplyDayBoundaries = applyDayBoundaries;
-applyDayBoundaries = function () {
-  var today = getTodayString();
-  if (lastResetDate && lastResetDate !== today) mkAutoMulch(lastResetDate, today);
-  var out = mkBaseApplyDayBoundaries.apply(this, arguments);
-  if (mkSavedToday.length && typeof dewToast === 'function') {
-    mkSavedToday.forEach(function (t) {
-      dewToast('Mulch saved your ' + t.streak + '-day ' + t.text + ' streak');
-    });
-  }
-  mkSavedToday = [];
-  return out;
-};
+// Could a bag go on this plant's yesterday? The same days "Forgot to
+// tick yesterday?" (17) offers - due, not ticked, the plant already
+// planted, today's rollover done - minus any the weekly limit rules
+// out. Whether a bag is in the shed is asked separately, so the offer
+// can say where to get one rather than vanish.
+function mkCanMulch(task) {
+  if (!task || task.kind === 'once' || typeof ydCanFix !== 'function') return false;
+  var y = ydDay();
+  if (mkCovered(task, y)) return false;
+  return ydCanFix(task) && mkMayCover(task, y);
+}
+
+function mkUseMulch(taskId) {
+  var task = tasks.find(function (t) { return t.id === taskId; });
+  var m = mkState();
+  if (m.mulch <= 0 || !mkCanMulch(task)) return false;
+  var y = ydDay();
+  mkCover(task, y);
+  m.mulch--;
+  if (!m.use) m.use = { d: getTodayString(), p: {} };
+  m.use.p[String(task.id)] = y;
+  // Counted again from the history, which now steps over the covered
+  // day - the midnight rollover had already broken the streak there.
+  task.streak    = clampStreak(Math.max(ydStreakFromHistory(task), task.streak || 0));
+  task.maxStreak = Math.max(task.maxStreak || 0, task.streak);
+  m.log.push({ t: task.id, d: y, s: task.streak });
+  m.log = m.log.slice(-MULCH_LOG_MAX);
+  if (typeof dewToast === 'function') dewToast('Mulch kept your ' + task.streak + '-day streak');
+  saveData();
+  render();
+  return true;
+}
+
+function mkUndoMulch(taskId) {
+  var task = tasks.find(function (t) { return t.id === taskId; });
+  if (!mkUsedToday(task)) return false;
+  var m = mkState();
+  var y = ydDay();
+  mkUncover(task, y);
+  delete m.use.p[String(task.id)];
+  m.mulch = Math.min(MULCH_HELD_CEILING, m.mulch + 1);
+  m.log = m.log.filter(function (e) { return !(e.t === task.id && e.d === y); });
+  // maxStreak stays where it got to, as it does for an unticked tick.
+  task.streak = clampStreak(ydStreakFromHistory(task));
+  if (typeof dewToast === 'function') dewToast('Mulch back in the shed');
+  saveData();
+  render();
+  return true;
+}
 
 
 // ---- Mulch and "Forgot to tick yesterday?" (17) ------------------
 
 if (typeof ydCanFix === 'function') {
+  // A Mulched yesterday can still be logged as done - the bag only
+  // saved the streak, and the free fix should always stay open.
   var mkBaseYdCanFix = ydCanFix;
   ydCanFix = function (task) {
     if (mkBaseYdCanFix.apply(this, arguments)) return true;
@@ -275,6 +285,7 @@ if (typeof ydCanFix === 'function') {
     finally { mkIgnoreCover = false; }
   };
 
+  // ...and logging it hands the bag back.
   var mkBaseYdFix = ydFix;
   ydFix = function (taskId) {
     var task = tasks.find(function (t) { return t.id === taskId; });
@@ -286,38 +297,59 @@ if (typeof ydCanFix === 'function') {
     if (handBack && !ok) { mkCover(task, y); return ok; }
     if (handBack) {
       m.mulch = Math.min(MULCH_HELD_CEILING, m.mulch + 1);
-      if (!m.unc) m.unc = { d: getTodayString(), p: {} };
-      m.unc.p[String(task.id)] = y;
+      if (m.use) delete m.use.p[String(task.id)];
       m.log = m.log.filter(function (e) { return !(e.t === task.id && e.d === y); });
-      if (typeof dewToast === 'function') dewToast('Mulch handed back - you did it after all');
+      if (typeof dewToast === 'function') dewToast('Mulch back in the shed - you did it after all');
       saveData();
       render();
     }
     return ok;
   };
 
-  var mkBaseYdUndo = ydUndo;
-  ydUndo = function (taskId) {
-    var task = tasks.find(function (t) { return t.id === taskId; });
-    var y = ydDay();
-    var m = mkState();
-    var wasHandedBack = !!task && !!m.unc && m.unc.p[String(task.id)] === y;
-    var ok = mkBaseYdUndo.apply(this, arguments);
-    if (ok && wasHandedBack && m.mulch > 0) {
-      mkCover(task, y);
-      m.mulch--;
-      delete m.unc.p[String(task.id)];
-      m.log.push({ t: task.id, d: y, s: 0 });
-      m.log = m.log.slice(-MULCH_LOG_MAX);
-      task.streak = clampStreak(ydStreakFromHistory(task));
-      m.log[m.log.length - 1].s = task.streak;
-      if (typeof dewToast === 'function') dewToast('Mulch is back on ' + task.text);
-      saveData();
-      render();
+  // The card and the sheet in 17 both draw their controls through
+  // ydControlsHtml, so this is where Mulch joins them: a second
+  // button beside "Yes, I did it", or Undo once a bag is on.
+  var mkBaseYdControlsHtml = ydControlsHtml;
+  ydControlsHtml = function (task) {
+    if (mkUsedToday(task)) {
+      return '<div class="yd-done">' +
+        '<span class="yd-done-label">Streak kept with Mulch.</span>' +
+        '<button type="button" class="yd-undo" data-mk-act="undomulch" data-mk-id="' + task.id + '">Undo</button>' +
+      '</div>';
     }
-    return ok;
+    var base = mkBaseYdControlsHtml.apply(this, arguments);
+    if (!mkCanMulch(task)) return base;
+    var held = mkState().mulch;
+    return '<div class="mk-yd-choice">' + base +
+      (held > 0
+        ? '<button type="button" class="ob-btn ob-btn-quiet mk-yd-mulch" data-mk-act="usemulch" data-mk-id="' +
+            task.id + '">Missed it? Use Mulch (' + held + ' left)</button>'
+        : '<button type="button" class="mk-yd-buy" data-mk-go="market">Missed it? Mulch can save the streak</button>') +
+    '</div>';
+  };
+
+  var mkBaseYdPromiseText = ydPromiseText;
+  ydPromiseText = function (task) {
+    if (mkUsedToday(task)) return 'Streak kept at ' + task.streak + ' days';
+    return mkBaseYdPromiseText.apply(this, arguments);
   };
 }
+
+// Delegated from the document: these buttons live in 17's card and
+// sheet as well as on the Market page.
+document.addEventListener('click', function (e) {
+  if (!e.target.closest) return;
+  var btn = e.target.closest('[data-mk-act="usemulch"], [data-mk-act="undomulch"]');
+  if (btn) {
+    var id = parseInt(btn.getAttribute('data-mk-id'), 10);
+    if (btn.getAttribute('data-mk-act') === 'usemulch') mkUseMulch(id);
+    else mkUndoMulch(id);
+    return;
+  }
+  // "Mulch can save the streak" on the Tasks page goes to the Market.
+  var go = e.target.closest('.mk-yd-buy');
+  if (go) navigateTo('market');
+});
 
 
 // ---- Buying and pausing -----------------------------------------
@@ -447,13 +479,37 @@ function mkMulchHtml() {
       (e.s ? ' (' + e.s + '-day streak)' : '') + '</li>';
   }).join('');
 
+  // The plants a bag could go on right now - and any already Mulched
+  // today, so Undo is reachable from here too. Same controls as the
+  // Tasks page card, without the "Yes, I did it" half.
+  var targets = tasks.filter(function (t) { return mkCanMulch(t) || mkUsedToday(t); });
+  if (typeof tpSortHabits === 'function') targets = tpSortHabits(targets);
+  var pick = targets.map(function (t) {
+    var ctl;
+    if (mkUsedToday(t)) {
+      ctl = '<span class="mk-pick-done">Saved</span>' +
+        '<button type="button" class="yd-undo mk-pick-undo" data-mk-act="undomulch" data-mk-id="' + t.id + '">Undo</button>';
+    } else if (m.mulch > 0) {
+      ctl = '<button type="button" class="ob-btn ob-btn-go mk-pick-use" data-mk-act="usemulch" data-mk-id="' +
+        t.id + '">Use Mulch</button>';
+    } else {
+      ctl = '<span class="mk-pick-done">Buy a bag first</span>';
+    }
+    return '<li class="mk-pick">' +
+      '<span class="mk-pick-name">' + escapeHtml(t.text) +
+        '<span>' + (mkUsedToday(t) ? 'Streak kept at ' + t.streak + ' days'
+          : 'Missed yesterday \u00b7 keeps a ' + ydStreakFromHistory(t, ydDay()) + '-day streak') + '</span></span>' +
+      ctl +
+    '</li>';
+  }).join('');
+
   return '<section class="rw-board mk-item">' +
     '<div class="mk-item-head">' + mkMulchArt() +
       '<div class="mk-item-text">' +
         '<h3 class="rw-h">Mulch</h3>' +
-        '<p class="rw-sub">Keeps a streak alive through one missed day. It works on its own at ' +
-          'midnight: if a habit missed exactly one day it was due, a bag of Mulch covers it and the ' +
-          'streak carries on. It never grows the plant - only real days do that.</p>' +
+        '<p class="rw-sub">Keeps a streak alive through one missed day. You choose when and where: ' +
+          'the day after a habit missed a day it was due, put a bag on it and the streak carries on. ' +
+          'It never grows the plant - only real days do that.</p>' +
       '</div>' +
     '</div>' +
     '<div class="mk-item-foot">' +
@@ -461,8 +517,13 @@ function mkMulchHtml() {
         '<span>' + m.mulch + ' in the shed</span></span>' +
       btn +
     '</div>' +
-    '<p class="mk-fine">Hold up to ' + MULCH_MAX_HELD + '. One per plant per week, so it never covers two days in a row. ' +
-      'Longest streak gets it first. If you log the day through "Forgot to tick yesterday?", the Mulch comes back.</p>' +
+    (pick
+      ? '<h4 class="mk-pick-title">Missed yesterday</h4><ul class="mk-picks">' + pick + '</ul>'
+      : '<p class="mk-fine mk-none">No streak needs saving today. When a habit misses a day, it shows up here ' +
+        'and under your tasks the next day.</p>') +
+    '<p class="mk-fine">Hold up to ' + MULCH_MAX_HELD + '. Only for yesterday, and you can undo it until today ends. ' +
+      'One per plant per week, so it never covers two days in a row. If you actually did it, ' +
+      '"Yes, I did it" under your tasks is free - and gives a used bag back.</p>' +
     (log ? '<ul class="mk-log">' + log + '</ul>' : '') +
   '</section>';
 }

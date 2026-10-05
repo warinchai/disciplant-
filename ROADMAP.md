@@ -20,7 +20,7 @@ Legend: ✅ done · ⬜ open · 🔜 next up · ❌ dropped
 ## B. Scheduling & fairness
 
 * ✅ **B1** — Custom schedule (7-bit weekday mask); streaks only break on scheduled days
-* ✅ **B2** — Streak insurance: **Mulch** (`18-market.js`). 25 Dew, hold at most 2. Spent automatically at the midnight rollover on a habit that missed exactly one scheduled day; longest streak first; one per plant per 7 days, so never two days in a row. The covered day stops counting as due (via `isScheduledOn` / `wasDueOn`), so the streak, the heatmap and B4 all agree. Never grows the plant or writes history. Logging the day through B4 hands the Mulch back; undoing that puts it back on
+* ✅ **B2** — Streak insurance: **Mulch** (`18-market.js`). 25 Dew, hold at most 2. **Used by hand** on the plant you choose, the day after it missed a day it was due: from the "Forgot to tick yesterday?" card (beside "Yes, I did it"), the habit's sheet, or the Market page's "Missed yesterday" list. Yesterday only; undoable until today ends; one per plant per 7 days, so never two days in a row. The covered day stops counting as due (via `isScheduledOn` / `wasDueOn`), so the streak, the heatmap and B4 all agree. Never grows the plant or writes history. Logging a Mulched day through B4 hands the bag back. (First shipped as automatic at midnight; changed to manual on 5 October 2026 so a bag is never spent on a day someone only forgot to log, and so the user picks the plant.)
 * ✅ **B3** — Pause / vacation mode (`18-market.js`). Free. 3, 7 or 14 days, starting today or tomorrow, never backdated; the next can start 7 days after the last one ended. Paused days are not due, so nothing can be missed; ticking still works. Can be ended early, keeping the days already behind it
 * ✅ **B4** — Retroactive ticking (`17-yesterday.js`). Yesterday only, habits only, only a day the habit was scheduled for and not before it existed. Offered from a "Forgot to tick yesterday?" card under the Tasks page list (hideable for the day) and a Yesterday row in the detail sheet. Logs yesterday with an effort level, grows the plant by an ordinary tick, rebuilds the streak from history, and pays the habit-tick Dew plus any milestone crossed. Re-ratable and undoable until today ends, then banked. One optional task field, `lateOn` (the day the fix was made), written only while it is today's; the Dew paid sits in `wallet.ly` for the same day
 * ✅ **B5** — Heatmap denominator rebuilt on B1 + A7
@@ -125,7 +125,7 @@ Tests are additive — none should be lost between sessions.
 | `test-appcheck.js` | 29 checks, App Check vs rate-limit denial | jsdom |
 | `test-wallet.js` | 82 checks, Dew earning, refunds, caps, shop, pill | jsdom |
 | `test-rewards.js` | 50 checks, Morning dew, quests, badges, navigation | jsdom |
-| `test-market.js` | 77 checks, Mulch buying / midnight / B4 hand-back, Pause, wallet invariant, saving, page | jsdom |
+| `test-market.js` | 97 checks, Mulch buying / using by hand / B4 hand-back / Tasks card, Pause, wallet invariant, saving, page | jsdom |
 | `test-timezone.js` | 25 checks, flying west / east, corrected clocks, heatmap's today | jsdom |
 | `test-yesterday.js` | 70 checks, logging yesterday: eligibility, growth, streak, Dew, undo, card, sheet | jsdom |
 | `verify-history.js` | 77 assertions, round-trip losslessness | node |
