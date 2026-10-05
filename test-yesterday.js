@@ -117,6 +117,9 @@ run(habit(1, []));
 run('lastResetDate = shiftDate(getTodayString(), -1);');
 check('not before today\'s rollover has run', run('ydCanFix(tasks[0])'), false);
 
+// Dew per habit tick, read from 15 so retuning it changes no check.
+const TICK = run('DEW_HABIT_TICK');
+
 console.log('\n--- fixing it ---');
 reset();
 run(habit(1, [-5, -4, -3, -2], { maxStreak: 4 }));
@@ -128,8 +131,8 @@ check('and best streak follows it', run('tasks[0].maxStreak'), 5);
 check('it is marked as logged today', run('tasks[0].lateOn === getTodayString()'), true);
 check('it can no longer be fixed again', run('ydCanFix(tasks[0])'), false);
 check('fixing twice does nothing', run('ydFix(1, EFFORT_DEFAULT)'), false);
-check('it pays the habit tick in Dew', run('wallet.bal'), 1);
-check('against today\'s habit cap', run('wallet.htoday'), 1);
+check('it pays the habit tick in Dew', run('wallet.bal'), TICK);
+check('against today\'s habit cap', run('wallet.htoday'), TICK);
 check('today is untouched', run('histGet(tasks[0].history, getTodayString())'), false);
 check('and so is the tick box', run('tasks[0].completed'), false);
 
@@ -159,7 +162,7 @@ run('toggleTask(1, true);');
 check('today alone is a streak of 1', run('tasks[0].streak'), 1);
 run('ydFix(1, EFFORT_DEFAULT);');
 check('fixing yesterday joins the two runs', run('tasks[0].streak'), 5);
-check('both ticks paid', run('wallet.bal'), 2);
+check('both ticks paid', run('wallet.bal'), 2 * TICK);
 run('ydUndo(1);');
 check('undo splits them again', run('tasks[0].streak'), 1);
 check('and today is still ticked', run('tasks[0].completed && histGet(tasks[0].history, getTodayString())'), true);
@@ -177,11 +180,11 @@ console.log('\n--- streak milestones ---');
 reset();
 run(habit(1, [-7, -6, -5, -4, -3, -2], { maxStreak: 6 }));
 run('ydFix(1, EFFORT_DEFAULT);');
-check('reaching 7 days pays the milestone too', run('wallet.bal'), 1 + 3);
+check('reaching 7 days pays the milestone too', run('wallet.bal'), TICK + 3);
 run('ydUndo(1);');
 check('undo refunds only the tick', run('wallet.bal'), 3);
 run('ydFix(1, EFFORT_DEFAULT);');
-check('and the milestone never pays twice', run('wallet.bal'), 4);
+check('and the milestone never pays twice', run('wallet.bal'), TICK + 3);
 
 console.log('\n--- saving ---');
 reset();
@@ -192,9 +195,9 @@ check('a fixed one writes it today', run('buildCleanTasks()[0].lateOn === getTod
 run('tasks[0].lateOn = shiftDate(getTodayString(), -1);');
 check('a stale one is dropped', run('"lateOn" in buildCleanTasks()[0]'), false);
 run('tasks[0].lateOn = getTodayString();');
-check('the Dew it paid rides on the wallet', run('JSON.stringify(dewWalletPayload().ly.p)'), '{"1":1}');
+check('the Dew it paid rides on the wallet', run('JSON.stringify(dewWalletPayload().ly.p)'), JSON.stringify({ 1: TICK }));
 run('wallet = dewNormalizeWallet(JSON.parse(JSON.stringify(dewWalletPayload())));');
-check('and survives a reload', run('wallet.ly.p["1"]'), 1);
+check('and survives a reload', run('wallet.ly.p["1"]'), TICK);
 run('ydUndo(1);');
 check('so undo after a reload still refunds', run('wallet.bal'), 0);
 check('an old ledger is not loaded',

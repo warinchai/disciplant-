@@ -87,6 +87,7 @@ const T = (n) => run(`shiftDate(getTodayString(), ${n})`);
 function rich(n) { run(`wallet.bal = ${n}; wallet.earned = ${n}; wallet.spent = 0;`); }
 const inv = () => run('wallet.bal === wallet.earned - wallet.spent');
 const YY = 'shiftDate(getTodayString(), -1)';
+const TICK = run('DEW_HABIT_TICK');   // Dew per habit tick, read from 15
 
 console.log('\n--- buying Mulch ---');
 reset();
@@ -124,7 +125,7 @@ run('ydFix(1, EFFORT_DEFAULT);');
 check('with a bag it logs the day', run(`histGet(tasks[0].history, ${YY})`), true);
 check('the plant grows by an ordinary day', run('tasks[0].totalGrowthDays'), 5);
 check('the streak comes back', run('tasks[0].streak'), 5);
-check('the tick Dew is paid as usual', run('wallet.bal'), 1);
+check('the tick Dew is paid as usual', run('wallet.bal'), TICK);
 check('one bag is spent', run('mkState().mulch'), 1);
 check('the day is recorded against the weekly limit', run(`mkMulched(tasks[0], ${YY})`), true);
 check('the log is kept for the page', run('mkState().log.length && mkState().log[0].s'), 5);

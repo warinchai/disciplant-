@@ -120,23 +120,30 @@ check('a tick from an earlier day is banked', run('wallet.bal'), 3);
 check('and a new day starts with a fresh cap', run('dewRollDay(); wallet.today'), 0);
 
 console.log('\n--- habit ticks ---');
+// Read from the file rather than written in, so retuning the numbers
+// (3 a tick and 30 a day since 6 Oct 2026; 1 and 10 before) does not
+// mean rewriting every check below.
+const TICK = run('DEW_HABIT_TICK');
+const HCAP = run('DEW_HABIT_DAILY_CAP');
+check('a habit tick pays 3', TICK, 3);
+check('up to 30 a day from habits - ten habits', HCAP, 30);
 reset();
 run(`tasks = [makeTask(1, 'Read', 'education')];`);
 run('toggleTask(1, true);');
-check('every habit tick pays a little', run('wallet.bal'), 1);
-check('on its own counter', run('[wallet.htoday, wallet.today]'), [1, 0]);
+check('every habit tick pays its tick', run('wallet.bal'), TICK);
+check('on its own counter', run('[wallet.htoday, wallet.today]'), [TICK, 0]);
 run('toggleTask(1, false);');
 check('unticking takes it back', run('wallet.bal'), 0);
 check('and frees the room', run('wallet.htoday'), 0);
 run('toggleTask(1, true); tasks[0].completed = false; toggleTask(1, true);');
-check('one tick\'s worth per habit per day', run('wallet.bal'), 1);
+check('one tick\'s worth per habit per day', run('wallet.bal'), TICK);
 reset();
 run('for (var i = 1; i <= 12; i++) tasks.push(makeTask(i, "H" + i, "education"));');
 run('for (var j = 1; j <= 12; j++) toggleTask(j, true);');
-check('habit ticks stop at their daily cap', run('wallet.bal'), 10);
+check('habit ticks stop at their daily cap', run('wallet.bal'), HCAP);
 run(freshAssignment(20, 7));
 run('toggleTask(20, true);');
-check('and never crowd out an assignment', run('wallet.bal'), 17);
+check('and never crowd out an assignment', run('wallet.bal'), HCAP + 7);
 reset();
 run(`tasks = [makeTask(1, 'Read', 'education')]; toggleTask(1, true); setTaskKind(tasks[0], 'once');`);
 check('turning a ticked habit into an assignment hands its tick Dew back', run('wallet.bal'), 0);
@@ -145,15 +152,15 @@ console.log('\n--- habit milestones ---');
 reset();
 run(`var h = makeTask(1, 'Read', 'education'); h.streak = 6; h.maxStreak = 6; tasks.push(h);`);
 run('toggleTask(1, true);');
-check('reaching a 7-day streak pays 3 on top of the tick', run('wallet.bal'), 4);
-check('milestones use neither daily cap', run('[wallet.htoday, wallet.today]'), [1, 0]);
+check('reaching a 7-day streak pays 3 on top of the tick', run('wallet.bal'), TICK + 3);
+check('milestones use neither daily cap', run('[wallet.htoday, wallet.today]'), [TICK, 0]);
 run('toggleTask(1, false); toggleTask(1, true);');
-check('re-ticking the same day does not pay the milestone twice', run('wallet.bal'), 4);
+check('re-ticking the same day does not pay the milestone twice', run('wallet.bal'), TICK + 3);
 run('tasks[0].streak = 0; tasks[0].maxStreak = 7;');
 for (let i = 0; i < 7; i++) run('tasks[0].completed = false; toggleTask(1, true);');
-check('rebuilding to 7 after a break pays nothing new', run('wallet.bal'), 4);
+check('rebuilding to 7 after a break pays nothing new', run('wallet.bal'), TICK + 3);
 run('tasks[0].streak = 29; tasks[0].maxStreak = 29; tasks[0].completed = false; toggleTask(1, true);');
-check('30 days pays 10', run('wallet.bal'), 14);
+check('30 days pays 10', run('wallet.bal'), TICK + 3 + 10);
 
 console.log('\n--- buying plant skins ---');
 reset();

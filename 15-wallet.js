@@ -70,8 +70,8 @@
 // ---- The numbers ------------------------------------------------
 
 var DEW_DAILY_CAP        = 25;   // assignments, per day
-var DEW_HABIT_TICK       = 1;    // every habit tick
-var DEW_HABIT_DAILY_CAP  = 10;   // habit ticks, per day, counted separately
+var DEW_HABIT_TICK       = 3;    // every habit tick (was 1 until 6 Oct 2026)
+var DEW_HABIT_DAILY_CAP  = 30;   // habit ticks, per day, counted separately - ten habits
 var DEW_MIN_AGE_MS  = 10 * 60 * 1000;
 var DEW_BALANCE_MIN = -9999;
 var DEW_BALANCE_MAX = 99999;
