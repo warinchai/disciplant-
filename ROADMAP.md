@@ -47,7 +47,7 @@ Legend: ✅ done · ⬜ open · 🔜 next up · ❌ dropped
 * ⬜ **D3** — Garden-level aggregate goals
 * ⬜ **D4** — Plot expansion / new terrain
 * ✅ **D5** — Dew currency (`15-wallet.js`). Earned: 1 per habit tick (cap 10/day), an assignment's impact on completion (cap 25/day, nothing for one under 10 minutes old), and streak bonuses at 7/30/100/365 days off `maxStreak`. Spent on plant skins (per species, by slot: 30/40/50/80) and landscapes (100–150). Same-day unticks refund exactly what was paid; achievement unlocks still work as a free route. Stored as one `wallet` map on `gardens/{uid}`, riding on the existing save; never mirrored to `gardenSummaries`
-* ✅ **D7** — The Market page (`#market`, in the menu, linked from the Greenhouse's Dew balance). Protect shelf: Mulch and Pause. Decorate shelf: links to the Greenhouse, which keeps skins and landscapes because a look needs its plant on screen to choose. Fertilizer (multiplies real ticks, never adds growth) and pets/props are deferred
+* ✅ **D7** — The Greenhouse's two markets (`18-market.js`). One page, two tabs under one Dew balance: **Decoration Market** (the existing plant skins and landscapes, unchanged) and **Booster Market** (Mulch and Pause, as linen item cards: name, price, one sentence, fact chips, an action strip). The menu plank opens Decoration; `#market` / `navigateTo('market')` and "Get Mulch" open Boosters. There was briefly a separate Market page (5 October 2026); merged on request so all spending is in one place. Fertilizer (multiplies real ticks only) and pets/props are deferred
 * ✅ **D6** — Rewards page (`16-rewards.js`): Morning dew (a 7-step daily collect ladder, reset by a missed day), three daily / weekly / monthly quests, and 12 lifelong badges. All progress is derived from stored history, `doneAt` and `maxStreak`; the only new state is which rewards were collected (`wallet.rw`)
 
 ## E. Social
@@ -125,7 +125,7 @@ Tests are additive — none should be lost between sessions.
 | `test-appcheck.js` | 29 checks, App Check vs rate-limit denial | jsdom |
 | `test-wallet.js` | 82 checks, Dew earning, refunds, caps, shop, pill | jsdom |
 | `test-rewards.js` | 50 checks, Morning dew, quests, badges, navigation | jsdom |
-| `test-market.js` | 101 checks, Mulch buying / logging yesterday with it / weekly limit / Tasks card, Pause, wallet invariant, saving, page | jsdom |
+| `test-market.js` | 111 checks, Mulch buying / logging yesterday with it / weekly limit / Tasks card, Pause, wallet invariant, saving, the Greenhouse's two tabs | jsdom |
 | `test-timezone.js` | 25 checks, flying west / east, corrected clocks, heatmap's today | jsdom |
 | `test-yesterday.js` | 70 checks, the B4 engine without the Market loaded (so free): eligibility, growth, streak, Dew, undo, card, sheet | jsdom |
 | `verify-history.js` | 77 assertions, round-trip losslessness | node |

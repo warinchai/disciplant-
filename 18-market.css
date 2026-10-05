@@ -1,221 +1,307 @@
 /* ============================================
-   MARKET - Mulch and Pause (18-market.js)
+   GREENHOUSE MARKETS - the two tabs, and the Booster Market
+   (18-market.js)
 
-   The page is the Rewards page's own recipe - .page-rewards, the
-   header, the wood-grain .rw-board and the dew-blue .rw-collect - so
-   the two places Dew is earned and spent read as one shop. Only what
-   is new lives here: the item layout, the "held" pips, the shelf
-   headings and the way into the Greenhouse.
+   The tabs sit under the Greenhouse header and the shared Dew balance.
+   Booster items are LINEN cards with dark ink, not text on wood grain:
+   the wood boards elsewhere hold a heading and a button, and a shop
+   item has to be read - what it does, what it costs, what you have.
+   Every item has the same five parts in the same order: head (art,
+   name, price), one sentence, fact chips, the action strip, and
+   anything item-specific below it.
    ============================================ */
 
-.mk-shelf {
-  margin: 22px 4px 10px;
+/* ---------- The tabs ---------- */
+
+.gh-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 6px;
+  background: rgba(20, 16, 10, 0.4);
+  border: 2px solid var(--bark-deep);
+  border-radius: var(--r-lg);
+}
+
+.gh-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 10px 12px;
+  border: 2px solid transparent;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--clay);
   font-family: var(--font-display);
+  cursor: pointer;
+  transition: background 0.16s, color 0.16s;
+}
+
+.gh-tab:hover { background: rgba(248, 238, 220, 0.08); color: var(--linen); }
+
+.gh-tab.active {
+  background: var(--linen);
+  border-color: var(--sun-deep);
+  color: var(--ink);
+  box-shadow: 0 3px 0 var(--sun-deep);
+}
+
+.gh-tab-name { font-size: var(--fs-base); font-weight: 800; }
+.gh-tab-sub  { font-family: var(--font-body); font-size: var(--fs-xs); font-weight: 700; opacity: 0.75; }
+
+.gh-tab:focus-visible { outline: 3px solid var(--leaf); outline-offset: 2px; }
+
+.gh-panel-lede {
+  margin: 0 2px 14px;
   font-size: var(--fs-sm);
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 600;
+  line-height: 1.5;
   color: var(--clay);
 }
 
-.mk-item-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
+/* ---------- Booster cards ---------- */
+
+.bm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  align-items: start;
 }
 
-.mk-art {
+.bm-card {
+  padding: 16px;
+  background: var(--linen);
+  border: 3px solid var(--bark);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lip) var(--bark-deep), 0 10px 22px rgba(0, 0, 0, 0.22);
+  color: var(--ink);
+}
+
+.bm-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bm-art {
   flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 64px;
   height: 64px;
+  border-radius: 52% 48% 58% 42% / 55% 62% 40% 50%;
+  background: rgba(127, 169, 104, 0.16);
 }
 
-.mk-item-text { flex: 1 1 auto; min-width: 0; }
+.bm-art-svg { width: 52px; height: 52px; display: block; }
 
-.mk-free {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--leaf-deep);
-  color: var(--linen);
+.bm-name { flex: 1 1 auto; min-width: 0; }
+
+.bm-name h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+.bm-tag {
   font-size: var(--fs-xs);
-  vertical-align: 2px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
 }
 
-.mk-item-foot {
+.bm-price {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #E3F4FB;
+  border: 2px solid #9BD3EA;
+  color: var(--dew-ink, #1F5E78);
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+}
+
+.bm-price.bm-free { background: #E7F1DF; border-color: var(--leaf); color: var(--leaf-dark); }
+
+.bm-what {
+  margin: 12px 0 10px;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.bm-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.bm-facts li {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(122, 92, 66, 0.1);
+  border: 1.5px solid rgba(122, 92, 66, 0.22);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+/* The strip with what you have and what you can do about it. */
+.bm-action {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px 14px;
-  margin-top: 12px;
+  gap: 10px;
   padding: 10px 12px;
   border-radius: var(--r-md);
-  background: rgba(20, 16, 10, 0.35);
+  background: var(--clay);
+  border: 2px solid var(--clay-deep);
 }
 
-.mk-held {
+.bm-held {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--linen);
-  font-family: var(--font-display);
-  font-weight: 700;
   font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--ink);
 }
 
-.mk-held > span:last-child { margin-left: 4px; }
+.bm-held b { font-family: var(--font-display); font-size: var(--fs-lg); margin-left: 4px; }
 
 .mk-pip {
   width: 14px;
   height: 14px;
   border-radius: 52% 48% 58% 42% / 55% 62% 40% 50%;
-  border: 2px solid var(--clay-deep);
+  border: 2px solid var(--bark);
   background: transparent;
 }
 
-.mk-pip.is-full { background: var(--clay-deep); border-color: var(--clay); }
+.mk-pip.is-full { background: var(--bark); }
 
-/* White drop on the blue button: set on the icon, not the button, whose
-   own background is var(--dew-drop) too. */
-.mk-buy .dew-drop { --dew-drop: #fff; --dew-glint: #6CC4E8; margin-right: 2px; }
-.mk-buy.is-armed { filter: brightness(1.1); box-shadow: 0 3px 0 #3E8FB0, 0 0 0 3px rgba(108, 196, 232, 0.45); }
-
-.mk-fine {
-  margin: 10px 2px 0;
-  font-size: var(--fs-xs);
-  line-height: 1.5;
-  color: var(--clay);
-}
-
-.mk-log {
-  margin: 8px 0 0;
-  padding: 0 0 0 18px;
-  font-size: var(--fs-xs);
-  line-height: 1.6;
-  color: var(--linen);
-  opacity: 0.85;
-}
-
-.mk-status {
-  flex: 1 1 260px;
-  margin: 0;
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-  color: var(--linen);
-}
-
-.mk-status b { color: var(--sun); }
-
-.mk-pause-pick {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.mk-pause-pick .tp-seg-btn { color: var(--clay-edge, #E7CDA6); }
-.mk-pause-pick .tp-seg-btn.active { color: var(--ink); }
-.mk-pause-pick .tp-seg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-/* The Decorate shelf: one board that is a button. */
-.mk-link {
-  display: flex;
+.bm-buy {
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  width: 100%;
-  color: var(--linen);
-  font-family: var(--font-body);
-  text-align: left;
-  cursor: pointer;
-}
-
-.mk-link-text { flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; }
-.mk-link-text b { font-family: var(--font-display); font-size: var(--fs-lg); color: var(--sun); }
-.mk-link-text span { font-size: var(--fs-sm); opacity: 0.9; }
-.mk-link-arrow { color: var(--sun); font-size: var(--fs-lg); font-weight: 800; }
-.mk-link:hover { filter: brightness(1.06); }
-
-/* The way in from the Greenhouse, under its Dew balance. */
-.mk-gh-link {
-  flex-basis: 100%;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--sun);
-  font-family: var(--font-display);
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  text-align: left;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-@media (max-width: 480px) {
-  .mk-art { width: 48px; height: 48px; }
-  .mk-item-foot .rw-collect,
-  .mk-item-foot .ob-btn { flex-basis: 100%; }
-}
-
-/* ---------- Using Mulch by hand ---------- */
-
-.mk-pick-title {
-  margin: 14px 2px 6px;
+  gap: 4px;
+  padding: 9px 16px;
+  border: 2px solid #3E8FB0;
+  border-radius: var(--r-sm);
+  background: var(--dew-drop, #6CC4E8);
+  color: #fff;
   font-family: var(--font-display);
   font-size: var(--fs-sm);
   font-weight: 800;
-  color: var(--sun);
+  cursor: pointer;
+  box-shadow: 0 3px 0 #3E8FB0;
+  transition: transform 0.1s, box-shadow 0.1s, filter 0.16s;
 }
 
-.mk-picks { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+/* White drop on the blue button: set on the icon, not the button, whose
+   own background is var(--dew-drop) too. */
+.bm-buy .dew-drop { --dew-drop: #fff; --dew-glint: #6CC4E8; }
+.bm-buy:hover:not(:disabled) { filter: brightness(1.06); }
+.bm-buy:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 #3E8FB0; }
+.bm-buy.is-armed { box-shadow: 0 3px 0 #3E8FB0, 0 0 0 3px rgba(108, 196, 232, 0.5); }
+.bm-buy:disabled { background: var(--clay-deep); border-color: var(--bark-light); box-shadow: none; cursor: default; }
 
-.mk-pick {
+.bm-note, .bm-done {
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+.bm-done { color: var(--leaf-dark); }
+
+.bm-status {
+  flex: 1 1 200px;
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.bm-pick { display: flex; flex-wrap: wrap; gap: 8px; }
+.bm-pick .tp-seg-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* "Use it on" - the plants a bag can log right now. */
+.bm-use-on { margin-top: 14px; }
+
+.bm-use-on h4 {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.bm-rows { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+
+.bm-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 12px;
   padding: 8px 10px;
   border-radius: var(--r-md);
-  background: var(--linen);
+  background: #FFFAF0;
   border: 2px solid var(--linen-edge);
 }
 
-.mk-pick-name {
+.bm-row-name {
   flex: 1 1 160px;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--ink);
   overflow-wrap: anywhere;
 }
 
-.mk-pick-name span { font-size: var(--fs-xs); font-weight: 600; color: var(--ink-soft); }
-.mk-pick-use { padding: 7px 14px; }
-.mk-pick-done { font-size: var(--fs-xs); font-weight: 800; color: var(--leaf-dark); }
-.mk-none { margin-top: 12px; }
+.bm-row-name small { font-size: var(--fs-xs); font-weight: 600; color: var(--ink-soft); }
+.bm-use { padding: 7px 14px; }
 
-/* Under the Tasks page: the two choices side by side, wrapping. */
-.mk-yd-choice { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.mk-yd-mulch { padding: 7px 14px; }
-
-.mk-yd-buy {
-  padding: 0;
-  border: none;
-  background: none;
+.bm-empty, .bm-recent {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
   color: var(--ink-soft);
-  font-family: var(--font-display);
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  text-decoration: underline;
-  cursor: pointer;
 }
 
-@media (max-width: 520px) {
-  .mk-yd-choice { flex-basis: 100%; }
-  .mk-yd-choice .ob-btn { flex: 1 1 100%; justify-content: center; }
-}
+.bm-recent { margin-top: 10px; font-size: var(--fs-xs); }
 
-/* The bag on "Use Mulch to log it". */
+
+/* ---------- "Forgot to tick yesterday?" with Mulch ---------- */
+
+.mk-yd-buy { white-space: normal; }
 .mk-mini { width: 1em; height: 1em; vertical-align: -0.12em; margin-right: 2px; }
 .mk-left { opacity: 0.8; font-weight: 600; }
+
+
+/* ---------- Phones ---------- */
+
+@media (max-width: 480px) {
+  .gh-tab { padding: 8px 6px; }
+  .gh-tab-name { font-size: var(--fs-sm); }
+  .bm-card { padding: 14px 12px; }
+  .bm-name h3 { font-size: var(--fs-lg); }
+  .bm-action .bm-buy,
+  .bm-action .ob-btn { flex: 1 1 100%; justify-content: center; }
+}

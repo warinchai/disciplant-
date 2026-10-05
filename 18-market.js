@@ -1,5 +1,5 @@
 // ============================================
-// 18: MARKET - things Dew can do, not just wear
+// 18: MARKET - the Greenhouse's Booster Market: Mulch and Pause
 // Part of DISCIPLANT. Plain global script, loaded after 15 (it spends
 // through the wallet and rides on its save), 16 and 17 (it wraps the
 // yesterday fix), and before 11.
@@ -31,6 +31,10 @@
 // Everything that decides whether a day was missed - the rollover, the
 // streak count in 17, the heatmap's denominator, the Tasks page's "due
 // today" - already asks those two, so none of it had to change.
+//
+// WHERE IT LIVES
+// A second tab on the Greenhouse page, beside the Decoration Market
+// (skins and landscapes). See "The Greenhouse's two markets" below.
 //
 // STORAGE
 // `wallet.mk` on gardens/{uid}, written by the save that writes the
@@ -309,11 +313,6 @@ function mkMulchIcon() {
   '</svg>';
 }
 
-// "Get Mulch" goes to the Market.
-document.addEventListener('click', function (e) {
-  var go = e.target.closest && e.target.closest('.mk-yd-buy');
-  if (go) navigateTo('market');
-});
 
 
 // ---- Buying and pausing -----------------------------------------
@@ -376,15 +375,23 @@ function mkEndPause() {
 }
 
 
-// ---- The page ---------------------------------------------------
-
-var pageMarketEl    = document.getElementById('page-market');
-var marketContentEl = document.getElementById('marketContent');
-var marketLoadingEl = document.getElementById('marketLoadingState');
+// ---- The Greenhouse's two markets --------------------------------
+// The Greenhouse page holds both shops, as two tabs under one Dew
+// balance: the Decoration Market (the plant cards, skins and
+// landscapes 05 already draws) and the Booster Market (Mulch and
+// Pause, drawn here). There is no separate Market page: "#market" and
+// navigateTo('market') still work, and open the Greenhouse on the
+// Booster tab.
+//
+// The tab bar and the Booster panel are built here rather than in
+// index.html, and the Decoration panel is made by moving 05's own
+// elements into a wrapper - so removing this script tag puts the
+// Greenhouse back exactly as it was.
 
 var mkArmed = false;        // two taps to buy, the same as a shop tile
 var mkPauseFrom = 'today';  // 'today' | 'tomorrow'
 var mkPauseDays = 7;
+var ghTab = 'decor';        // 'decor' | 'boost'
 
 function mkTaskName(id) {
   var t = tasks.find(function (x) { return x.id === id; });
@@ -398,8 +405,8 @@ function mkShortDate(d) {
 }
 
 function mkMulchArt() {
-  return '<svg class="mk-art" viewBox="0 0 64 64" aria-hidden="true">' +
-    '<ellipse cx="32" cy="56" rx="26" ry="5" style="fill:var(--bark-deep,#5E4632);opacity:0.35"/>' +
+  return '<svg class="bm-art-svg" viewBox="0 0 64 64" aria-hidden="true">' +
+    '<ellipse cx="32" cy="57" rx="24" ry="4.5" style="fill:var(--bark-deep,#5E4632);opacity:0.25"/>' +
     '<path d="M12 22 C12 18 15 16 18 16 L46 16 C49 16 52 18 52 22 L55 50 C55 54 52 56 48 56 L16 56 C12 56 9 54 9 50 Z" style="fill:var(--clay-deep,#C39F73)"/>' +
     '<path d="M14 16 C20 10 44 10 50 16 C44 20 20 20 14 16 Z" style="fill:var(--bark,#7A5C42)"/>' +
     '<path d="M18 15 C24 8 40 8 46 15" style="fill:none;stroke:var(--bark-deep,#5E4632);stroke-width:2.4;stroke-linecap:round"/>' +
@@ -410,27 +417,46 @@ function mkMulchArt() {
 }
 
 function mkPauseArt() {
-  return '<svg class="mk-art" viewBox="0 0 64 64" aria-hidden="true">' +
-    '<ellipse cx="32" cy="56" rx="24" ry="5" style="fill:var(--bark-deep,#5E4632);opacity:0.35"/>' +
-    '<path d="M14 34 C14 22 22 14 32 14 C42 14 50 22 50 34 Z" style="fill:var(--dusk,#9C8FB8)"/>' +
-    '<path d="M32 14 L32 54" style="fill:none;stroke:var(--bark,#7A5C42);stroke-width:3;stroke-linecap:round"/>' +
-    '<path d="M14 34 C17 31 20 31 23 34 C26 31 29 31 32 34 C35 31 38 31 41 34 C44 31 47 31 50 34" style="fill:none;stroke:var(--linen,#F8EEDC);stroke-width:2;stroke-linecap:round"/>' +
-    '<path d="M32 54 C32 57 28 57 28 54" style="fill:none;stroke:var(--bark,#7A5C42);stroke-width:3;stroke-linecap:round"/>' +
+  return '<svg class="bm-art-svg" viewBox="0 0 64 64" aria-hidden="true">' +
+    '<ellipse cx="32" cy="57" rx="22" ry="4.5" style="fill:var(--bark-deep,#5E4632);opacity:0.25"/>' +
+    '<path d="M12 34 C12 21 21 12 32 12 C43 12 52 21 52 34 Z" style="fill:var(--dusk,#9C8FB8)"/>' +
+    '<path d="M32 12 L32 53" style="fill:none;stroke:var(--bark,#7A5C42);stroke-width:3;stroke-linecap:round"/>' +
+    '<path d="M12 34 C15.5 31 19 31 22 34 C25.5 31 28.5 31 32 34 C35.5 31 38.5 31 42 34 C45 31 48.5 31 52 34" style="fill:none;stroke:var(--linen,#F8EEDC);stroke-width:2;stroke-linecap:round"/>' +
+    '<path d="M32 53 C32 57 27 57 27 53" style="fill:none;stroke:var(--bark,#7A5C42);stroke-width:3;stroke-linecap:round"/>' +
   '</svg>';
+}
+
+function bmFacts(list) {
+  return '<ul class="bm-facts">' + list.map(function (f) {
+    return '<li>' + f + '</li>';
+  }).join('') + '</ul>';
+}
+
+function bmHead(art, name, tag, priceHtml, what) {
+  return '<div class="bm-head">' +
+      '<span class="bm-art">' + art + '</span>' +
+      '<div class="bm-name">' +
+        '<h3>' + name + '</h3>' +
+        '<span class="bm-tag">' + tag + '</span>' +
+      '</div>' +
+      priceHtml +
+    '</div>' +
+    '<p class="bm-what">' + what + '</p>';
 }
 
 function mkMulchHtml() {
   var m = mkState();
   var full = m.mulch >= MULCH_MAX_HELD;
   var short = Math.max(0, MULCH_PRICE - wallet.bal);
-  var btn;
+
+  var buy;
   if (full) {
-    btn = '<span class="rw-collected">Shed full (' + MULCH_MAX_HELD + ' of ' + MULCH_MAX_HELD + ')</span>';
+    buy = '<span class="bm-note">Shed full</span>';
   } else if (mkArmed && short > 0) {
-    btn = '<button type="button" class="rw-collect" disabled>Need ' + short + ' more Dew</button>';
+    buy = '<button type="button" class="bm-buy" disabled>Need ' + short + ' more Dew</button>';
   } else {
-    btn = '<button type="button" class="rw-collect mk-buy' + (mkArmed ? ' is-armed' : '') + '" data-mk-act="buy">' +
-      (mkArmed ? 'Tap again to buy' : dewDropIcon() + ' ' + MULCH_PRICE) + '</button>';
+    buy = '<button type="button" class="bm-buy' + (mkArmed ? ' is-armed' : '') + '" data-mk-act="buy">' +
+      (mkArmed ? 'Tap again to buy' : 'Buy for ' + dewDropIcon() + MULCH_PRICE) + '</button>';
   }
 
   var pips = '';
@@ -438,76 +464,72 @@ function mkMulchHtml() {
     pips += '<span class="mk-pip' + (i < m.mulch ? ' is-full' : '') + '"></span>';
   }
 
-  var log = m.log.slice().reverse().map(function (e) {
-    return '<li>' + mkShortDate(e.d) + ': logged ' + escapeHtml(mkTaskName(e.t)) +
-      (e.s ? ' (' + e.s + '-day streak)' : '') + '</li>';
-  }).join('');
-
   // The plants a bag could log right now - and any logged today, so
   // Undo is reachable from here too.
   var targets = tasks.filter(function (t) { return mkCanMulch(t) || mkUsedToday(t); });
   if (typeof tpSortHabits === 'function') targets = tpSortHabits(targets);
-  var pick = targets.map(function (t) {
+  var rows = targets.map(function (t) {
     var ctl;
     if (mkUsedToday(t)) {
-      ctl = '<span class="mk-pick-done">Logged</span>' +
-        '<button type="button" class="yd-undo mk-pick-undo" data-yd-act="undo" data-yd-id="' + t.id + '">Undo</button>';
+      ctl = '<span class="bm-done">Logged</span>' +
+        '<button type="button" class="yd-undo" data-yd-act="undo" data-yd-id="' + t.id + '">Undo</button>';
     } else if (m.mulch > 0) {
-      ctl = '<button type="button" class="ob-btn ob-btn-go mk-pick-use" data-yd-act="fix" data-yd-id="' +
+      ctl = '<button type="button" class="ob-btn ob-btn-go bm-use" data-yd-act="fix" data-yd-id="' +
         t.id + '">Use Mulch</button>';
     } else {
-      ctl = '<span class="mk-pick-done">Buy a bag first</span>';
+      ctl = '<span class="bm-note">Buy a bag first</span>';
     }
-    return '<li class="mk-pick">' +
-      '<span class="mk-pick-name">' + escapeHtml(t.text) +
-        '<span>' + (mkUsedToday(t) ? 'Logged for yesterday \u00b7 ' + t.streak + '-day streak'
-          : 'Not ticked yesterday \u00b7 back to a ' + ydStreakFromHistory(t, ydDay()) + '-day streak') + '</span></span>' +
+    return '<li class="bm-row">' +
+      '<span class="bm-row-name">' + escapeHtml(t.text) +
+        '<small>' + (mkUsedToday(t) ? 'Logged for yesterday · ' + t.streak + '-day streak'
+          : 'Not ticked yesterday · brings back a ' + ydStreakFromHistory(t, ydDay()) + '-day streak') +
+        '</small></span>' +
       ctl +
     '</li>';
   }).join('');
 
-  return '<section class="rw-board mk-item">' +
-    '<div class="mk-item-head">' + mkMulchArt() +
-      '<div class="mk-item-text">' +
-        '<h3 class="rw-h">Mulch</h3>' +
-        '<p class="rw-sub">Did a habit yesterday but forgot to tick it? A bag of Mulch logs it late: ' +
-          'the day, its growth and its streak all come back, as if you had ticked it on time.</p>' +
-      '</div>' +
+  var recent = m.log.slice(-3).reverse().map(function (e) {
+    return mkShortDate(e.d) + ': ' + escapeHtml(mkTaskName(e.t));
+  }).join(' · ');
+
+  return '<article class="bm-card">' +
+    bmHead(mkMulchArt(), 'Mulch', 'Booster',
+      '<span class="bm-price">' + dewDropIcon() + MULCH_PRICE + '</span>',
+      'Did a habit yesterday but forgot to tick it? One bag logs it late, and the day, ' +
+      'its growth and its streak all come back.') +
+    bmFacts(['Yesterday only', 'Undo until midnight', 'One per plant a week', 'Hold up to ' + MULCH_MAX_HELD]) +
+    '<div class="bm-action">' +
+      '<span class="bm-held">' + pips + '<b>' + m.mulch + '</b> of ' + MULCH_MAX_HELD + ' in your shed</span>' +
+      buy +
     '</div>' +
-    '<div class="mk-item-foot">' +
-      '<span class="mk-held" aria-label="' + m.mulch + ' held">' + pips +
-        '<span>' + m.mulch + ' in the shed</span></span>' +
-      btn +
+    '<div class="bm-use-on">' +
+      '<h4>Use it on</h4>' +
+      (rows
+        ? '<ul class="bm-rows">' + rows + '</ul>'
+        : '<p class="bm-empty">Nothing to log today. A habit you did not tick yesterday shows up here.</p>') +
     '</div>' +
-    (pick
-      ? '<h4 class="mk-pick-title">Not ticked yesterday</h4><ul class="mk-picks">' + pick + '</ul>'
-      : '<p class="mk-fine mk-none">Nothing to log today. When a habit goes unticked on a day it was due, ' +
-        'it shows up here and under your tasks the next day.</p>') +
-    '<p class="mk-fine">Hold up to ' + MULCH_MAX_HELD + '. Only for yesterday, and you can undo it until ' +
-      'today ends - the bag comes back. One per plant per week. Only use it for something you really did: ' +
-      'the plant is meant to show real days.</p>' +
-    (log ? '<ul class="mk-log">' + log + '</ul>' : '') +
-  '</section>';
+    (recent ? '<p class="bm-recent">Recently: ' + recent + '</p>' : '') +
+  '</article>';
 }
 
 function mkPauseHtml() {
   var m = mkState();
   var today = getTodayString();
-  var body;
+  var action;
 
   if (m.pause) {
     var started = m.pause.from <= today;
-    body = '<p class="mk-status">' + (started ? 'Paused until ' : 'Pause starts ' +
-      mkShortDate(m.pause.from) + ', until ') + '<b>' + mkShortDate(m.pause.to) + '</b>. ' +
-      'No habit is due' + (started ? '' : ' then') + ', so no streak can break.</p>' +
+    action = '<p class="bm-status">' + (started
+        ? 'Paused until <b>' + mkShortDate(m.pause.to) + '</b>'
+        : 'Starts <b>' + mkShortDate(m.pause.from) + '</b>, until <b>' + mkShortDate(m.pause.to) + '</b>') +
+      '</p>' +
       '<button type="button" class="ob-btn ob-btn-quiet" data-mk-act="endpause">' +
-        (started ? 'End the pause' : 'Cancel it') + '</button>';
+        (started ? 'End pause' : 'Cancel') + '</button>';
   } else {
     var earliest = mkPauseEarliest();
     var tomorrow = shiftDate(today, 1);
     if (earliest > tomorrow) {
-      body = '<p class="mk-status">Your last pause ended ' + mkShortDate(m.pend) + '. ' +
-        'The next one can start from <b>' + mkShortDate(earliest) + '</b>.</p>';
+      action = '<p class="bm-status">Next pause from <b>' + mkShortDate(earliest) + '</b></p>';
     } else {
       if (earliest === tomorrow && mkPauseFrom === 'today') mkPauseFrom = 'tomorrow';
       var seg = function (group, value, label, on, disabled) {
@@ -515,11 +537,11 @@ function mkPauseHtml() {
           'data-mk-' + group + '="' + value + '" aria-pressed="' + (on ? 'true' : 'false') + '"' +
           (disabled ? ' disabled' : '') + '>' + label + '</button>';
       };
-      body =
-        '<div class="mk-pause-pick">' +
+      action =
+        '<div class="bm-pick">' +
           '<div class="tp-seg" role="group" aria-label="When it starts">' +
-            seg('from', 'today', 'From today', mkPauseFrom === 'today', earliest > today) +
-            seg('from', 'tomorrow', 'From tomorrow', mkPauseFrom === 'tomorrow', false) +
+            seg('from', 'today', 'Today', mkPauseFrom === 'today', earliest > today) +
+            seg('from', 'tomorrow', 'Tomorrow', mkPauseFrom === 'tomorrow', false) +
           '</div>' +
           '<div class="tp-seg" role="group" aria-label="How long">' +
             PAUSE_LENGTHS.map(function (n) {
@@ -531,125 +553,178 @@ function mkPauseHtml() {
     }
   }
 
-  return '<section class="rw-board mk-item">' +
-    '<div class="mk-item-head">' + mkPauseArt() +
-      '<div class="mk-item-text">' +
-        '<h3 class="rw-h">Pause <span class="mk-free">Free</span></h3>' +
-        '<p class="rw-sub">Exam week, sick, away? Pause the whole garden for up to ' + PAUSE_MAX_DAYS +
-          ' days. Habits are not due while it lasts, so streaks wait for you. You can still tick ' +
-          'anything you do.</p>' +
-      '</div>' +
-    '</div>' +
-    '<div class="mk-item-foot mk-pause-foot">' + body + '</div>' +
-    '<p class="mk-fine">Starts today or tomorrow, never backdated. After one ends, the next can start ' +
-      PAUSE_COOLDOWN_DAYS + ' days later.</p>' +
-  '</section>';
+  return '<article class="bm-card">' +
+    bmHead(mkPauseArt(), 'Pause', 'Booster',
+      '<span class="bm-price bm-free">Free</span>',
+      'Exam week, sick or away? Pause your whole garden. No habit is due while it lasts, ' +
+      'so no streak can break. You can still tick anything you do.') +
+    bmFacts(['Up to ' + PAUSE_MAX_DAYS + ' days', 'Starts today or tomorrow', 'Next one ' + PAUSE_COOLDOWN_DAYS + ' days after']) +
+    '<div class="bm-action bm-action-pause">' + action + '</div>' +
+  '</article>';
 }
 
+// The Booster Market panel.
 function renderMarketPage() {
-  if (!marketContentEl) return;
-  marketContentEl.innerHTML =
-    '<header class="rw-header">' +
-      '<div class="rw-header-text">' +
-        '<h2 class="rw-title">Market</h2>' +
-        '<p class="rw-subtitle">Dew you earn by showing up, spent on things that help you keep ' +
-          'showing up. Nothing here grows a plant by itself - only real days do that.</p>' +
-        '<div class="rw-balance">' + dewDropIcon() + '<strong>' + wallet.bal + '</strong> Dew' +
-          '<button type="button" class="rw-link" data-mk-go="rewards">More ways to earn</button></div>' +
-      '</div>' +
-    '</header>' +
-    '<h3 class="mk-shelf">Protect your streaks</h3>' +
-    mkMulchHtml() +
-    mkPauseHtml() +
-    '<h3 class="mk-shelf">Decorate</h3>' +
-    '<button type="button" class="rw-board mk-link" data-mk-go="greenhouse">' +
-      '<span class="mk-link-text"><b>Skins and landscapes</b>' +
-      '<span>New looks for every plant and the whole garden are in the Greenhouse.</span></span>' +
-      '<span class="mk-link-arrow" aria-hidden="true">&rarr;</span>' +
-    '</button>';
+  var el = ghBoosterEl();
+  if (!el) return;
+  el.innerHTML =
+    '<p class="gh-panel-lede">Boosters help you keep showing up. Nothing here grows a plant by ' +
+      'itself - only real days do that.</p>' +
+    '<div class="bm-grid">' + mkMulchHtml() + mkPauseHtml() + '</div>';
 }
 
-if (marketContentEl) {
-  marketContentEl.addEventListener('click', function (e) {
-    var btn = e.target.closest && e.target.closest('button');
-    if (!btn || btn.disabled) return;
 
-    if (btn.hasAttribute('data-mk-go')) { navigateTo(btn.getAttribute('data-mk-go')); return; }
+// ---- Building the two tabs inside the Greenhouse -----------------
 
-    var act = btn.getAttribute('data-mk-act');
-    if (act === 'buy') {
-      if (mkArmed) { mkArmed = false; mkBuyMulch(); }
-      else { mkArmed = true; renderMarketPage(); }
-      return;
-    }
-    if (act === 'startpause') {
-      var today = getTodayString();
-      mkStartPause(mkPauseFrom === 'tomorrow' ? shiftDate(today, 1) : today, mkPauseDays);
-      return;
-    }
-    if (act === 'endpause') { mkEndPause(); return; }
+function ghBoosterEl() { return document.getElementById('ghBooster'); }
 
-    if (btn.hasAttribute('data-mk-from')) { mkPauseFrom = btn.getAttribute('data-mk-from'); renderMarketPage(); return; }
-    if (btn.hasAttribute('data-mk-days')) { mkPauseDays = parseInt(btn.getAttribute('data-mk-days'), 10); renderMarketPage(); }
+function ghEnsureTabs() {
+  var content = document.getElementById('greenhouseContent');
+  if (!content) return null;
+  var tabs = document.getElementById('ghTabs');
+  if (tabs) return tabs;
+
+  var header = content.querySelector('.greenhouse-header');
+  tabs = document.createElement('div');
+  tabs.id = 'ghTabs';
+  tabs.className = 'gh-tabs';
+  tabs.setAttribute('role', 'tablist');
+  tabs.setAttribute('aria-label', 'Greenhouse markets');
+  tabs.innerHTML =
+    '<button type="button" class="gh-tab" role="tab" id="ghTabDecor" data-gh-tab="decor" aria-controls="ghDecor">' +
+      '<span class="gh-tab-name">Decoration Market</span>' +
+      '<span class="gh-tab-sub">Skins and landscapes</span></button>' +
+    '<button type="button" class="gh-tab" role="tab" id="ghTabBoost" data-gh-tab="boost" aria-controls="ghBooster">' +
+      '<span class="gh-tab-name">Booster Market</span>' +
+      '<span class="gh-tab-sub">Mulch and Pause</span></button>';
+  if (header && header.nextSibling) content.insertBefore(tabs, header.nextSibling);
+  else content.insertBefore(tabs, content.firstChild);
+
+  // The Decoration panel is 05's own elements, moved into a wrapper.
+  var decor = document.createElement('div');
+  decor.id = 'ghDecor';
+  decor.className = 'gh-panel';
+  decor.setAttribute('role', 'tabpanel');
+  decor.setAttribute('aria-labelledby', 'ghTabDecor');
+  ['landscapePicker', 'greenhouseGrid', 'greenhouseEmpty'].forEach(function (id) {
+    var node = document.getElementById(id);
+    if (node) decor.appendChild(node);
   });
+  content.appendChild(decor);
+
+  var boost = document.createElement('div');
+  boost.id = 'ghBooster';
+  boost.className = 'gh-panel gh-booster';
+  boost.setAttribute('role', 'tabpanel');
+  boost.setAttribute('aria-labelledby', 'ghTabBoost');
+  content.appendChild(boost);
+
+  tabs.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-gh-tab]');
+    if (!btn) return;
+    ghTab = btn.getAttribute('data-gh-tab');
+    mkArmed = false;
+    renderGreenhouse();
+  });
+  return tabs;
 }
+
+function ghSyncTabs() {
+  var tabs = ghEnsureTabs();
+  if (!tabs) return;
+  tabs.querySelectorAll('[data-gh-tab]').forEach(function (b) {
+    var on = b.getAttribute('data-gh-tab') === ghTab;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  var decor = document.getElementById('ghDecor');
+  var boost = ghBoosterEl();
+  if (decor) decor.classList.toggle('hidden', ghTab !== 'decor');
+  if (boost) boost.classList.toggle('hidden', ghTab !== 'boost');
+}
+
+// The Dew balance belongs to both markets, so it sits above the tabs
+// rather than inside the Decoration panel where 15 first puts it.
+var mkBaseRenderDewBalance = renderDewBalance;
+renderDewBalance = function () {
+  var out = mkBaseRenderDewBalance.apply(this, arguments);
+  var bal  = document.getElementById('dewBalance');
+  var tabs = ghEnsureTabs();
+  if (bal && tabs && bal.nextSibling !== tabs) tabs.parentNode.insertBefore(bal, tabs);
+  return out;
+};
+
+var mkBaseRenderGreenhouse = renderGreenhouse;
+renderGreenhouse = function () {
+  ghEnsureTabs();
+  var out = mkBaseRenderGreenhouse.apply(this, arguments);
+  ghSyncTabs();
+  if (ghTab === 'boost') renderMarketPage();
+  return out;
+};
+
+// Clicks in the Booster panel. Logging and Undo buttons carry 17's
+// data-yd-act and are handled by 17's own document listener.
+document.addEventListener('click', function (e) {
+  var panel = ghBoosterEl();
+  if (!panel || !e.target.closest || !panel.contains(e.target)) return;
+  var btn = e.target.closest('button');
+  if (!btn || btn.disabled) return;
+
+  var act = btn.getAttribute('data-mk-act');
+  if (act === 'buy') {
+    if (mkArmed) { mkArmed = false; mkBuyMulch(); }
+    else { mkArmed = true; renderMarketPage(); }
+    return;
+  }
+  if (act === 'startpause') {
+    var today = getTodayString();
+    mkStartPause(mkPauseFrom === 'tomorrow' ? shiftDate(today, 1) : today, mkPauseDays);
+    return;
+  }
+  if (act === 'endpause') { mkEndPause(); return; }
+  if (btn.hasAttribute('data-mk-from')) { mkPauseFrom = btn.getAttribute('data-mk-from'); renderMarketPage(); return; }
+  if (btn.hasAttribute('data-mk-days')) { mkPauseDays = parseInt(btn.getAttribute('data-mk-days'), 10); renderMarketPage(); }
+});
 
 // A tap anywhere else disarms a half-made purchase.
 document.addEventListener('click', function (e) {
   if (!mkArmed) return;
   if (e.target.closest && e.target.closest('[data-mk-act="buy"]')) return;
   mkArmed = false;
-  if (currentPage === 'market' && authReady) renderMarketPage();
+  if (currentPage === 'greenhouse' && ghTab === 'boost' && authReady) renderMarketPage();
 });
 
 
-// ---- Wiring: navigation, render, the Greenhouse link -------------
+// ---- Wiring: the old Market address, and every "go to the Market" --
 
+// "#market" and navigateTo('market') open the Greenhouse on the
+// Booster tab. Kept so the links in 17's card, and any bookmark from
+// the day the Market had its own page, still land somewhere sensible.
 if (typeof NAV_HASH_PAGES !== 'undefined' && NAV_HASH_PAGES.indexOf('market') === -1) {
   NAV_HASH_PAGES.push('market');
 }
 
 var mkBaseNavigateTo = navigateTo;
 navigateTo = function (page) {
-  var out = mkBaseNavigateTo.apply(this, arguments);
-  if (pageMarketEl) pageMarketEl.classList.toggle('hidden', page !== 'market');
   if (page === 'market') {
-    mkArmed = false;
-    if (marketLoadingEl) marketLoadingEl.classList.toggle('hidden', authReady);
-    if (marketContentEl) marketContentEl.classList.toggle('hidden', !authReady);
-    if (authReady) renderMarketPage();
-    if (pageMarketEl) pageMarketEl.scrollTop = 0;
+    ghTab = 'boost';
+    var args = Array.prototype.slice.call(arguments);
+    args[0] = 'greenhouse';
+    var out = mkBaseNavigateTo.apply(this, args);
+    try { history.replaceState(null, '', '#greenhouse'); } catch (e) {}
+    return out;
   }
-  return out;
+  // Arriving at the Greenhouse any other way - the menu, the home sign,
+  // "Spend it in the Greenhouse" - starts on Decoration, its front page.
+  if (page === 'greenhouse' && currentPage !== 'greenhouse') { mkArmed = false; ghTab = 'decor'; }
+  return mkBaseNavigateTo.apply(this, arguments);
 };
 
-var mkBaseRender = render;
-render = function () {
-  var out = mkBaseRender.apply(this, arguments);
-  if (currentPage === 'market' && authReady) {
-    if (marketLoadingEl) marketLoadingEl.classList.add('hidden');
-    if (marketContentEl) marketContentEl.classList.remove('hidden');
-    renderMarketPage();
-  }
-  return out;
-};
-
-// A way in from the Greenhouse, under the Dew balance it already shows.
-var mkBaseRenderDewBalance = renderDewBalance;
-renderDewBalance = function () {
-  var out = mkBaseRenderDewBalance.apply(this, arguments);
-  var el = document.getElementById('dewBalance');
-  if (el && !el.querySelector('[data-mk-go]')) {
-    el.insertAdjacentHTML('beforeend',
-      '<button type="button" class="mk-gh-link" data-mk-go="market">' +
-        'Mulch and Pause are in the Market &rarr;</button>');
-  }
-  return out;
-};
-
+// "Get Mulch to log it" under the Tasks page goes to the Booster tab.
 document.addEventListener('click', function (e) {
-  var link = e.target.closest && e.target.closest('.mk-gh-link');
-  if (link) navigateTo('market');
+  var go = e.target.closest && e.target.closest('.mk-yd-buy');
+  if (go) navigateTo('market');
 });
 
 

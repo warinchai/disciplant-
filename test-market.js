@@ -1,6 +1,6 @@
 // Market (18-market.js): buying Mulch, logging yesterday with it (the
 // only way now - it wraps 17), Pause, the wallet invariant the security rules
-// rely on, saving, and the page itself.
+// rely on, saving, and the Greenhouse's two tabs.
 // Same jsdom + Firebase-stub harness as test-yesterday.js.
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
@@ -190,22 +190,24 @@ run('wallet.mk.mulch = 0; render();');
 check('with none in the shed it offers to get some', ydc().querySelector('.mk-yd-buy').textContent, 'Get Mulch to log it');
 check('which is not a free log', ydc().querySelector('[data-yd-act="fix"]'), null);
 ydc().querySelector('.mk-yd-buy').click();
-check('it goes to the Market', run('currentPage'), 'market');
+check('it goes to the Greenhouse', run('currentPage'), 'greenhouse');
+check('on the Booster tab', $('ghBooster').classList.contains('hidden'), false);
 
-console.log('\n--- the Market page lists the plants ---');
+console.log('\n--- the Booster Market lists the plants ---');
 reset();
 run(habit(1, [-3, -2]));
 run(habit(2, [-1]));
 run(`wallet.mk = mkEmpty(); wallet.mk.mulch = 1; lastResetDate = getTodayString(); navigateTo('market');`);
-check('only the habit not ticked yesterday is listed', $('marketContent').querySelectorAll('.mk-pick').length, 1);
-$('marketContent').querySelector('.mk-pick [data-yd-act="fix"]').click();
+const gb = () => $('ghBooster');
+check('only the habit not ticked yesterday is listed', gb().querySelectorAll('.bm-row').length, 1);
+gb().querySelector('.bm-row [data-yd-act="fix"]').click();
 check('Use Mulch there logs it', run(`histGet(tasks[0].history, ${YY})`), true);
-check('and it stays listed with Undo', !!$('marketContent').querySelector('.mk-pick [data-yd-act="undo"]'), true);
-$('marketContent').querySelector('.mk-pick [data-yd-act="undo"]').click();
+check('and it stays listed with Undo', !!gb().querySelector('.bm-row [data-yd-act="undo"]'), true);
+gb().querySelector('.bm-row [data-yd-act="undo"]').click();
 check('which works from there', run('mkState().mulch'), 1);
 reset();
 run(`navigateTo('market');`);
-check('with nothing to log it says so', !!$('marketContent').querySelector('.mk-none'), true);
+check('with nothing to log it says so', !!gb().querySelector('.bm-empty'), true);
 
 console.log('\n--- Pause ---');
 reset();
@@ -270,35 +272,46 @@ check('nonsense on the document becomes nothing',
   run('JSON.stringify(mkNormalize({ mulch: 999, cov: { x: ["nope"] }, pause: { from: "2026-01-01", to: "2027-01-01" } }))'),
   run('JSON.stringify(Object.assign(mkEmpty(), { mulch: MULCH_HELD_CEILING }))'));
 
-console.log('\n--- the page ---');
+console.log('\n--- one Greenhouse, two markets ---');
 reset();
 rich(30);
-run('navigateTo("market");');
-check('the Market is a page of its own', $('page-market').classList.contains('hidden'), false);
-check('the Greenhouse is not shown', $('page-greenhouse').classList.contains('hidden'), true);
-check('it can be linked to', run('NAV_HASH_PAGES.indexOf("market") !== -1'), true);
-check('it is in the menu', !!win.document.querySelector('.nav-plank[data-page="market"]'), true);
-const mc = () => $('marketContent');
-check('it shows the balance', mc().querySelector('.rw-balance strong').textContent, '30');
-mc().querySelector('[data-mk-act="buy"]').click();
+run('navigateTo("greenhouse");');
+check('the Greenhouse has two tabs', win.document.querySelectorAll('#ghTabs [data-gh-tab]').length, 2);
+check('named for the two markets', Array.from(win.document.querySelectorAll('#ghTabs .gh-tab-name')).map(e => e.textContent),
+  ['Decoration Market', 'Booster Market']);
+check('it opens on Decoration', $('ghTabDecor').getAttribute('aria-selected'), 'true');
+check('which holds the plants and landscapes', !!$('ghDecor').querySelector('#greenhouseGrid') && !!$('ghDecor').querySelector('#landscapePicker'), true);
+check('the Booster panel is hidden', $('ghBooster').classList.contains('hidden'), true);
+check('the Dew balance sits above both tabs', $('dewBalance').nextElementSibling === $('ghTabs'), true);
+$('ghTabBoost').click();
+check('the Booster tab switches over', $('ghBooster').classList.contains('hidden'), false);
+check('and hides Decoration', $('ghDecor').classList.contains('hidden'), true);
+check('and is marked as chosen', $('ghTabBoost').getAttribute('aria-selected'), 'true');
+check('it sells Mulch and Pause', Array.from(gb().querySelectorAll('.bm-name h3')).map(e => e.textContent), ['Mulch', 'Pause']);
+check('there is no Market page any more', $('page-market'), null);
+check('nor a Market plank in the menu', win.document.querySelector('.nav-plank[data-page="market"]'), null);
+run('navigateTo("home"); ghTab = "decor"; navigateTo("market");');
+check('the old Market address opens the Greenhouse', run('currentPage'), 'greenhouse');
+check('on the Booster tab', $('ghBooster').classList.contains('hidden'), false);
+check('it can still be linked to', run('NAV_HASH_PAGES.indexOf("market") !== -1'), true);
+
+gb().querySelector('[data-mk-act="buy"]').click();
 check('the first tap only arms the purchase', run('mkState().mulch'), 0);
-check('and says so', mc().querySelector('[data-mk-act="buy"]').textContent, 'Tap again to buy');
-mc().querySelector('[data-mk-act="buy"]').click();
+check('and says so', gb().querySelector('[data-mk-act="buy"]').textContent, 'Tap again to buy');
+gb().querySelector('[data-mk-act="buy"]').click();
 check('the second buys it', run('mkState().mulch'), 1);
 check('for 25', run('wallet.bal'), 5);
-mc().querySelector('[data-mk-days="3"]').click();
-mc().querySelector('[data-mk-from="tomorrow"]').click();
-mc().querySelector('[data-mk-act="startpause"]').click();
+check('the balance above the tabs follows', $('dewBalance').querySelector('.dew-balance-amount').textContent, '5');
+gb().querySelector('[data-mk-days="3"]').click();
+gb().querySelector('[data-mk-from="tomorrow"]').click();
+gb().querySelector('[data-mk-act="startpause"]').click();
 check('the pause controls start one', run('!!mkState().pause && mkState().pause.from === shiftDate(getTodayString(), 1)'), true);
 check('for the length picked', run('mkState().pause.to === shiftDate(getTodayString(), 3)'), true);
-check('and the page says when', mc().querySelector('.mk-status').textContent.indexOf('Pause starts') === 0, true);
-mc().querySelector('[data-mk-act="endpause"]').click();
+check('and the card says when', gb().querySelector('.bm-status').textContent.indexOf('Starts') === 0, true);
+gb().querySelector('[data-mk-act="endpause"]').click();
 check('it can be cancelled from there', run('mkState().pause'), null);
-mc().querySelector('[data-mk-go="greenhouse"]').click();
-check('Decorate leads to the Greenhouse', run('currentPage'), 'greenhouse');
-check('which links back to the Market', !!$('dewBalance').querySelector('.mk-gh-link'), true);
-$('dewBalance').querySelector('.mk-gh-link').click();
-check('and the link works', run('currentPage'), 'market');
+$('ghTabDecor').click();
+check('and Decoration is one tap back', $('ghDecor').classList.contains('hidden'), false);
 
 console.log('\n--- export ---');
 run('mkWrapExport();');

@@ -27,7 +27,8 @@
        the row in the detail sheet (17-yesterday.js). -->
   <link rel="stylesheet" href="17-yesterday.css" />
 
-  <!-- Market: Mulch and Pause (18-market.js). -->
+  <!-- The Greenhouse's two tabs and its Booster Market: Mulch and
+       Pause (18-market.js). -->
   <link rel="stylesheet" href="18-market.css" />
 
   <!-- Icons. The same sprout circle the account picture uses, drawn
@@ -904,7 +905,7 @@
     <div id="greenhouseContent" class="greenhouse-content hidden">
       <header class="greenhouse-header">
         <h2 class="greenhouse-title">The Greenhouse</h2>
-        <p class="greenhouse-subtitle">Every plant you’re growing, and every look it can wear. Tap a plant to open its skins - whatever you pick shows up in the garden straight away.</p>
+        <p class="greenhouse-subtitle">Spend the Dew you earn. Dress up your plants and your garden, or stock up on boosters that help you keep your streaks.</p>
       </header>
 
       <!-- The Dew balance panel is inserted here, just above the
@@ -1042,17 +1043,6 @@
     <div id="rewardsContent" class="rewards-content hidden"></div>
   </div>
 
-  <!-- ================================================
-       PAGE: MARKET
-       ================================================
-       What Dew does besides looks: Mulch, which saves a streak
-       through one missed day, and Pause, which is free. Built by
-       renderMarketPage() in 18-market.js.
-       ================================================ -->
-  <div id="page-market" class="page page-rewards page-market hidden">
-    <p id="marketLoadingState" class="loading-state">Loading your garden...</p>
-    <div id="marketContent" class="rewards-content hidden"></div>
-  </div>
 
   <button id="navPost" class="nav-post" aria-controls="navDrawer" aria-expanded="false">
     <span class="nav-post-slat" aria-hidden="true"></span>
@@ -1069,7 +1059,6 @@
     <button class="nav-plank" data-page="stats">Stats</button>
     <button class="nav-plank" data-page="greenhouse">Greenhouse</button>
     <button class="nav-plank" data-page="rewards" data-rw-dot>Rewards</button>
-    <button class="nav-plank" data-page="market">Market</button>
     <button class="nav-plank" data-page="guide">Grower's Guide</button>
     <button class="nav-plank" data-page="friends">Friends</button>
   </nav>
@@ -1229,9 +1218,9 @@
        (pays Dew through the wallet and rides on its save). -->
   <script src="17-yesterday.js"></script>
 
-  <!-- The Market. After 15 (spends through the wallet), 16 and 17
-       (wraps the yesterday fix so logging a Mulched day hands the
-       Mulch back). -->
+  <!-- The Booster Market, as a second tab on the Greenhouse. After 05
+       (wraps renderGreenhouse), 15 (spends through the wallet), 16 and
+       17 (every late log through 17 spends a bag of Mulch). -->
   <script src="18-market.js"></script>
 
   <!-- Analytics consent. Loaded LAST and depends on nothing above it -
