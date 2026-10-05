@@ -769,6 +769,17 @@ auth.onIdTokenChanged(function (user) {
 
   unsubscribeSnapshot = db.collection('gardens').doc(currentUserId)
     .onSnapshot(function (docSnapshot) {
+      // A change is waiting in the save throttle (see saveData): this
+      // device holds newer state than any document that can arrive now,
+      // and the held-back save is about to write it. Adopting the
+      // snapshot would overwrite that change in memory - and the
+      // held-back save would then write the OLD garden back. That is
+      // how a plant dug up straight after another change came back:
+      // the server's echo of the previous save (always different,
+      // because rlAt is a server timestamp) landed in the gap. The
+      // snapshot that follows our own save brings everything in line.
+      if (authReady && pendingSaveTimer) return;
+
       try {
 
         if (docSnapshot.exists) {

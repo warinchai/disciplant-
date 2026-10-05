@@ -7,7 +7,7 @@
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
 
-function load(hash) {
+function load(hash, realSaves) {
   const html = fs.readFileSync('index.html', 'utf8').replace(/<script[\s\S]*?<\/script>/g, '');
   const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true,
                                 url: 'https://disciplant.com/' + hash });
@@ -54,13 +54,14 @@ function load(hash) {
                    '05-stats-app.js', '06-friends.js', '07-friend-garden.js', '12-tasks-page.js',
                    '13-onboarding.js', '14-guides.js', '10-account-data.js', '15-wallet.js',
                    '16-rewards.js', '17-yesterday.js', '18-market.js']) runScript(fs.readFileSync(f, 'utf8'), f);
-  win.eval('saveData = function () {};');
+  if (!realSaves) win.eval('saveData = function () {};');
+  win.__hooks = hooks;
 
   // The real order: every script is in, the deep link navigates, then
   // Firebase restores the session, then the garden document arrives.
   win.document.dispatchEvent(new win.Event('DOMContentLoaded'));
   hooks.token({ uid: 'u1', isAnonymous: true, displayName: null, email: null, photoURL: null, providerData: [] });
-  hooks.garden({
+  win.__firstDoc = {
     exists: true,
     data: () => ({
       tasks: [{ id: 1, text: 'Read 10 pages', categoryId: 'education', history: {}, totalGrowthDays: 3 },
@@ -68,7 +69,8 @@ function load(hash) {
       lastResetDate: win.eval('getTodayString()'),
       wallet: { bal: 12, earned: 12, spent: 0 },
     }),
-  });
+  };
+  hooks.garden(win.__firstDoc);
   return win;
 }
 
@@ -104,6 +106,23 @@ check('and shown', w.document.getElementById('rewardsContent').classList.contain
 console.log('\n--- reload on Tasks, which always worked ---');
 w = load('#tasks');
 check('the task list is drawn', w.document.querySelectorAll('#tpSections .tp-row').length, 2);
+
+console.log('\n--- a change waiting in the save throttle survives a snapshot ---');
+// Saves inside SAVE_MIN_INTERVAL_MS of the last one are held back and
+// sent together. A snapshot landing in that gap - the server's echo of
+// the PREVIOUS save, which always differs because rlAt is a server
+// timestamp - used to overwrite the in-memory garden, and the held-back
+// save then wrote the old garden back: a plant dug up straight after
+// another change came back.
+w = load('#tasks', true);
+w.eval('lastSaveAt = Date.now();');            // a save has only just gone out
+w.eval('removeTask(1);');                      // so this one waits in the throttle
+check('the dig is held back for the throttle', w.eval('!!pendingSaveTimer'), true);
+check('the plant is gone locally', w.eval('tasks.length'), 1);
+w.__hooks.garden(w.__firstDoc);                // the previous save's echo, still with both plants
+check('the echo does not bring it back', w.eval('tasks.length'), 1);
+check('and the list still shows one plant', w.document.querySelectorAll('#tpSections .tp-row').length, 1);
+w.eval('clearTimeout(pendingSaveTimer); pendingSaveTimer = null;');
 
 console.log(fail.length ? `\n${fail.length} FAILURE(S):\n` + fail.join('\n') : '\nall passed');
 process.exit(fail.length ? 1 : 0);
