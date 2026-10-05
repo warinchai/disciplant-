@@ -100,8 +100,9 @@ check('and the balance still adds up', inv(), true);
 check('one in the shed', run('mkState().mulch'), 1);
 run('mkBuyMulch();');
 check('a second', run('mkState().mulch'), 2);
-rich(100); run('wallet.mk.mulch = 2;');
-check('but never a third', run('mkBuyMulch()'), false);
+rich(100); run('wallet.mk.mulch = 9;');
+check('up to ten', run('mkBuyMulch() && mkState().mulch'), 10);
+check('but never an eleventh', run('mkBuyMulch()'), false);
 
 console.log('\n--- nothing happens at midnight ---');
 reset();
@@ -229,11 +230,12 @@ check('for 40 Dew', run('wallet.bal'), 60);
 check('and the balance still adds up', inv(), true);
 run('mkBuyFert();');
 check('a second', run('mkState().fz'), 2);
-rich(100); run('wallet.mk.fz = 2;');
-check('but never a third', run('mkBuyFert()'), false);
+rich(100); run('wallet.mk.fz = 9;');
+check('up to ten', run('mkBuyFert() && mkState().fz'), 10);
+check('but never an eleventh', run('mkBuyFert()'), false);
 
 run('mkUseFert(1);');
-check('feeding uses a bag', run('mkState().fz'), 1);
+check('feeding uses a bag', run('mkState().fz'), 9);
 check('the plant is fed from today', run('mkFedToday(tasks[0])'), true);
 check('for seven days', run('mkFedWeek(tasks[0], getTodayString()).t === shiftDate(getTodayString(), 6)'), true);
 check('and not on the eighth', run('growthBonusOn(tasks[0], shiftDate(getTodayString(), 7))'), 0);

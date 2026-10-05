@@ -53,14 +53,14 @@
 // ---- The numbers ------------------------------------------------
 
 var MULCH_PRICE        = 25;
-var MULCH_MAX_HELD     = 2;
+var MULCH_MAX_HELD     = 10;
 var MULCH_GAP_DAYS     = 7;    // one per plant per week
 var MULCH_HELD_CEILING = MULCH_MAX_HELD + 1;  // a hand-back can top a full sack up by one
 var MULCH_LOG_MAX      = 6;    // recent saves shown on the page
 var MULCH_KEEP_DAYS    = 400;  // covered days older than this are dropped
 
 var FERT_PRICE    = 40;
-var FERT_MAX_HELD = 2;
+var FERT_MAX_HELD = 10;
 var FERT_DAYS     = 7;
 var FERT_BONUS    = 0.25;
 var FERT_HELD_CEILING = FERT_MAX_HELD + 1;
@@ -495,10 +495,6 @@ function mkMulchHtml() {
     buy = bmBuyButton('mulch', MULCH_PRICE);
   }
 
-  var pips = '';
-  for (var i = 0; i < MULCH_MAX_HELD; i++) {
-    pips += '<span class="mk-pip' + (i < m.mulch ? ' is-full' : '') + '"></span>';
-  }
 
   // The plants a bag could log right now - and any logged today, so
   // Undo is reachable from here too.
@@ -535,7 +531,7 @@ function mkMulchHtml() {
       'its growth and its streak all come back.') +
     bmFacts(['Yesterday only', 'Undo until midnight', 'One per plant a week', 'Hold up to ' + MULCH_MAX_HELD]) +
     '<div class="bm-action">' +
-      '<span class="bm-held">' + pips + '<b>' + m.mulch + '</b> of ' + MULCH_MAX_HELD + ' in your shed</span>' +
+      '<span class="bm-held"><b>' + m.mulch + '</b> in your shed</span>' +
       buy +
     '</div>' +
     '<div class="bm-use-on">' +
@@ -564,10 +560,6 @@ function mkFertHtml() {
   var m = mkState();
   var buy = m.fz >= FERT_MAX_HELD ? '<span class="bm-note">Shed full</span>' : bmBuyButton('fert', FERT_PRICE);
 
-  var pips = '';
-  for (var i = 0; i < FERT_MAX_HELD; i++) {
-    pips += '<span class="mk-pip mk-pip-fert' + (i < m.fz ? ' is-full' : '') + '"></span>';
-  }
 
   // Every plant, fed ones first: what is fed and until when is the
   // thing worth seeing at a glance.
@@ -603,7 +595,7 @@ function mkFertHtml() {
       'Hard \u00d71.75, All out \u00d72.25. A day you do not tick gets nothing.') +
     bmFacts([FERT_DAYS + ' days', '+' + FERT_BONUS + ' on every tick', 'One bag per plant', 'Hold up to ' + FERT_MAX_HELD]) +
     '<div class="bm-action">' +
-      '<span class="bm-held">' + pips + '<b>' + m.fz + '</b> of ' + FERT_MAX_HELD + ' in your shed</span>' +
+      '<span class="bm-held"><b>' + m.fz + '</b> in your shed</span>' +
       buy +
     '</div>' +
     '<div class="bm-use-on">' +

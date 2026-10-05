@@ -234,8 +234,8 @@ service cloud.firestore {
         && w.earned >= 0 && w.spent >= 0
         && w.bal == w.earned - w.spent
         && w.bal <= 99999
-        && (!('mk' in w) || !('mulch' in w.mk) || (w.mk.mulch is number && w.mk.mulch <= 3))
-        && (!('mk' in w) || !('fz' in w.mk) || (w.mk.fz is number && w.mk.fz <= 3))
+        && (!('mk' in w) || !('mulch' in w.mk) || (w.mk.mulch is number && w.mk.mulch <= 11))
+        && (!('mk' in w) || !('fz' in w.mk) || (w.mk.fz is number && w.mk.fz <= 11))
         && ownedOk(w, old)
       );
     }
